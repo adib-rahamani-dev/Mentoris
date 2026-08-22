@@ -1,1 +1,3 @@
-
+.event-card__visual { min-height: 190px; display: grid; place-content: center; text-align: center; background: radial-gradient(circle, rgba(139,92,246,.42), transparent 24%), linear-gradient(145deg,#11182a,#080d19); }
+.event-card__visual span { color:#fff;font-size:3.5rem;font-weight:800;line-height:1; }.event-card__visual small { color:var(--color-brand-300); }
+.event-card__visual--magenta { background-color:#2a0b30 }.event-card__visual--violet { background-color:#160d32 }.event-card__visual--teal { background-color:#072828 }

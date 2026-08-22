@@ -1,1 +1,6 @@
-
+.mentor-card__portrait { min-height:250px;display:grid;place-items:center;background:radial-gradient(circle at 50% 44%,rgba(139,92,246,.38),transparent 24%),linear-gradient(145deg,#11192a,#080d18); }
+.mentor-card__portrait span { width:92px;aspect-ratio:1;display:grid;place-items:center;border:1px solid var(--color-border-strong);border-radius:50%;color:#fff;font-size:var(--font-size-2xl);background:rgba(124,58,237,.15);box-shadow:0 0 40px rgba(124,58,237,.24); }
+.mentor-card__portrait--teal { background-color:#062321 }.mentor-card__portrait--blue { background-color:#071d35 }.mentor-card__portrait--rose { background-color:#2c0a19 }
+.mentor-card__social { display:flex;justify-content:center;gap:var(--space-2);padding:var(--space-3);border-top:1px solid var(--color-border); }
+.mentor-card__social a { width:28px;height:28px;display:grid;place-items:center;border:1px solid var(--color-border);border-radius:50%;color:var(--color-text-muted);font-size:.65rem; }
+.mentor-card__social a:hover { color:var(--color-brand-300);border-color:var(--color-border-strong); }

@@ -1,0 +1,12 @@
+.founder-hero { padding-block:var(--space-16);background:radial-gradient(circle at 70% 30%,rgba(124,58,237,.14),transparent 34%); }
+.founder-hero__grid { display:grid;grid-template-columns:.85fr 1.15fr;align-items:center;gap:var(--space-16); }
+.founder-hero__portrait { position:relative;max-width:500px;border:1px solid var(--color-border-strong);border-radius:var(--radius-xl);overflow:hidden;background:#070b14;box-shadow:var(--shadow-lg); }
+.founder-hero__portrait img { width:100%;height:min(700px,72vh);object-fit:cover;object-position:center top; }
+.founder-hero__content { max-width:650px; }.founder-role { color:var(--color-brand-300);font-size:var(--font-size-lg); }
+.founder-story { display:grid;grid-template-columns:1.15fr .85fr;gap:var(--space-16);align-items:center; }
+.founder-quote { margin:0;padding:var(--space-10);border:1px solid var(--color-border-strong);border-radius:var(--radius-xl);color:var(--color-text-soft);background:radial-gradient(circle at 20% 90%,rgba(124,58,237,.2),transparent 50%),var(--color-surface-1);font-size:var(--font-size-xl);line-height:2; }
+.founder-quote cite { display:block;margin-top:var(--space-6);color:var(--color-brand-400);font-size:var(--font-size-xs);font-style:normal; }
+.timeline { position:relative;max-width:850px;margin-inline:auto; }.timeline::before{position:absolute;top:0;bottom:0;right:86px;width:1px;content:"";background:linear-gradient(var(--color-brand-600),var(--color-border));}
+.timeline article { position:relative;display:grid;grid-template-columns:70px 1fr;gap:var(--space-10);padding-bottom:var(--space-10); }.timeline article>span{color:var(--color-brand-300);font-family:var(--font-mono);}.timeline article>span::after{position:absolute;right:80px;top:8px;width:13px;height:13px;content:"";border:3px solid var(--color-bg);border-radius:50%;background:var(--color-brand-500);box-shadow:0 0 16px var(--color-brand-500)}.timeline h3{margin-bottom:var(--space-2)}
+@media(max-width:850px){.founder-hero__grid,.founder-story{grid-template-columns:1fr}.founder-hero__portrait{margin-inline:auto}.founder-hero__content{text-align:center;margin-inline:auto}.founder-hero__content .cluster{justify-content:center}}
+@media(max-width:520px){.founder-hero{padding-block:var(--space-8)}.founder-hero__portrait img{height:500px}.founder-quote{padding:var(--space-6);font-size:var(--font-size-base)}.timeline::before{right:66px}.timeline article{grid-template-columns:52px 1fr;gap:var(--space-8)}.timeline article>span::after{right:60px}}

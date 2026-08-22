@@ -26,7 +26,7 @@ if (is_file($environmentFile)) {
 $app = new Application(BASE_PATH, (bool) env('APP_DEBUG', false));
 $router = $app->router();
 
-foreach (['web', 'auth', 'admin', 'api'] as $routeFile) {
+foreach (['web', 'auth', 'payment', 'admin', 'api'] as $routeFile) {
     $path = BASE_PATH . '/routes/' . $routeFile . '.php';
     if (is_file($path)) {
         require $path;

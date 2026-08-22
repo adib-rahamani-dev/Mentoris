@@ -1,1 +1,2 @@
-
+.article-card__visual { min-height:165px;display:grid;place-items:center;background:radial-gradient(circle,rgba(139,92,246,.35),transparent 25%),#090f1e; }
+.article-card__visual span { color:var(--color-brand-300);font-size:4rem;filter:drop-shadow(0 0 14px currentColor); }.article-card__visual--teal { color:#14b8a6;background-color:#062522 }.article-card__visual--blue{color:#3b82f6;background-color:#071d35}.article-card__visual--amber{color:#f59e0b;background-color:#281707}

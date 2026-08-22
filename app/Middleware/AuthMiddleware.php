@@ -17,6 +17,10 @@ final class AuthMiddleware implements MiddlewareInterface
     public function handle(Request $request, callable $next): Response
     {
         if (!$this->session->has('auth.user')) {
+            if (!$request->expectsJson() && $request->isMethod('GET')) {
+                $query = $request->query();
+                $this->session->put('auth.intended', $request->uri() . ($query ? '?' . http_build_query($query) : ''));
+            }
             return $request->expectsJson()
                 ? Response::json(['message' => 'Unauthenticated'], 401)
                 : Response::redirect('/login');

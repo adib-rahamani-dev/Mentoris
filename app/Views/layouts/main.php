@@ -6,8 +6,9 @@
     <meta name="theme-color" content="#050914">
     <meta name="description" content="<?= e($description ?? 'آکادمی تخصصی رشد، یادگیری و سلامت روان Mentoris') ?>">
     <title><?= e($title ?? 'Mentoris') ?></title>
-    <link rel="stylesheet" href="<?= asset('css/app.css') ?>?v=2.0.1">
-    <script type="module" src="<?= asset('js/app.js') ?>?v=2.0.0" defer></script>
+    <script>try{document.documentElement.dataset.theme=localStorage.getItem('mentoris-theme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark')}catch(e){document.documentElement.dataset.theme='dark'}</script>
+    <link rel="stylesheet" href="<?= asset('css/app.css') ?>?v=8.0.0">
+    <script type="module" src="<?= asset('js/app.js') ?>?v=8.0.0" defer></script>
 </head>
 <body>
     <a class="skip-link" href="#main-content">رفتن به محتوای اصلی</a>

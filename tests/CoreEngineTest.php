@@ -61,7 +61,7 @@ $assert(Security::escape('<script>') === '&lt;script&gt;', 'HTML escaping is act
 /** @var App\Core\Application $app */
 $app = require dirname(__DIR__) . '/bootstrap/app.php';
 $home = $app->handle($request('GET', '/'));
-$assert($home->status() === 200 && str_contains($home->content(), 'Mentoris Design System'), 'Controller and View render through Application.');
+$assert($home->status() === 200 && str_contains($home->content(), 'اکوسیستم رشد'), 'Controller and View render through Application.');
 $health = $app->handle($request('GET', '/api/health', [], ['HTTP_ACCEPT' => 'application/json']));
 $assert($health->status() === 200 && str_contains($health->content(), '"status":"ok"'), 'API route returns JSON response.');
 

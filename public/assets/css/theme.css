@@ -1,0 +1,18 @@
+.theme-toggle{width:40px;height:40px;display:grid;place-items:center;flex:0 0 auto;border:1px solid var(--color-border);border-radius:var(--radius-full);color:var(--color-text-soft);background:var(--color-surface-1);transition:color var(--duration-fast),background var(--duration-fast),transform var(--duration-fast)}.theme-toggle:hover{color:var(--color-brand-400);transform:rotate(8deg)}.theme-toggle__sun,.theme-toggle__moon{grid-area:1/1;transition:opacity var(--duration-fast),transform var(--duration-fast)}.theme-toggle__sun{opacity:0;transform:scale(.6)}.theme-toggle__moon{opacity:1}:root[data-theme="light"] .theme-toggle__sun{opacity:1;transform:scale(1)}:root[data-theme="light"] .theme-toggle__moon{opacity:0;transform:scale(.6)}
+:root[data-theme="light"] body{background:radial-gradient(circle at 80% 12%,rgba(124,58,237,.08),transparent 28rem),radial-gradient(circle at 8% 42%,rgba(37,99,235,.05),transparent 30rem),var(--color-bg)}
+:root[data-theme="light"] body::before{opacity:.32;background-image:linear-gradient(rgba(15,23,42,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(15,23,42,.03) 1px,transparent 1px)}
+:root[data-theme="light"] .site-header{background:rgba(255,255,255,.84)}
+:root[data-theme="light"] .site-footer{background:linear-gradient(180deg,rgba(248,250,252,.9),var(--color-bg-deep))}
+:root[data-theme="light"] .section--muted{background:rgba(238,242,247,.68)}
+:root[data-theme="light"] .surface,:root[data-theme="light"] .card,:root[data-theme="light"] .accordion__item,:root[data-theme="light"] .program-list-card,:root[data-theme="light"] .specialization-card,:root[data-theme="light"] .community-benefit,:root[data-theme="light"] .event-line-card,:root[data-theme="light"] .user-panel,:root[data-theme="light"] .user-sidebar,:root[data-theme="light"] .checkout-card,:root[data-theme="light"] .order-summary{background:#fff}
+:root[data-theme="light"] .form-control,:root[data-theme="light"] .form-select,:root[data-theme="light"] .form-textarea{background:#fff}
+:root[data-theme="light"] .form-control:focus,:root[data-theme="light"] .form-select:focus,:root[data-theme="light"] .form-textarea:focus{background:#fff}
+:root[data-theme="light"] .dropdown__menu,:root[data-theme="light"] .navbar{background:rgba(255,255,255,.98)}
+:root[data-theme="light"] .program-enroll-card,:root[data-theme="light"] .event-registration,:root[data-theme="light"] .course-enroll-card{background:rgba(255,255,255,.94)}
+:root[data-theme="light"] .program-anchor-nav{background:rgba(255,255,255,.9)}
+:root[data-theme="light"] .auth-page,:root[data-theme="light"] .user-area,:root[data-theme="light"] .checkout-page,:root[data-theme="light"] .payment-result-page{background:radial-gradient(circle at 18% 30%,rgba(124,58,237,.09),transparent 30%),var(--color-bg)}
+:root[data-theme="light"] .user-empty{background:rgba(248,250,252,.72)}
+:root[data-theme="light"] .notification-item,:root[data-theme="light"] .user-certificate{background:#fff}
+:root[data-theme="light"] .notification-item.is-unread{background:linear-gradient(100deg,rgba(124,58,237,.08),#fff)}
+:root[data-theme="light"] .checkout-secure,:root[data-theme="light"] .form-hint{color:var(--color-text-faint)}
+@media(max-width:980px){:root[data-theme="light"] .navbar{border-color:var(--color-border)}}
