@@ -1,0 +1,7 @@
+.slider { position: relative; }
+.slider__viewport { overflow: hidden; direction: ltr; }
+.slider__track { display: flex; gap: var(--space-5); transition: transform var(--duration-slow) var(--ease-out); will-change: transform; }
+.slider__slide { min-width: calc((100% - 2 * var(--space-5)) / 3); direction: rtl; }
+.slider__controls { display: flex; gap: var(--space-2); margin-top: var(--space-5); }
+@media (max-width: 900px) { .slider__slide { min-width: calc((100% - var(--space-5)) / 2); } }
+@media (max-width: 600px) { .slider__slide { min-width: 100%; } }

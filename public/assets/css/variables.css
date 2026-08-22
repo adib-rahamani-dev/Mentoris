@@ -1,0 +1,106 @@
+:root {
+  color-scheme: dark;
+
+  /* Brand */
+  --color-brand-50: #f5f3ff;
+  --color-brand-100: #ede9fe;
+  --color-brand-200: #ddd6fe;
+  --color-brand-300: #c4b5fd;
+  --color-brand-400: #a78bfa;
+  --color-brand-500: #8b5cf6;
+  --color-brand-600: #7c3aed;
+  --color-brand-700: #6d28d9;
+  --color-brand-800: #5b21b6;
+  --color-brand-900: #4c1d95;
+  --color-accent-cyan: #2dd4bf;
+  --color-accent-blue: #60a5fa;
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+  --color-danger: #fb7185;
+  --color-info: #38bdf8;
+
+  /* Surfaces */
+  --color-bg: #050914;
+  --color-bg-deep: #02050d;
+  --color-surface-1: #0a101d;
+  --color-surface-2: #0d1524;
+  --color-surface-3: #111b2d;
+  --color-surface-glass: rgba(13, 21, 36, 0.78);
+  --color-border: rgba(148, 163, 184, 0.14);
+  --color-border-strong: rgba(167, 139, 250, 0.34);
+  --color-overlay: rgba(1, 4, 12, 0.78);
+
+  /* Text */
+  --color-text: #f8fafc;
+  --color-text-soft: #d7deea;
+  --color-text-muted: #8f9bad;
+  --color-text-faint: #657087;
+  --color-text-inverse: #080b12;
+
+  /* Typography */
+  --font-sans: "Mentoris Sans", Tahoma, Arial, sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, monospace;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: clamp(1.75rem, 3vw, 2.25rem);
+  --font-size-4xl: clamp(2.25rem, 5vw, 3.75rem);
+  --line-height-tight: 1.35;
+  --line-height-base: 1.85;
+  --line-height-loose: 2;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 800;
+
+  /* Spacing: 4px scale */
+  --space-0: 0;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  --space-24: 6rem;
+
+  /* Shape */
+  --radius-xs: 0.375rem;
+  --radius-sm: 0.625rem;
+  --radius-md: 0.875rem;
+  --radius-lg: 1.125rem;
+  --radius-xl: 1.5rem;
+  --radius-full: 999px;
+
+  /* Shadows */
+  --shadow-sm: 0 6px 18px rgba(0, 0, 0, 0.18);
+  --shadow-md: 0 16px 38px rgba(0, 0, 0, 0.28);
+  --shadow-lg: 0 28px 80px rgba(0, 0, 0, 0.42);
+  --shadow-brand: 0 10px 32px rgba(124, 58, 237, 0.32);
+  --glow-brand: 0 0 70px rgba(124, 58, 237, 0.18);
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --duration-fast: 160ms;
+  --duration-base: 260ms;
+  --duration-slow: 520ms;
+
+  /* Layout */
+  --container-sm: 680px;
+  --container-md: 920px;
+  --container-lg: 1180px;
+  --container-xl: 1320px;
+  --header-height: 72px;
+  --z-dropdown: 30;
+  --z-sticky: 40;
+  --z-modal: 80;
+  --z-toast: 100;
+}

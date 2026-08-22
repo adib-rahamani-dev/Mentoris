@@ -1,0 +1,12 @@
+@media (max-width: 960px) {
+  :root { --header-height: 64px; }
+  .section { padding-block: var(--space-16); }
+  .section__head { align-items: start; flex-direction: column; }
+}
+
+@media (max-width: 640px) {
+  .section { padding-block: var(--space-12); }
+  .section__head { margin-bottom: var(--space-8); }
+  h1 { font-size: clamp(2rem, 11vw, 3rem); }
+  .hide-mobile { display: none !important; }
+}

@@ -1,0 +1,6 @@
+.tabs__list { display: flex; gap: var(--space-2); overflow-x: auto; padding: var(--space-1); border-bottom: 1px solid var(--color-border); scrollbar-width: none; }
+.tabs__tab { position: relative; flex: 0 0 auto; padding: var(--space-3) var(--space-5); border-radius: var(--radius-sm) var(--radius-sm) 0 0; color: var(--color-text-muted); background: transparent; font-size: var(--font-size-sm); }
+.tabs__tab::after { position: absolute; right: 15%; bottom: -1px; left: 15%; height: 2px; content: ""; background: var(--color-brand-400); transform: scaleX(0); transition: transform var(--duration-fast); }
+.tabs__tab[aria-selected="true"] { color: var(--color-brand-300); background: rgba(124,58,237,.07); }
+.tabs__tab[aria-selected="true"]::after { transform: scaleX(1); }
+.tabs__panel { padding: var(--space-6) 0; }

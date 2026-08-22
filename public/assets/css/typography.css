@@ -1,0 +1,36 @@
+@font-face {
+  font-family: "Mentoris Sans";
+  src: url("../fonts/ایرانسل.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Mentoris Sans";
+  src: url("../fonts/ایرانسل مدیوم .ttf") format("truetype");
+  font-weight: 500 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Mentoris Sans";
+  src: url("../fonts/ایرانسل بلک .ttf") format("truetype");
+  font-weight: 800 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+body { font-family: var(--font-sans); font-size: var(--font-size-base); line-height: var(--line-height-base); }
+h1, h2, h3, h4 { color: var(--color-text); font-weight: var(--font-weight-bold); line-height: var(--line-height-tight); text-wrap: balance; }
+h1 { font-size: var(--font-size-4xl); }
+h2 { font-size: var(--font-size-3xl); }
+h3 { font-size: var(--font-size-xl); }
+h4 { font-size: var(--font-size-lg); }
+p { color: var(--color-text-muted); }
+small { font-size: var(--font-size-xs); }
+strong { color: var(--color-text); font-weight: var(--font-weight-semibold); }
+code, kbd { font-family: var(--font-mono); font-size: 0.9em; direction: ltr; }
+.text-gradient { color: transparent; background: linear-gradient(120deg, var(--color-brand-300), var(--color-brand-600)); background-clip: text; -webkit-background-clip: text; }
+.eyebrow { color: var(--color-brand-400); font-size: var(--font-size-xs); font-weight: var(--font-weight-semibold); letter-spacing: 0.04em; text-transform: uppercase; }

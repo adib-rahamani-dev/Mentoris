@@ -1,0 +1,4 @@
+.spinner { width: 22px; height: 22px; display: inline-block; border: 2px solid rgba(255,255,255,.22); border-top-color: currentColor; border-radius: 50%; animation: spin .8s linear infinite; }
+.skeleton { position: relative; overflow: hidden; border-radius: var(--radius-sm); background: var(--color-surface-2); }
+.skeleton::after { position: absolute; inset: 0; content: ""; background: linear-gradient(90deg, transparent, rgba(255,255,255,.07), transparent); transform: translateX(-100%); animation: shimmer 1.6s infinite; }
+@keyframes shimmer { to { transform: translateX(100%); } }

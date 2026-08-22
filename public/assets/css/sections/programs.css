@@ -1,0 +1,2 @@
+.programs-grid { --grid-gap: var(--space-5); }
+.programs-intro { max-width: 720px; }

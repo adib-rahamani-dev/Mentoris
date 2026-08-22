@@ -1,0 +1,9 @@
+.toast-region { position: fixed; left: var(--space-5); bottom: var(--space-5); z-index: var(--z-toast); width: min(380px, calc(100% - 2 * var(--space-5))); display: grid; gap: var(--space-3); pointer-events: none; }
+.toast { display: flex; align-items: start; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); color: var(--color-text-soft); background: rgba(13,21,36,.96); box-shadow: var(--shadow-lg); backdrop-filter: blur(12px); pointer-events: auto; animation: toast-in var(--duration-base) var(--ease-out) both; }
+.toast--success { border-color: rgba(52,211,153,.35); }
+.toast--danger { border-color: rgba(251,113,133,.38); }
+.toast__body { flex: 1; }
+.toast__title { display: block; margin-bottom: var(--space-1); color: var(--color-text); font-size: var(--font-size-sm); }
+.toast__message { color: var(--color-text-muted); font-size: var(--font-size-xs); }
+.toast__close { color: var(--color-text-muted); background: transparent; }
+@keyframes toast-in { from { opacity: 0; transform: translateX(-20px); } }

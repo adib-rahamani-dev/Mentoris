@@ -1,0 +1,18 @@
+.card { position: relative; overflow: hidden; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: linear-gradient(145deg, rgba(16, 25, 42, .94), rgba(8, 14, 26, .96)); box-shadow: var(--shadow-sm); transition: transform var(--duration-base) var(--ease-out), border-color var(--duration-base), box-shadow var(--duration-base); }
+.card:hover { border-color: rgba(167, 139, 250, .3); box-shadow: var(--shadow-md), var(--glow-brand); transform: translateY(-4px); }
+.card__media { position: relative; min-height: 180px; display: grid; place-items: center; overflow: hidden; background: radial-gradient(circle at 45% 45%, rgba(139, 92, 246, .48), transparent 22%), radial-gradient(circle at 50% 52%, rgba(37, 99, 235, .2), transparent 50%), #080d1b; }
+.card__media::before, .card__media::after { position: absolute; content: ""; border: 1px solid rgba(167, 139, 250, .3); border-radius: 50%; }
+.card__media::before { width: 118px; height: 118px; box-shadow: 0 0 35px rgba(139,92,246,.35), inset 0 0 30px rgba(139,92,246,.18); }
+.card__media::after { width: 68px; height: 68px; border-style: dashed; animation: spin 18s linear infinite; }
+.card__media-icon { width: 46px; color: var(--color-brand-200); filter: drop-shadow(0 0 12px var(--color-brand-500)); }
+.card__badge { position: absolute; top: var(--space-3); right: var(--space-3); z-index: 1; }
+.card__body { padding: var(--space-6); }
+.card__title { margin-bottom: var(--space-2); font-size: var(--font-size-lg); }
+.card__text { font-size: var(--font-size-sm); }
+.card__meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4); margin-top: var(--space-5); color: var(--color-text-faint); font-size: var(--font-size-xs); }
+.card__footer { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: var(--space-4) var(--space-6); border-top: 1px solid var(--color-border); }
+.card--compact .card__body { padding: var(--space-5); }
+.feature-card { padding: var(--space-6); text-align: center; }
+.feature-card__icon { width: 48px; height: 48px; display: grid; place-items: center; margin: 0 auto var(--space-4); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); color: var(--color-brand-300); background: rgba(124, 58, 237, .1); }
+.feature-card__icon svg { width: 24px; }
+@keyframes spin { to { transform: rotate(360deg); } }
