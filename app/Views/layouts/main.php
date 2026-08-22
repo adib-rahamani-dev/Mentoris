@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#050914">
     <meta name="description" content="<?= e($description ?? 'آکادمی تخصصی رشد، یادگیری و سلامت روان Mentoris') ?>">
     <title><?= e($title ?? 'Mentoris') ?></title>
-    <link rel="stylesheet" href="<?= asset('css/app.css') ?>?v=2.0.0">
+    <link rel="stylesheet" href="<?= asset('css/app.css') ?>?v=2.0.1">
     <script type="module" src="<?= asset('js/app.js') ?>?v=2.0.0" defer></script>
 </head>
 <body>

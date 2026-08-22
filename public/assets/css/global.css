@@ -1,3 +1,5 @@
+html { overflow-x: clip; }
+
 body {
   color: var(--color-text);
   background:
