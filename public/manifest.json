@@ -1,1 +1,20 @@
-
+{
+  "name": "Mentoris Academy",
+  "short_name": "Mentoris",
+  "description": "Learning, connection and professional growth in psychology and mental health.",
+  "lang": "fa",
+  "dir": "rtl",
+  "start_url": "/?lang=fa",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#050914",
+  "theme_color": "#7c3aed",
+  "icons": [
+    {
+      "src": "/assets/icons/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

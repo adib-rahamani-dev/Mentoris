@@ -21,7 +21,7 @@ final class AuthController extends Controller
     {
         $data = $request->only(['name', 'email', 'password', 'password_confirmation', 'accept']);
         $validator = new Validator();
-        $validator->validate($data, ['name' => 'required|string|min:2|max:80', 'email' => 'required|email|max:120', 'password' => 'required|string|min:8|max:72', 'password_confirmation' => 'required|same:password', 'accept' => 'required']);
+        $validator->validate($data, ['name' => 'required|string|min:2|max:80', 'email' => 'required|email|max:120', 'password' => 'required|string|min:12|max:128', 'password_confirmation' => 'required|same:password', 'accept' => 'required']);
         $errors = $validator->errors();
         if (!isset($errors['password']) && (!preg_match('/[A-Za-z]/', (string) ($data['password'] ?? '')) || !preg_match('/\d/', (string) ($data['password'] ?? '')))) {
             $errors['password'][] = 'رمز عبور باید حداقل یک حرف و یک عدد داشته باشد.';
@@ -42,7 +42,7 @@ final class AuthController extends Controller
     {
         $data = $request->only(['email', 'password']);
         $validator = new Validator();
-        $validator->validate($data, ['email' => 'required|email|max:120', 'password' => 'required|string|max:72']);
+        $validator->validate($data, ['email' => 'required|email|max:120', 'password' => 'required|string|max:128']);
         if ($validator->fails()) return $this->authView('login', $validator->errors(), ['email' => $data['email'] ?? '']);
         if (!(new AuthService())->attempt((string) $data['email'], (string) $data['password'])) {
             return $this->authView('login', ['credentials' => ['ایمیل یا رمز عبور صحیح نیست.']], ['email' => $data['email']]);
@@ -80,7 +80,7 @@ final class AuthController extends Controller
         if (strlen($token) !== 64 || $repository->findByResetToken($token) === null) return $this->resetView($token, false);
         $data = $request->only(['password', 'password_confirmation']);
         $validator = new Validator();
-        $validator->validate($data, ['password' => 'required|string|min:8|max:72', 'password_confirmation' => 'required|same:password']);
+        $validator->validate($data, ['password' => 'required|string|min:12|max:128', 'password_confirmation' => 'required|same:password']);
         $errors = $validator->errors();
         if (!isset($errors['password']) && (!preg_match('/[A-Za-z]/', (string) ($data['password'] ?? '')) || !preg_match('/\d/', (string) ($data['password'] ?? '')))) $errors['password'][] = 'رمز عبور باید حداقل یک حرف و یک عدد داشته باشد.';
         if ($errors) return $this->resetView($token, true, $errors);

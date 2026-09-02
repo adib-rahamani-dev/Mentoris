@@ -15,8 +15,9 @@ final class CoursesController extends Controller
     {
         $courses = array_map(fn (array $course): array => PublicContentService::course($course['slug']) ?? $course, PublicContentService::courses());
         return $this->view('pages.courses', [
-            'title' => 'دوره‌های Mentoris',
-            'description' => 'فهرست دوره‌های تخصصی، کاربردی و شواهدمحور Mentoris.',
+            'title' => t('nav.courses') . ' | Mentoris Academy',
+            'description' => t('empty.text'),
+            'indexable' => $courses !== [],
             'courses' => $courses,
             'categories' => PublicContentService::courseCategories(),
             'statuses' => PublicContentService::courseStatusLabels(),

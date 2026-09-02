@@ -14,8 +14,8 @@ final class AcademyController extends Controller
     public function index(Request $request): Response
     {
         return $this->view('pages.academy', [
-            'title' => 'لاین‌های آکادمی Mentoris',
-            'description' => 'هفت لاین تخصصی Mentoris برای آموزش، پژوهش و توسعه حرفه‌ای.',
+            'title' => t('nav.lines') . ' | Mentoris Academy',
+            'description' => t('home.lead'),
             'lines' => PublicContentService::academyLines(),
         ]);
     }

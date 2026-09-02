@@ -48,8 +48,8 @@ final class CommunityController extends Controller
         )), 0, 3);
 
         return $this->view('pages.community', [
-            'title' => 'Mentoris Community',
-            'description' => 'جامعه‌ای حرفه‌ای برای یادگیری، گفتگو و ارتباط متخصصان سلامت روان.',
+            'title' => t('nav.community') . ' | Mentoris Academy',
+            'description' => t('footer.tagline') . ' ' . t('home.lead'),
             'community' => PublicContentService::community(),
             'events' => $events,
             'errors' => $errors,

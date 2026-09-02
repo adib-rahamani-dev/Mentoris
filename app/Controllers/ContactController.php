@@ -14,8 +14,8 @@ final class ContactController extends Controller
     public function index(Request $request): Response
     {
         return $this->view('pages.contact', [
-            'title' => 'ارتباط با Mentoris',
-            'description' => 'برای مشاوره، همکاری و پرسش‌های آموزشی با تیم Mentoris در ارتباط باشید.',
+            'title' => t('nav.contact') . ' | Mentoris Academy',
+            'description' => t('footer.tagline'),
             'errors' => [],
             'old' => [],
             'success' => false,
@@ -35,8 +35,8 @@ final class ContactController extends Controller
         ]);
 
         return $this->view('pages.contact', [
-            'title' => 'ارتباط با Mentoris',
-            'description' => 'برای مشاوره، همکاری و پرسش‌های آموزشی با تیم Mentoris در ارتباط باشید.',
+            'title' => t('nav.contact') . ' | Mentoris Academy',
+            'description' => t('footer.tagline'),
             'errors' => $validator->errors(),
             'old' => $data,
             'success' => $valid,

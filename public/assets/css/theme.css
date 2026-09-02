@@ -15,4 +15,21 @@
 :root[data-theme="light"] .notification-item,:root[data-theme="light"] .user-certificate{background:#fff}
 :root[data-theme="light"] .notification-item.is-unread{background:linear-gradient(100deg,rgba(124,58,237,.08),#fff)}
 :root[data-theme="light"] .checkout-secure,:root[data-theme="light"] .form-hint{color:var(--color-text-faint)}
+:root[data-theme="light"] .mission-card,:root[data-theme="light"] .line-card,:root[data-theme="light"] .public-cta{background:linear-gradient(145deg,#fff,#f7f8fc)}
+:root[data-theme="light"] .public-hero--founder .public-hero__backdrop{background:radial-gradient(circle at 20% 30%,rgba(124,58,237,.12),transparent 32rem),radial-gradient(circle at 85% 75%,rgba(45,212,191,.07),transparent 28rem),linear-gradient(180deg,#fff,var(--color-bg))}
+:root[data-theme="light"] .admin-body{background:var(--color-bg)}
+:root[data-theme="light"] .admin-topbar{background:rgba(255,255,255,.88)}
+:root[data-theme="light"] .event-detail-facts span,:root[data-theme="light"] .course-detail-facts span,:root[data-theme="light"] .auth-quote,:root[data-theme="light"] .academy-line-hero blockquote{background:#fff}
+:root[data-theme="light"] .academy-line-panel{background:linear-gradient(100deg,#fff,#f8fafc)}
+:root[data-theme="light"] .academy-line-panel:hover{background:linear-gradient(100deg,rgba(124,58,237,.06),#fff)}
+:root[data-theme="light"] .btn--ghost:hover{color:var(--color-brand-700);border-color:var(--color-border-strong);background:rgba(124,58,237,.06)}
+:root[data-theme="light"] .badge--brand,:root[data-theme="light"] .event-status,:root[data-theme="light"] .course-status--coming-soon{color:var(--color-brand-700)}
+:root[data-theme="light"] .badge--success,:root[data-theme="light"] .event-status--registration-open,:root[data-theme="light"] .course-status{color:#047857}
+:root[data-theme="light"] .badge--warning,:root[data-theme="light"] .event-status--full,:root[data-theme="light"] .course-status--full{color:#a16207}
+:root[data-theme="light"] .badge--danger,:root[data-theme="light"] .event-status--canceled{color:#be123c}
+:root[data-theme="light"] .event-status--completed,:root[data-theme="light"] .course-status--completed{color:#475569}
+:root[data-theme="light"] .course-enroll-card__price strong{color:var(--color-text)}
+:root[data-theme="light"] .user-sidebar nav a:hover,:root[data-theme="light"] .user-sidebar nav a.is-active{color:var(--color-brand-700)}
+:root[data-theme="light"] .alert--success strong{color:#047857}
+:root[data-theme="light"] .alert--danger strong{color:#be123c}
 @media(max-width:980px){:root[data-theme="light"] .navbar{border-color:var(--color-border)}}

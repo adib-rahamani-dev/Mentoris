@@ -23,6 +23,8 @@
 }
 
 body { font-family: var(--font-sans); font-size: var(--font-size-base); line-height: var(--line-height-base); }
+html[lang="en"] body { font-family: var(--font-latin); letter-spacing: -0.01em; }
+html[lang="ar"] body, html[lang="ckb"] body { font-family: "Mentoris Sans", Tahoma, Arial, sans-serif; }
 h1, h2, h3, h4 { color: var(--color-text); font-weight: var(--font-weight-bold); line-height: var(--line-height-tight); text-wrap: balance; }
 h1 { font-size: var(--font-size-4xl); }
 h2 { font-size: var(--font-size-3xl); }

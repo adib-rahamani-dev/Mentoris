@@ -14,8 +14,9 @@ final class SpecializationsController extends Controller
     public function index(Request $request): Response
     {
         return $this->view('pages.specializations', [
-            'title' => 'تخصص‌های Mentoris',
-            'description' => 'نقشه تخصص‌های آکادمی در هفت لاین آموزشی و حرفه‌ای.',
+            'title' => t('nav.specializations') . ' | Mentoris Academy',
+            'description' => t('empty.text'),
+            'indexable' => false,
             'lines' => PublicContentService::academyLines(),
         ]);
     }

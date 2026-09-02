@@ -1,1 +1,19 @@
-
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url><loc>https://mentorisacademy.com/?lang=fa</loc><lastmod>2026-09-02</lastmod><changefreq>weekly</changefreq><priority>1.0</priority><xhtml:link rel="alternate" hreflang="fa" href="https://mentorisacademy.com/?lang=fa"/><xhtml:link rel="alternate" hreflang="ar" href="https://mentorisacademy.com/?lang=ar"/><xhtml:link rel="alternate" hreflang="ku" href="https://mentorisacademy.com/?lang=ku"/><xhtml:link rel="alternate" hreflang="en" href="https://mentorisacademy.com/?lang=en"/><xhtml:link rel="alternate" hreflang="x-default" href="https://mentorisacademy.com/?lang=fa"/></url>
+  <url><loc>https://mentorisacademy.com/about?lang=fa</loc><lastmod>2026-09-02</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://mentorisacademy.com/founder?lang=fa</loc><lastmod>2026-09-02</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://mentorisacademy.com/academy?lang=fa</loc><lastmod>2026-09-02</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://mentorisacademy.com/academy/research?lang=fa</loc><lastmod>2026-09-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://mentorisacademy.com/academy/therapist-development?lang=fa</loc><lastmod>2026-09-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://mentorisacademy.com/academy/wellbeing?lang=fa</loc><lastmod>2026-09-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://mentorisacademy.com/academy/therapy?lang=fa</loc><lastmod>2026-09-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://mentorisacademy.com/academy/assessment?lang=fa</loc><lastmod>2026-09-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://mentorisacademy.com/academy/public-mental-health?lang=fa</loc><lastmod>2026-09-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://mentorisacademy.com/academy/professional-development?lang=fa</loc><lastmod>2026-09-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://mentorisacademy.com/events?lang=fa</loc><lastmod>2026-09-02</lastmod><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://mentorisacademy.com/events/therapists-circle-tabriz?lang=fa</loc><lastmod>2026-09-02</lastmod><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://mentorisacademy.com/community?lang=fa</loc><lastmod>2026-09-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://mentorisacademy.com/mentors?lang=fa</loc><lastmod>2026-09-02</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://mentorisacademy.com/contact?lang=fa</loc><lastmod>2026-09-02</lastmod><changefreq>yearly</changefreq><priority>0.6</priority></url>
+</urlset>

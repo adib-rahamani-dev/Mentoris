@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Core\CSRF;
 use App\Core\Security;
+use App\Core\Translator;
 
 if (!function_exists('base_path')) {
     function base_path(string $path = ''): string
@@ -62,5 +63,40 @@ if (!function_exists('asset')) {
     function asset(string $path): string
     {
         return '/assets/' . ltrim($path, '/');
+    }
+}
+
+if (!function_exists('t')) {
+    function t(string $key, array $replace = []): string
+    {
+        return Translator::get($key, $replace);
+    }
+}
+
+if (!function_exists('locale')) {
+    function locale(): string
+    {
+        return Translator::locale();
+    }
+}
+
+if (!function_exists('locale_direction')) {
+    function locale_direction(): string
+    {
+        return Translator::direction();
+    }
+}
+
+if (!function_exists('locale_html')) {
+    function locale_html(): string
+    {
+        return Translator::htmlLocale();
+    }
+}
+
+if (!function_exists('locale_url')) {
+    function locale_url(string $locale): string
+    {
+        return Translator::switchUrl($locale);
     }
 }

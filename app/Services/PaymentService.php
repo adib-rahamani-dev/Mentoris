@@ -32,7 +32,6 @@ final class PaymentService
         if ($order['amount'] === 0) {
             $transaction = $this->commerce->createTransaction(['order_id' => $order['id'], 'gateway' => 'free', 'authority' => 'free_' . Security::randomToken(16), 'amount' => 0, 'currency' => $order['currency'], 'status' => 'initiated']);
             $order = $this->commerce->finalizePayment($order['id'], $transaction['id'], 'FREE-' . strtoupper(substr($order['id'], 0, 10)));
-            $this->users->addCourse($user['id'], $course['slug']);
             return ['order' => $order, 'transaction' => $transaction, 'redirect_url' => '/payment/result?order=' . $order['id']];
         }
         $callback = rtrim((string) env('APP_URL', 'http://mentoris.test'), '/') . '/payment/callback';
@@ -51,8 +50,8 @@ final class PaymentService
         if ($transaction === null) throw new RuntimeException('تراکنش پیدا نشد.');
         $order = $this->commerce->findOrder($transaction['order_id']);
         if ($order === null) throw new RuntimeException('سفارش پیدا نشد.');
-        if ($order['status'] === 'paid') { $this->users->addCourse($order['user_id'], $order['item_id']); return ['successful' => true, 'order' => $order, 'transaction' => $transaction, 'message' => 'این پرداخت قبلاً تأیید شده است.']; }
-        if (strtotime($order['expires_at']) < time()) {
+        if ($order['status'] === 'paid') { return ['successful' => true, 'order' => $order, 'transaction' => $transaction, 'message' => 'این پرداخت قبلاً تأیید شده است.']; }
+        if (strtotime($order['expires_at'] . ' UTC') < time()) {
             $this->commerce->markFailed($order['id'], $transaction['id'], 'expired', 'مهلت پرداخت سفارش پایان یافته است.');
             return ['successful' => false, 'order' => $this->commerce->findOrder($order['id']), 'transaction' => $transaction, 'message' => 'مهلت پرداخت سفارش پایان یافته است.'];
         }
@@ -66,7 +65,6 @@ final class PaymentService
             return ['successful' => false, 'order' => $this->commerce->findOrder($order['id']), 'transaction' => $transaction, 'message' => $verification->message ?? 'پرداخت تأیید نشد.'];
         }
         $order = $this->commerce->finalizePayment($order['id'], $transaction['id'], $verification->referenceId ?? '', $verification->raw);
-        $this->users->addCourse($order['user_id'], $order['item_id']);
         return ['successful' => true, 'order' => $order, 'transaction' => $this->commerce->findTransactionByAuthority($authority), 'message' => 'پرداخت با موفقیت تأیید شد.'];
     }
 

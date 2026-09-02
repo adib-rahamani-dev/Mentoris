@@ -13,10 +13,12 @@ final class ProgramsController extends Controller
 {
     public function index(Request $request): Response
     {
+        $programs = PublicContentService::programs();
         return $this->view('pages.programs', [
-            'title' => 'دوره‌ها و برنامه‌های Mentoris',
-            'description' => 'دوره‌ها، کارگاه‌ها و مسیرهای یادگیری تخصصی Mentoris.',
-            'programs' => PublicContentService::programs(),
+            'title' => t('nav.programs') . ' | Mentoris Academy',
+            'description' => t('empty.text'),
+            'indexable' => $programs !== [],
+            'programs' => $programs,
             'lines' => PublicContentService::academyLines(),
         ]);
     }

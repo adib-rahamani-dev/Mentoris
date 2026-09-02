@@ -6,7 +6,7 @@ export class Theme {
     if (!button) return null;
     const apply = (theme, persist = true) => {
       document.documentElement.dataset.theme = theme;
-      button.setAttribute('aria-label', theme === 'dark' ? 'فعال‌کردن حالت روشن' : 'فعال‌کردن حالت تیره');
+      button.setAttribute('aria-label', theme === 'dark' ? (button.dataset.labelLight || 'Switch to light theme') : (button.dataset.labelDark || 'Switch to dark theme'));
       button.setAttribute('aria-pressed', String(theme === 'light'));
       document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#050914' : '#f6f7fb');
       if (persist) localStorage.setItem(Theme.key, theme);

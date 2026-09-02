@@ -13,10 +13,13 @@ final class AboutController extends Controller
 {
     public function index(Request $request): Response
     {
+        $about = PublicContentService::about();
         return $this->view('pages.about', [
-            'title' => 'درباره Mentoris',
-            'description' => 'داستان، مأموریت، چشم‌انداز و ارزش‌های آکادمی Mentoris.',
+            'title' => $about['title'] . ' | Mentoris Academy',
+            'description' => $about['lead'],
             'lines' => PublicContentService::academyLines(),
+            'about' => $about,
+            'founder' => PublicContentService::founder(),
         ]);
     }
 }

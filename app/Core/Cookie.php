@@ -18,10 +18,12 @@ final class Cookie
         bool $httpOnly = true,
         string $sameSite = 'Lax'
     ): bool {
+        $forwardedProto = strtolower(trim(explode(',', (string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''))[0] ?? ''));
+        $isSecure = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== '' && $_SERVER['HTTPS'] !== 'off') || $forwardedProto === 'https';
         return setcookie($name, $value, [
             'expires' => time() + ($minutes * 60),
             'path' => '/',
-            'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+            'secure' => $isSecure,
             'httponly' => $httpOnly,
             'samesite' => $sameSite,
         ]);
@@ -30,6 +32,8 @@ final class Cookie
     public static function forget(string $name): bool
     {
         unset($_COOKIE[$name]);
-        return setcookie($name, '', ['expires' => time() - 3600, 'path' => '/']);
+        $forwardedProto = strtolower(trim(explode(',', (string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''))[0] ?? ''));
+        $isSecure = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== '' && $_SERVER['HTTPS'] !== 'off') || $forwardedProto === 'https';
+        return setcookie($name, '', ['expires' => time() - 3600, 'path' => '/', 'secure' => $isSecure, 'httponly' => true, 'samesite' => 'Lax']);
     }
 }

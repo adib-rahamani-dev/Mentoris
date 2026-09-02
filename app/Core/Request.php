@@ -38,8 +38,8 @@ final class Request
     {
         $method = strtoupper((string) ($this->server['REQUEST_METHOD'] ?? 'GET'));
         $override = $this->body['_method'] ?? $this->header('X-HTTP-Method-Override');
-
-        return is_string($override) && $override !== '' ? strtoupper($override) : $method;
+        $override = is_string($override) ? strtoupper($override) : '';
+        return $method === 'POST' && in_array($override, ['PUT', 'PATCH', 'DELETE'], true) ? $override : $method;
     }
 
     public function uri(): string
@@ -111,7 +111,14 @@ final class Request
 
     public function ip(): string
     {
-        return (string) ($this->server['REMOTE_ADDR'] ?? '127.0.0.1');
+        $remote = (string) ($this->server['REMOTE_ADDR'] ?? '127.0.0.1');
+        $trusted = array_filter(array_map('trim', explode(',', (string) env('TRUSTED_PROXIES', ''))));
+        $trustForwarded = env('VERCEL', '') === '1' || in_array($remote, $trusted, true);
+        if ($trustForwarded) {
+            $forwarded = trim(explode(',', (string) ($this->server['HTTP_X_FORWARDED_FOR'] ?? ''))[0] ?? '');
+            if (filter_var($forwarded, FILTER_VALIDATE_IP)) return $forwarded;
+        }
+        return filter_var($remote, FILTER_VALIDATE_IP) ? $remote : '127.0.0.1';
     }
 
     public function raw(): string

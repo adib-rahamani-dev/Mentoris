@@ -20,12 +20,33 @@ final class CsrfMiddleware implements MiddlewareInterface
             return $next($request);
         }
 
+        $origin = trim((string) $request->header('Origin', ''));
+        if ($origin !== '' && !$this->sameOrigin($origin, (string) env('APP_URL', ''))) {
+            return $this->rejected($request);
+        }
+
         $token = $request->input('_token') ?? $request->header('X-CSRF-TOKEN');
         if (!$this->csrf->validate(is_string($token) ? $token : null)) {
-            return $request->expectsJson()
-                ? Response::json(['message' => 'CSRF token mismatch'], 419)
-                : Response::html('<h1>419 - Page Expired</h1>', 419);
+            return $this->rejected($request);
         }
         return $next($request);
+    }
+
+    private function sameOrigin(string $origin, string $applicationUrl): bool
+    {
+        $left = parse_url($origin);
+        $right = parse_url($applicationUrl);
+        if (!is_array($left) || !is_array($right)) return false;
+        $port = static fn (array $url): int => (int) ($url['port'] ?? (($url['scheme'] ?? '') === 'https' ? 443 : 80));
+        return strtolower((string) ($left['scheme'] ?? '')) === strtolower((string) ($right['scheme'] ?? ''))
+            && strtolower((string) ($left['host'] ?? '')) === strtolower((string) ($right['host'] ?? ''))
+            && $port($left) === $port($right);
+    }
+
+    private function rejected(Request $request): Response
+    {
+        return $request->expectsJson()
+            ? Response::json(['message' => 'CSRF token mismatch'], 419)
+            : Response::html('<!doctype html><html lang="fa" dir="rtl"><meta charset="utf-8"><title>نشست منقضی شد</title><body><main><h1>نشست منقضی شد</h1><p>صفحه را تازه کنید و دوباره تلاش کنید.</p></main></body></html>', 419);
     }
 }

@@ -10,6 +10,7 @@ use App\Core\Response;
 use App\Core\Session;
 use App\Core\Validator;
 use App\Services\PublicContentService;
+use App\Services\SeoService;
 
 final class EventsController extends Controller
 {
@@ -17,8 +18,8 @@ final class EventsController extends Controller
     {
         $events = array_map(fn (array $event): array => PublicContentService::event($event['slug']) ?? $event, PublicContentService::events());
         return $this->view('pages.events', [
-            'title' => 'رویدادهای Mentoris',
-            'description' => 'کارگاه‌ها، نشست‌ها و تجربه‌های جمعی آکادمی و Community منتوریس.',
+            'title' => t('nav.events') . ' | Mentoris Academy',
+            'description' => $events[0]['short_description'] ?? t('empty.text'),
             'events' => $events,
             'statuses' => PublicContentService::eventStatusLabels(),
         ]);
@@ -72,6 +73,8 @@ final class EventsController extends Controller
         return $this->view('pages.event-details', [
             'title' => $event['title'] . ' | Events',
             'description' => $event['short_description'],
+            'seoType' => 'event',
+            'structuredData' => [SeoService::eventSchema($event)],
             'event' => $event,
             'errors' => $errors,
             'old' => $old,

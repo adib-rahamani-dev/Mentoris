@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Mentoris Academy</title>
+  <defs>
+    <linearGradient id="m" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#c4b5fd"/>
+      <stop offset=".48" stop-color="#8b5cf6"/>
+      <stop offset="1" stop-color="#2dd4bf"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="18" fill="#050914"/>
+  <path d="M14 45V19c0-2.6 3.4-3.6 4.8-1.4L32 38.4l13.2-20.8c1.4-2.2 4.8-1.2 4.8 1.4v26" fill="none" stroke="url(#m)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

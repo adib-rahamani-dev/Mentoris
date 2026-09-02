@@ -9,7 +9,7 @@ import { Navbar } from './components/navbar.js?v=2.0.0';
 import { initReveal } from './components/reveal.js?v=2.0.0';
 import { initProgramFilters, initCourseFilters } from './pages/courses.js?v=6.0.0';
 import { initEventFilters } from './pages/events.js?v=5.0.0';
-import { Theme } from './components/theme.js?v=8.0.0';
+import { Theme } from './components/theme.js?v=10.0.0';
 
 ready(() => {
   Theme.init(); Modal.init(); Dropdown.init(); Tabs.init(); Accordion.init(); Slider.init(); Navbar.init(); initReveal(); initProgramFilters(); initCourseFilters(); initEventFilters();

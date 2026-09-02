@@ -1,7 +1,7 @@
-@import url("./variables.css?v=2.0.0");
+@import url("./variables.css?v=10.0.0");
 @import url("./reset.css?v=2.0.0");
-@import url("./typography.css?v=2.0.0");
-@import url("./global.css?v=2.0.0");
+@import url("./typography.css?v=10.0.0");
+@import url("./global.css?v=10.0.0");
 @import url("./utilities.css?v=2.0.0");
 
 @import url("./layout/container.css?v=2.0.0");
@@ -16,7 +16,7 @@
 @import url("./components/modal.css?v=2.0.0");
 @import url("./components/tabs.css?v=2.0.0");
 @import url("./components/accordion.css?v=2.0.0");
-@import url("./components/navbar.css?v=2.0.0");
+@import url("./components/navbar.css?v=10.0.0");
 @import url("./components/loaders.css?v=2.0.0");
 @import url("./components/slider.css?v=2.0.0");
 @import url("./components/toast.css?v=2.0.0");
@@ -29,15 +29,16 @@
 @import url("./sections/mentors.css?v=3.0.0");
 @import url("./sections/research.css?v=3.0.0");
 
-@import url("./pages/home.css?v=3.0.0");
-@import url("./pages/about.css?v=3.0.0");
-@import url("./pages/founder.css?v=3.0.0");
+@import url("./pages/home.css?v=10.0.0");
+@import url("./pages/about.css?v=10.0.0");
+@import url("./pages/founder.css?v=10.0.0");
 @import url("./pages/courses.css?v=6.0.0");
-@import url("./pages/mentor.css?v=3.0.0");
-@import url("./pages/contact.css?v=3.0.0");
+@import url("./pages/mentor.css?v=10.0.0");
+@import url("./pages/contact.css?v=10.0.0");
 @import url("./pages/programs-academy.css?v=4.0.0");
 @import url("./pages/events-community.css?v=5.0.0");
 @import url("./pages/auth.css?v=7.0.0");
 @import url("./pages/payment.css?v=8.0.0");
-@import url("./theme.css?v=8.0.0");
+@import url("./pages/admin.css?v=9.0.0");
+@import url("./theme.css?v=10.0.0");
 @import url("./responsive.css?v=2.0.0");

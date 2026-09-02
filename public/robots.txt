@@ -1,1 +1,19 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api
+Disallow: /checkout
+Disallow: /dashboard
+Disallow: /design-system
+Disallow: /forgot-password
+Disallow: /framework
+Disallow: /login
+Disallow: /my-
+Disallow: /notifications
+Disallow: /orders
+Disallow: /payment
+Disallow: /profile
+Disallow: /register
+Disallow: /reset-password
 
+Sitemap: https://mentorisacademy.com/sitemap.xml

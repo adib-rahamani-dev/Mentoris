@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Core\Application;
+use App\Core\Translator;
 
 require_once __DIR__ . '/constants.php';
 require_once __DIR__ . '/autoload.php';
@@ -21,6 +22,13 @@ if (is_file($environmentFile)) {
             putenv("{$key}={$value}");
         }
     }
+}
+
+Translator::boot($_GET, $_COOKIE, $_SERVER);
+date_default_timezone_set((string) env('APP_TIMEZONE', 'Asia/Tehran'));
+if (env('APP_ENV', 'production') === 'production') {
+    ini_set('display_errors', '0');
+    ini_set('log_errors', '1');
 }
 
 $app = new Application(BASE_PATH, (bool) env('APP_DEBUG', false));

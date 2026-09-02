@@ -1,0 +1,65 @@
+<?php
+
+declare(strict_types=1);
+
+use App\Core\Crypto;
+use App\Core\Database;
+use App\Core\Migrator;
+
+require dirname(__DIR__) . '/bootstrap/constants.php';
+require BASE_PATH . '/bootstrap/autoload.php';
+
+$envFile = BASE_PATH . '/.env';
+if (is_file($envFile)) {
+    foreach (file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [] as $line) {
+        $line = trim($line);
+        if ($line === '' || str_starts_with($line, '#') || !str_contains($line, '=')) continue;
+        [$key, $value] = array_map('trim', explode('=', $line, 2));
+        $value = trim($value, "\"'");
+        if ($key !== '' && getenv($key) === false) putenv("{$key}={$value}");
+    }
+}
+
+$command = $argv[1] ?? 'help';
+try {
+    if ($command === 'key:generate') {
+        $key = Crypto::generateKey();
+        $contents = is_file($envFile) ? (string) file_get_contents($envFile) : '';
+        $contents = preg_match('/^APP_KEY=.*$/m', $contents)
+            ? (string) preg_replace('/^APP_KEY=.*$/m', 'APP_KEY=' . $key, $contents)
+            : rtrim($contents) . PHP_EOL . 'APP_KEY=' . $key . PHP_EOL;
+        $temporary = $envFile . '.tmp';
+        if (file_put_contents($temporary, $contents, LOCK_EX) === false || !rename($temporary, $envFile)) throw new RuntimeException('Could not update .env safely.');
+        echo "Application key generated. Keep .env private.\n";
+        exit(0);
+    }
+    if ($command === 'db:create') {
+        $config = Database::environmentConfig();
+        if ($config['driver'] !== 'mysql') throw new RuntimeException('db:create is only available for MySQL.');
+        $database = (string) $config['database'];
+        if (!preg_match('/^[A-Za-z0-9_]+$/', $database)) throw new RuntimeException('Invalid database name.');
+        $pdo = new PDO("mysql:host={$config['host']};port={$config['port']};charset={$config['charset']}", $config['username'], $config['password'], [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_EMULATE_PREPARES => false]);
+        $pdo->exec("CREATE DATABASE IF NOT EXISTS `{$database}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+        echo "Database {$database} is ready.\n";
+        exit(0);
+    }
+    if (in_array($command, ['migrate', 'migrate:status', 'db:check'], true)) {
+        $pdo = Database::connection();
+        if ($command === 'db:check') {
+            echo Database::ping($pdo) ? "Database connection is healthy.\n" : "Database connection failed.\n";
+            exit(Database::ping($pdo) ? 0 : 1);
+        }
+        $migrator = new Migrator($pdo, BASE_PATH . '/database/migrations');
+        if ($command === 'migrate') {
+            $applied = $migrator->migrate();
+            echo $applied === [] ? "Nothing to migrate.\n" : "Applied: " . implode(', ', $applied) . "\n";
+        } else {
+            foreach ($migrator->status() as $row) echo ($row['applied'] ? '[x] ' : '[ ] ') . $row['migration'] . PHP_EOL;
+        }
+        exit(0);
+    }
+    echo "Mentoris console\n\nCommands:\n  key:generate\n  db:create\n  db:check\n  migrate\n  migrate:status\n";
+} catch (Throwable $exception) {
+    fwrite(STDERR, 'ERROR: ' . $exception->getMessage() . PHP_EOL);
+    exit(1);
+}

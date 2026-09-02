@@ -13,10 +13,11 @@ final class MentorsController extends Controller
 {
     public function index(Request $request): Response
     {
+        $mentors = PublicContentService::mentors();
         return $this->view('pages.mentors', [
-            'title' => 'اساتید و متخصصان Mentoris',
-            'description' => 'با شبکه استادان، درمانگران و پژوهشگران Mentoris آشنا شوید.',
-            'mentors' => PublicContentService::mentors(),
+            'title' => t('nav.mentors') . ' | Mentoris Academy',
+            'description' => $mentors[0]['specialty'] ?? t('empty.text'),
+            'mentors' => $mentors,
         ]);
     }
 }

@@ -14,13 +14,15 @@ final class HomeController extends Controller
     public function index(Request $request): Response
     {
         return $this->view('pages.public-home', [
-            'title' => 'Mentoris | آکادمی رشد، یادگیری و تأثیرگذاری',
-            'description' => 'اکوسیستم علمی و حرفه‌ای برای روان‌شناسان، درمانگران، دانشجویان و علاقه‌مندان به سلامت روان.',
+            'title' => 'Mentoris Academy | ' . t('home.title.accent'),
+            'description' => t('home.lead'),
             'lines' => PublicContentService::academyLines(),
             'events' => PublicContentService::events(),
-            'programs' => array_slice(PublicContentService::courses(), 0, 3),
+            'programs' => [],
             'mentors' => PublicContentService::mentors(),
             'articles' => PublicContentService::articles(),
+            'founder' => PublicContentService::founder(),
+            'about' => PublicContentService::about(),
         ]);
     }
 

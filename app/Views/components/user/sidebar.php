@@ -12,6 +12,7 @@ $unread = count(array_filter($user['notifications'] ?? [], fn ($item) => empty($
         <a class="<?= $userPath === '/my-certificates' ? 'is-active' : '' ?>" href="/my-certificates"><span>◇</span>گواهی‌های من</a>
         <a class="<?= $userPath === '/notifications' ? 'is-active' : '' ?>" href="/notifications"><span>◉</span>اعلان‌ها<?php if ($unread): ?><em><?= $unread ?></em><?php endif; ?></a>
         <a class="<?= $userPath === '/profile' ? 'is-active' : '' ?>" href="/profile"><span>◎</span>پروفایل</a>
+        <?php if (\App\Core\Authorization::can($user, 'admin.access')): ?><a href="/admin"><span>⚙</span>مرکز مدیریت</a><?php endif; ?>
     </nav>
     <form method="post" action="/logout"><?= csrf_field() ?><button type="submit"><span>←</span>خروج از حساب</button></form>
 </aside>

@@ -6,6 +6,7 @@ namespace App\Core;
 
 final class Security
 {
+    private static ?string $cspNonce = null;
     public static function escape(mixed $value): string
     {
         return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
@@ -23,7 +24,13 @@ final class Security
 
     public static function hashPassword(string $password): string
     {
-        return password_hash($password, PASSWORD_DEFAULT);
+        $algorithm = defined('PASSWORD_ARGON2ID') ? PASSWORD_ARGON2ID : PASSWORD_DEFAULT;
+        $options = $algorithm === PASSWORD_ARGON2ID
+            ? ['memory_cost' => max(32 * 1024, (int) env('PASSWORD_MEMORY_COST', 65536)), 'time_cost' => max(2, (int) env('PASSWORD_TIME_COST', 4)), 'threads' => max(1, (int) env('PASSWORD_THREADS', 2))]
+            : ['cost' => max(10, (int) env('PASSWORD_BCRYPT_COST', 12))];
+        $hash = password_hash($password, $algorithm, $options);
+        if (!is_string($hash)) throw new \RuntimeException('Password hashing failed.');
+        return $hash;
     }
 
     public static function verifyPassword(string $password, string $hash): bool
@@ -34,5 +41,16 @@ final class Security
     public static function hashEquals(string $known, string $user): bool
     {
         return hash_equals($known, $user);
+    }
+
+    public static function passwordNeedsRehash(string $hash): bool
+    {
+        $algorithm = defined('PASSWORD_ARGON2ID') ? PASSWORD_ARGON2ID : PASSWORD_DEFAULT;
+        return password_needs_rehash($hash, $algorithm);
+    }
+
+    public static function cspNonce(): string
+    {
+        return self::$cspNonce ??= base64_encode(random_bytes(18));
     }
 }

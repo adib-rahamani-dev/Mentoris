@@ -3,10 +3,11 @@
 declare(strict_types=1);
 
 use App\Payments\SandboxIranianGateway;
+use App\Core\Database;
+use App\Core\Migrator;
 use App\Repositories\CommerceRepository;
 use App\Repositories\UserRepository;
 use App\Services\PaymentService;
-use App\Services\PublicContentService;
 
 require dirname(__DIR__) . '/bootstrap/constants.php';
 require dirname(__DIR__) . '/bootstrap/autoload.php';
@@ -17,18 +18,17 @@ $assert = static function (bool $condition, string $message) use (&$passed): voi
     $passed++;
 };
 
-$directory = STORAGE_PATH . '/testing-payment';
-$usersPath = $directory . '/users.json';
-$commercePath = $directory . '/commerce.json';
-$users = new UserRepository($usersPath);
-$commerce = new CommerceRepository($commercePath);
+$database = Database::connect(['driver' => 'sqlite', 'database' => ':memory:']);
+(new Migrator($database, BASE_PATH . '/database/migrations'))->migrate();
+$users = new UserRepository($database);
+$commerce = new CommerceRepository($database);
 $payments = new PaymentService(new SandboxIranianGateway(), $commerce, $users);
 
 try {
     $user = $users->create(['name' => 'خریدار تست', 'email' => 'buyer@example.test', 'password' => 'SecurePass123']);
     $secondUser = $users->create(['name' => 'خریدار دوم', 'email' => 'buyer2@example.test', 'password' => 'SecurePass123']);
-    $course = PublicContentService::course('schema-therapy');
-    $assert($course['price_amount'] === 4900000 && $course['currency'] === 'IRT', 'Course exposes a numeric toman price.');
+    $course = ['slug'=>'payment-fixture','title'=>'دوره تست پرداخت','price_amount'=>4900000,'currency'=>'IRT','available'=>20,'can_enroll'=>true];
+    $assert($course['price_amount'] === 4900000 && $course['currency'] === 'IRT', 'Payment fixture exposes a numeric toman price.');
 
     $first = $payments->checkoutCourse($course, $user);
     $assert($first['order']['status'] === 'pending', 'Checkout creates a pending order.');
@@ -62,7 +62,7 @@ try {
     try { $payments->checkoutCourse($course, $user); } catch (RuntimeException) { $duplicateRejected = true; }
     $assert($duplicateRejected, 'Already enrolled user cannot purchase the course again.');
 
-    $freeCourse = PublicContentService::course('mental-health-literacy');
+    $freeCourse = ['slug'=>'free-payment-fixture','title'=>'دوره رایگان تست','price_amount'=>0,'currency'=>'IRT','available'=>20,'can_enroll'=>true];
     $free = $payments->checkoutCourse($freeCourse, $user);
     $assert($free['order']['status'] === 'paid', 'Free checkout completes without gateway redirect.');
     $assert(str_starts_with($free['redirect_url'], '/payment/result'), 'Free checkout redirects to payment result.');
@@ -82,10 +82,6 @@ try {
     $assert($unknownRejected, 'Unknown authority is rejected.');
     $assert(count($payments->userOrders($user['id'])) === 3, 'User order history contains canceled, paid, and free orders.');
     $assert(count($payments->orderTransactions($second['order']['id'])) === 1, 'Order exposes its transaction history.');
-} finally {
-    if (is_file($usersPath)) unlink($usersPath);
-    if (is_file($commercePath)) unlink($commercePath);
-    if (is_dir($directory) && (scandir($directory) ?: []) === ['.', '..']) rmdir($directory);
-}
+} finally {}
 
 echo "Payment & Enrollment: {$passed} assertions passed." . PHP_EOL;

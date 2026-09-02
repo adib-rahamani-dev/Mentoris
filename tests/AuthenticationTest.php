@@ -3,6 +3,9 @@
 declare(strict_types=1);
 
 use App\Core\Security;
+use App\Core\Authorization;
+use App\Core\Database;
+use App\Core\Migrator;
 use App\Repositories\UserRepository;
 require dirname(__DIR__) . '/bootstrap/constants.php';
 require dirname(__DIR__) . '/bootstrap/autoload.php';
@@ -13,9 +16,9 @@ $assert = static function (bool $condition, string $message) use (&$passed): voi
     $passed++;
 };
 
-$testDirectory = STORAGE_PATH . '/testing';
-$testPath = $testDirectory . '/users-' . getmypid() . '.json';
-$repository = new UserRepository($testPath);
+$database = Database::connect(['driver' => 'sqlite', 'database' => ':memory:']);
+(new Migrator($database, BASE_PATH . '/database/migrations'))->migrate();
+$repository = new UserRepository($database);
 
 try {
     $user = $repository->create(['name' => 'کاربر تست', 'email' => 'USER@example.test', 'password' => 'StrongPass123']);
@@ -25,6 +28,8 @@ try {
     $assert(Security::verifyPassword('StrongPass123', $user['password_hash']), 'Password hash verifies.');
     $assert(!Security::verifyPassword('WrongPass123', $user['password_hash']), 'Wrong password is rejected.');
     $assert(count($user['notifications']) === 1, 'New user receives a welcome notification.');
+    $assert($user['account_role'] === 'student' && $user['status'] === 'active', 'New account receives safe default access.');
+    $assert(!Authorization::can($user, 'admin.access'), 'Regular user cannot access administration.');
 
     $found = $repository->findByEmail('User@Example.Test');
     $assert($found !== null && $found['id'] === $user['id'], 'Email lookup is case-insensitive.');
@@ -56,9 +61,10 @@ try {
     $assert($readUser['notifications'][0]['read_at'] !== null, 'Notifications can be marked read.');
     $public = UserRepository::publicUser($readUser);
     $assert(!isset($public['password_hash'], $public['reset_token_hash'], $public['reset_token_expires_at']), 'Public user excludes secrets.');
-} finally {
-    if (is_file($testPath)) unlink($testPath);
-    if (is_dir($testDirectory) && (scandir($testDirectory) ?: []) === ['.', '..']) rmdir($testDirectory);
-}
+    $admin = $repository->updateAccess($user['id'], 'admin', 'active');
+    $assert($admin['account_role'] === 'admin' && Authorization::can($admin, 'users.manage'), 'Administrator role grants user management permission.');
+    $repository->recordLogin($user['id']);
+    $assert($repository->findById($user['id'])['last_login_at'] !== null, 'Last login can be recorded for analytics.');
+} finally {}
 
 echo "Authentication: {$passed} assertions passed." . PHP_EOL;
