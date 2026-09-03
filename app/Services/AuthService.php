@@ -27,10 +27,6 @@ final class AuthService
         $hash = $user !== null ? (string) $user['password_hash'] : (self::$dummyHash ??= Security::hashPassword('not-a-real-password-' . Security::randomToken(8)));
         $valid = Security::verifyPassword($password, $hash);
         if ($user === null || ($user['status'] ?? 'active') !== 'active' || !$valid) return false;
-        $superAdmins = array_values(array_filter(array_map('trim', explode(',', mb_strtolower((string) env('SUPER_ADMIN_EMAILS', ''))))));
-        if (in_array(mb_strtolower((string) $user['email']), $superAdmins, true) && ($user['account_role'] ?? '') !== 'super_admin') {
-            $user = $this->users->updateAccess((string) $user['id'], 'super_admin', 'active') ?? $user;
-        }
         if (Security::passwordNeedsRehash((string) $user['password_hash'])) $this->users->rehashPassword($user['id'], $password);
         $this->users->recordLogin((string) $user['id']);
         $this->loginUser($user);

@@ -8,11 +8,13 @@ use App\Core\Controller;
 use App\Core\Request;
 use App\Core\Response;
 use App\Core\Validator;
+use App\Repositories\EngagementRepository;
 
 final class ContactController extends Controller
 {
     public function index(Request $request): Response
     {
+        if ($valid) (new EngagementRepository())->createContactMessage($data, $request->ip());
         return $this->view('pages.contact', [
             'title' => t('nav.contact') . ' | Mentoris Academy',
             'description' => t('footer.tagline'),
@@ -38,7 +40,7 @@ final class ContactController extends Controller
             'title' => t('nav.contact') . ' | Mentoris Academy',
             'description' => t('footer.tagline'),
             'errors' => $validator->errors(),
-            'old' => $data,
+            'old' => $valid ? [] : $data,
             'success' => $valid,
         ]);
     }

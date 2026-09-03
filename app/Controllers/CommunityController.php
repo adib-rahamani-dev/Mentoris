@@ -7,9 +7,11 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Core\Request;
 use App\Core\Response;
-use App\Core\Session;
 use App\Core\Validator;
+use App\Repositories\EngagementRepository;
+use App\Services\AuthService;
 use App\Services\PublicContentService;
+use RuntimeException;
 
 final class CommunityController extends Controller
 {
@@ -33,10 +35,12 @@ final class CommunityController extends Controller
             return $this->renderCommunity($validator->errors(), $data);
         }
 
-        (new Session())->put('community.membership.' . hash('sha256', strtolower((string) $data['email'])), [
-            ...$data,
-            'joined_at' => date(DATE_ATOM),
-        ]);
+        try {
+            $user = (new AuthService())->user();
+            (new EngagementRepository())->joinCommunity($data, $user['id'] ?? null);
+        } catch (RuntimeException $exception) {
+            return $this->renderCommunity(['email' => [$exception->getMessage()]], $data);
+        }
         return $this->renderCommunity([], [], true);
     }
 

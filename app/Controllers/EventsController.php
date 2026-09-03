@@ -7,10 +7,12 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Core\Request;
 use App\Core\Response;
-use App\Core\Session;
 use App\Core\Validator;
+use App\Repositories\EngagementRepository;
+use App\Services\AuthService;
 use App\Services\PublicContentService;
 use App\Services\SeoService;
+use RuntimeException;
 
 final class EventsController extends Controller
 {
@@ -56,13 +58,12 @@ final class EventsController extends Controller
             return $this->renderEvent($event, $validator->errors(), $data);
         }
 
-        $session = new Session();
-        $registrationKey = 'event.registration.' . $slug;
-        if ($session->has($registrationKey)) {
-            return $this->renderEvent($event, [], $data, false, 'درخواست ثبت‌نام شما قبلاً ثبت شده است.');
+        try {
+            $user = (new AuthService())->user();
+            (new EngagementRepository())->registerEvent($slug, $data, $user['id'] ?? null);
+        } catch (RuntimeException $exception) {
+            return $this->renderEvent($event, [], $data, false, $exception->getMessage());
         }
-
-        $session->put($registrationKey, [...$data, 'registered_at' => date(DATE_ATOM)]);
         $event['registered'] = min($event['capacity'], $event['registered'] + 1);
         $event['available'] = max(0, $event['capacity'] - $event['registered']);
         return $this->renderEvent($event, [], [], true);

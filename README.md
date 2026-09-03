@@ -9,14 +9,18 @@ URL -> Router -> Middleware -> Controller -> View -> Response
 ## Requirements
 
 - PHP 8.1+
+- MySQL 8+ with PDO MySQL
 - Apache with `mod_rewrite`, or another web server whose document root points to `public/`
 - Composer
 
 ## Local setup
 
+راهنمای کامل فارسی نصب، MySQL، ساخت مدیر و production در [docs/SETUP-FA.md](docs/SETUP-FA.md) قرار دارد.
+
 ```bash
 composer install
-php tests/CoreEngineTest.php
+php bin/console migrate
+php tests/DatabaseSecurityTest.php
 ```
 
 When Laragon maps `mentoris.test` to the project root, the root `.htaccess` forwards requests to the public front controller automatically.

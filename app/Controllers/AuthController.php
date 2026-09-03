@@ -6,6 +6,7 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Core\Request;
+use App\Core\RateLimiter;
 use App\Core\Response;
 use App\Core\Session;
 use App\Core\Validator;
@@ -44,9 +45,15 @@ final class AuthController extends Controller
         $validator = new Validator();
         $validator->validate($data, ['email' => 'required|email|max:120', 'password' => 'required|string|max:128']);
         if ($validator->fails()) return $this->authView('login', $validator->errors(), ['email' => $data['email'] ?? '']);
+        $limiter = new RateLimiter();
+        $limitKey = 'login-account|' . mb_strtolower(trim((string) $data['email']));
+        if (!$limiter->hit($limitKey, 10, 900)['allowed']) {
+            return $this->authView('login', ['credentials' => ['تلاش‌های ورود بیش از حد مجاز بود؛ ۱۵ دقیقه دیگر دوباره امتحان کنید.']], ['email' => $data['email']]);
+        }
         if (!(new AuthService())->attempt((string) $data['email'], (string) $data['password'])) {
             return $this->authView('login', ['credentials' => ['ایمیل یا رمز عبور صحیح نیست.']], ['email' => $data['email']]);
         }
+        $limiter->clear($limitKey);
         return $this->redirect($this->intended());
     }
 

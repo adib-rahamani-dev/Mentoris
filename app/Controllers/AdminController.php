@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Core\Authorization;
+use App\Core\Audit;
 use App\Core\Controller;
 use App\Core\Request;
 use App\Core\Response;
@@ -54,6 +55,7 @@ final class AdminController extends Controller
             return Response::redirect('/admin/users?error=self-access');
         }
         $repository->updateAccess($id, $role, $status);
+        Audit::record('user.access.updated', 'user', $id, $current['id'] ?? null, ['account_role' => $target['account_role'], 'status' => $target['status']], ['account_role' => $role, 'status' => $status], $request->ip());
         return Response::redirect('/admin/users?updated=1');
     }
 

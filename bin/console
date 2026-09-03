@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Core\Crypto;
 use App\Core\Database;
 use App\Core\Migrator;
+use App\Repositories\UserRepository;
 
 require dirname(__DIR__) . '/bootstrap/constants.php';
 require BASE_PATH . '/bootstrap/autoload.php';
@@ -43,6 +44,16 @@ try {
         echo "Database {$database} is ready.\n";
         exit(0);
     }
+    if ($command === 'admin:promote') {
+        $email = trim((string) ($argv[2] ?? ''));
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) throw new RuntimeException('Usage: php bin/console admin:promote you@example.com');
+        $repository = new UserRepository();
+        $user = $repository->findByEmail($email);
+        if ($user === null) throw new RuntimeException('Register this email on the site first.');
+        $repository->updateAccess((string) $user['id'], 'super_admin', 'active');
+        echo "Super administrator access granted. Existing sessions were revoked.\n";
+        exit(0);
+    }
     if (in_array($command, ['migrate', 'migrate:status', 'db:check'], true)) {
         $pdo = Database::connection();
         if ($command === 'db:check') {
@@ -58,7 +69,7 @@ try {
         }
         exit(0);
     }
-    echo "Mentoris console\n\nCommands:\n  key:generate\n  db:create\n  db:check\n  migrate\n  migrate:status\n";
+    echo "Mentoris console\n\nCommands:\n  key:generate\n  db:create\n  db:check\n  migrate\n  migrate:status\n  admin:promote you@example.com\n";
 } catch (Throwable $exception) {
     fwrite(STDERR, 'ERROR: ' . $exception->getMessage() . PHP_EOL);
     exit(1);
