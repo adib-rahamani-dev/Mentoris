@@ -48,7 +48,7 @@ final class SeoService
         $path = self::currentPath();
         $baseUrl = self::baseUrl();
         $canonical = self::localizedUrl($path, $locale);
-        $image = self::absoluteUrl((string) ($options['image'] ?? '/assets/images/mentoris-hero-v1.png'));
+        $image = self::absoluteUrl((string) ($options['image'] ?? '/assets/images/mentoris-hero-sage-v2.png'));
         $indexable = (bool) ($options['indexable'] ?? self::isIndexable($path));
 
         return [
@@ -169,7 +169,7 @@ final class SeoService
                     'addressCountry' => 'IR',
                 ],
             ],
-            'image' => [self::absoluteUrl('/assets/images/mentoris-hero-v1.png')],
+            'image' => [self::absoluteUrl('/assets/' . ltrim((string) ($event['image'] ?? 'images/mentoris-hero-sage-v2.png'), '/'))],
             'organizer' => ['@id' => $baseUrl . '/#organization'],
             'performer' => ['@id' => $baseUrl . '/founder/#person'],
             'url' => self::localizedUrl('/events/' . $event['slug'], Translator::locale()),

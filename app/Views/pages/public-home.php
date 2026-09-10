@@ -6,20 +6,17 @@ $homeCopy = [
     'en' => ['about'=>'About Mentoris','about_link'=>'Our story','lines'=>'Academy pathways','lines_text'=>'Seven fields that shape Mentoris Academy’s scientific and professional roadmap.','events'=>'Upcoming event','events_text'=>'An opportunity to connect, exchange experience, and grow with a professional community.','courses'=>'Courses and learning programs','founder'=>'Founder of Mentoris','founder_link'=>'Read the full biography','experts'=>'Experts and academic collaborators','content'=>'Research and specialist content','community'=>'Mentoris professional community','community_text'=>'A network for learning, exchanging experience, and connecting therapists, researchers, and mental-health professionals.','join'=>'Join Mentoris','contact'=>'Contact us'],
 ][locale()] ?? [];
 ?>
-<section class="public-hero public-hero--founder" id="home">
+<section class="public-hero public-hero--sage" id="home">
     <div class="public-hero__backdrop" aria-hidden="true"></div>
-    <div class="container public-hero__founder-grid">
+    <div class="container public-hero__sage-grid">
         <div class="public-hero__content" data-reveal>
-            <span class="badge badge--brand"><?= e(t('home.badge')) ?></span>
+            <span class="hero-kicker"><i aria-hidden="true"></i><?= e(t('home.badge')) ?></span>
             <h1><?= e(t('home.title.before')) ?> <span class="text-gradient"><?= e(t('home.title.accent')) ?></span></h1>
             <p><?= e(t('home.lead')) ?></p>
             <div class="hero__actions"><a class="btn btn--primary btn--lg" href="/about"><?= e(t('home.cta.primary')) ?></a><a class="btn btn--ghost btn--lg" href="/founder"><?= e(t('home.cta.secondary')) ?></a></div>
-            <div class="hero-proof" aria-label="Mentoris values"><span><b>01</b> Science</span><span><b>02</b> Mentoring</span><span><b>03</b> Community</span></div>
+            <div class="hero-proof" aria-label="Mentoris values"><span><b>01</b> Learning</span><span><b>02</b> Mentorship</span><span><b>03</b> Community</span></div>
         </div>
-        <figure class="hero-founder" data-reveal>
-            <div class="hero-founder__frame"><img src="<?= asset($founder['image']) ?>" alt="<?= e($founder['name'] . '، ' . $founder['role']) ?>" width="1024" height="1536" fetchpriority="high"></div>
-            <figcaption><strong><?= e($founder['name']) ?></strong><span><?= e($founder['role']) ?></span></figcaption>
-        </figure>
+        <div class="hero-scene" data-reveal><img src="<?= asset('images/mentoris-hero-sage-v2.png') ?>" alt="فضای آرام و حرفه‌ای آکادمی منتوریس" width="1536" height="1024" fetchpriority="high"><div class="hero-scene__seal"><b>M</b><span>MENTORIS<br><small>ACADEMY</small></span></div></div>
     </div>
 </section>
 

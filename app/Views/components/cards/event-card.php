@@ -17,8 +17,9 @@ $cardCopy = [
 ][locale()];
 ?>
 <article class="card event-card event-card--<?= e($status) ?>">
-    <div class="event-card__visual event-card__visual--<?= e($event['tone'] ?? 'violet') ?>">
-        <span><?= e($event['day']) ?></span><small><?= e($event['month']) ?></small>
+    <div class="event-card__visual event-card__visual--<?= e($event['tone'] ?? 'sage') ?>">
+        <?php if (!empty($event['image'])): ?><img src="<?= asset($event['image']) ?>" alt="پوستر <?= e($event['title']) ?>" width="1080" height="1920" loading="lazy"><?php endif; ?>
+        <div class="event-card__date"><span><?= e($event['day']) ?></span><small><?= e($event['month']) ?></small></div>
         <em class="event-status event-status--<?= e($status) ?>"><?= e($statusLabel) ?></em>
     </div>
     <div class="card__body">

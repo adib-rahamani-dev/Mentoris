@@ -1,7 +1,15 @@
 Options -Indexes
 
+<IfModule mod_authz_core.c>
+    <FilesMatch "(^\.|\.(?:env|ini|log|sql|sqlite|bak|dist|lock)$)">
+        Require all denied
+    </FilesMatch>
+</IfModule>
+
 <IfModule mod_rewrite.c>
     RewriteEngine On
+    RewriteRule ^(?:app|bootstrap|bin|database|routes|storage|vendor)(?:/|$) - [F,L,NC]
+    RewriteRule ^admin/?$ public/index.php [QSA,L,NC]
     RewriteRule ^$ public/ [L]
     RewriteCond %{REQUEST_URI} !^/public/
     RewriteRule ^(.+)$ public/$1 [L]

@@ -17,10 +17,10 @@ final class Authorization
 
     private const PERMISSIONS = [
         'super_admin' => ['*'],
-        'admin' => ['admin.access', 'analytics.view', 'users.view', 'users.manage', 'content.view', 'content.manage', 'settings.manage'],
+        'admin' => ['admin.access', 'analytics.view', 'users.view', 'users.manage', 'content.view', 'content.manage', 'orders.view', 'engagements.view', 'engagements.manage', 'notifications.manage', 'audit.view', 'system.view', 'settings.manage'],
         'editor' => ['admin.access', 'analytics.view', 'content.view', 'content.manage'],
         'instructor' => ['admin.access', 'analytics.view', 'content.view'],
-        'support' => ['admin.access', 'analytics.view', 'users.view'],
+        'support' => ['admin.access', 'analytics.view', 'users.view', 'engagements.view', 'engagements.manage', 'notifications.manage'],
         'student' => [],
     ];
 

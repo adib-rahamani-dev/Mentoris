@@ -163,7 +163,8 @@ final class PublicContentService
         ]);
         return [[
             'slug' => 'therapists-circle-tabriz', 'day' => '۲۷', 'month' => $copy['month'], 'date' => $copy['date'], 'date_iso' => '2026-09-18', 'time' => $copy['time'],
-            'title' => $copy['title'], 'type' => $copy['type'], 'mode' => 'offline', 'location' => $copy['location'], 'tone' => 'violet',
+            'title' => $copy['title'], 'type' => $copy['type'], 'mode' => 'offline', 'location' => $copy['location'], 'tone' => 'sage',
+            'image' => 'images/therapists-circle-poster-v1.jpg',
             'status' => 'registration-open', 'capacity' => 0, 'registered' => 0, 'capacity_label' => 'ظرفیت محدود', 'instructor_slug' => 'maryam-haghani', 'line_slug' => 'therapist-development',
             'short_description' => $copy['short'], 'description' => $copy['description'],
             'highlights' => [$copy['short'], $copy['note']], 'registration_note' => $copy['note'],

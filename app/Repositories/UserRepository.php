@@ -100,8 +100,8 @@ final class UserRepository
     public function recordLogin(string $id): void
     {
         $now = Database::now();
-        $statement = $this->pdo()->prepare('UPDATE users SET last_login_at = :now, updated_at = :now WHERE id = :id');
-        $statement->execute(['now' => $now, 'id' => $id]);
+        $statement = $this->pdo()->prepare('UPDATE users SET last_login_at = :login_at, updated_at = :updated_at WHERE id = :id');
+        $statement->execute(['login_at' => $now, 'updated_at' => $now, 'id' => $id]);
     }
 
     public function updateAccess(string $id, string $accountRole, string $status): ?array
@@ -162,8 +162,8 @@ final class UserRepository
                 return false;
             }
             $now = Database::now();
-            $update = $pdo->prepare('UPDATE users SET password_hash = :password_hash, password_changed_at = :now, auth_version = auth_version + 1, updated_at = :now WHERE id = :user_id');
-            $update->execute(['password_hash' => Security::hashPassword($password), 'now' => $now, 'user_id' => $reset['user_id']]);
+            $update = $pdo->prepare('UPDATE users SET password_hash = :password_hash, password_changed_at = :changed_at, auth_version = auth_version + 1, updated_at = :updated_at WHERE id = :user_id');
+            $update->execute(['password_hash' => Security::hashPassword($password), 'changed_at' => $now, 'updated_at' => $now, 'user_id' => $reset['user_id']]);
             $consume = $pdo->prepare('UPDATE password_reset_tokens SET used_at = :now WHERE id = :id AND used_at IS NULL');
             $consume->execute(['now' => $now, 'id' => $reset['id']]);
             return $consume->rowCount() === 1;

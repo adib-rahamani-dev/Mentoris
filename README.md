@@ -1,95 +1,43 @@
-# Mentoris
+# Mentoris Academy
 
-Mentoris includes a small custom PHP framework built for the project. Phase 1 provides this request lifecycle:
+وب‌سایت و پنل اختصاصی Mentoris با PHP 8.1+ و MySQL 8.
+
+## اجرای محلی
+
+Laragon را اجرا کنید و Apache و MySQL را روشن نگه دارید. آدرس اصلی محلی:
 
 ```text
-URL -> Router -> Middleware -> Controller -> View -> Response
+http://mentoris.test
 ```
 
-## Requirements
+برای اجرای مستقیم PHP:
 
-- PHP 8.1+
-- MySQL 8+ with PDO MySQL
-- Apache with `mod_rewrite`, or another web server whose document root points to `public/`
-- Composer
+```powershell
+php -S 127.0.0.1:8090 -t public public/router.php
+```
 
-## Local setup
+فایل محرمانه `.env` عمداً در Git قرار نمی‌گیرد. Document Root وب‌سرور باید همیشه پوشه `public` باشد.
 
-راهنمای کامل فارسی نصب، MySQL، ساخت مدیر و production در [docs/SETUP-FA.md](docs/SETUP-FA.md) قرار دارد.
+## دیتابیس
 
-```bash
-composer install
+ساختار MySQL در `database/migrations/001_core.mysql.sql` قرار دارد. این فایل فاقد رمز و اطلاعات کاربری است و برای انتقال دیتابیس به هاست نگهداری می‌شود.
+
+فرمان‌های مدیریتی فقط از ترمینال سرور قابل اجرا هستند:
+
+```powershell
+php bin/console db:check
+php bin/console migrate:status
 php bin/console migrate
-php tests/DatabaseSecurityTest.php
+php bin/console admin:promote email@example.com
 ```
 
-When Laragon maps `mentoris.test` to the project root, the root `.htaccess` forwards requests to the public front controller automatically.
+## پنل‌ها
 
-Available smoke-test routes:
+- `/login` ورود
+- `/dashboard` پنل کاربر
+- `/admin` مدیریت
+- `/admin/users` کاربران و نقش‌ها
+- `/admin/content` وضعیت محتوا
+- `/admin/analytics` آمار
 
-- `GET /` — Mentoris public homepage
-- `GET /about` — mission, vision, story and academy lines
-- `GET /founder` — founder story and professional path
-- `GET /programs` — searchable and filterable program catalog
-- `GET /programs/{slug}` — complete program details and relationships
-- `GET /academy` — the seven Mentoris academy lines
-- `GET /academy/{slug}` — academy line details and related programs
-- `GET /specializations` — all 21 specializations grouped by line
-- `GET /specializations/{slug}` — specialization context and next steps
-- `GET /courses` — searchable course catalog with category, status and delivery filters
-- `GET /courses/{slug}` — complete course details, curriculum, instructor, capacity, FAQ and certificate
-- `GET /events` — searchable event catalog with status and delivery-mode filters
-- `GET /events/{slug}` — event details, capacity and registration state
-- `POST /events/{slug}/register` — CSRF-protected MVP registration request
-- `GET /community` — Community landing, benefits, rules and events
-- `POST /community/join` — CSRF-protected MVP membership request
-- `GET|POST /register` — account registration
-- `GET|POST /login` — account login
-- `POST /logout` — CSRF-protected logout
-- `GET|POST /forgot-password` — request a one-hour password reset token
-- `GET|POST /reset-password/{token}` — validate and consume a password reset token
-- `GET /dashboard` — protected user overview
-- `GET|POST /profile` — protected profile management
-- `GET /my-courses` — protected user course area
-- `GET /my-events` — protected user event area
-- `GET /my-certificates` — protected certificate area
-- `GET /notifications` — protected notification center
-- `GET|POST /checkout/course/{slug}` — protected checkout and payment initiation
-- `GET /payment/callback` — server-side gateway verification callback
-- `GET|POST /payment/sandbox/{authority}` — local Iranian gateway simulator
-- `GET /payment/result` — protected payment result receipt
-- `GET /orders` — protected order history
-- `GET /orders/{id}` — protected order and transaction details
-- `GET /mentors` — mentors and experts directory
-- `GET|POST /contact` — CSRF-protected contact form
-- `GET /design-system` — live component and token gallery
-- `GET /api/health` — JSON response
-- `GET /framework/{name}` — route parameter example
-
-## Registering routes
-
-```php
-use App\Core\Request;
-
-$router->get('/courses/{id:\d+}', function (Request $request, string $id): array {
-    return ['course_id' => (int) $id];
-}, ['auth', 'rate:60,60']);
-```
-
-Route middleware aliases are `auth`, `guest`, `csrf`, and `rate`. A POST form protected by CSRF must contain `<?= csrf_field() ?>` or send the token in the `X-CSRF-TOKEN` header.
-
-## Main directories
-
-- `app/Core` — application, router, HTTP, session, view, validation and security primitives
-- `app/Middleware` — authentication, guest, CSRF and rate-limiting middleware
-- `app/Controllers` — request controllers
-- `app/Views` — PHP views and layouts
-- `routes` — web, auth, admin and API route registration
-- `public` — front controller and public assets
-- `tests/CoreEngineTest.php` — executable Core Engine integration test
-- `tests/AcademyContentTest.php` — academy, Program and specialization content test
-- `tests/EventsCommunityTest.php` — event states, capacity and Community content test
-- `tests/CourseCatalogTest.php` — course fields, categories, statuses and relationships test
-- `tests/AuthenticationTest.php` — password, profile, reset-token and user-repository security test
-- `tests/PaymentEnrollmentTest.php` — order, transaction, capacity, verification and enrollment test
-- `tests/ThemeTest.php` — light/dark tokens, persistence and accessibility test
+اطلاعات احراز هویت، نشست‌ها، درخواست‌ها، سفارش‌ها و پرداخت‌ها فقط در MySQL ذخیره می‌شوند.

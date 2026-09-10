@@ -35,12 +35,3 @@ $router->post('/community/join', [CommunityController::class, 'join'], ['csrf', 
 $router->get('/mentors', [MentorsController::class, 'index'], ['rate:120,60']);
 $router->get('/contact', [ContactController::class, 'index'], ['rate:60,60']);
 $router->post('/contact', [ContactController::class, 'store'], ['csrf', 'rate:5,60']);
-$router->get('/design-system', [HomeController::class, 'designSystem'], ['rate:60,60']);
-
-$router->get('/framework/{name:[A-Za-z0-9_-]+}', static function (\App\Core\Request $request, string $name): array {
-    return [
-        'framework' => 'Mentoris',
-        'hello' => $name,
-        'pipeline' => ['Router', 'Middleware', 'Controller', 'View', 'Response'],
-    ];
-}, ['rate:60,60']);

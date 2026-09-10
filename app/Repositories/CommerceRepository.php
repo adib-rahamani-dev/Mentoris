@@ -26,7 +26,7 @@ final class CommerceRepository
             $pdo->prepare($upsert)->execute(['type' => 'course', 'item' => $itemId, 'now' => $now]);
             $lock = $pdo->prepare('SELECT item_id FROM inventory_locks WHERE item_type=:type AND item_id=:item' . ($driver === 'mysql' ? ' FOR UPDATE' : ''));
             $lock->execute(['type' => 'course', 'item' => $itemId]);
-            $pdo->prepare("UPDATE orders SET status='expired',updated_at=:now WHERE status='pending' AND expires_at<=:now")->execute(['now' => $now]);
+            $pdo->prepare("UPDATE orders SET status='expired',updated_at=:updated_at WHERE status='pending' AND expires_at<=:expires_at")->execute(['updated_at' => $now, 'expires_at' => $now]);
 
             $enrollment = $pdo->prepare("SELECT 1 FROM enrollments WHERE user_id=:user AND course_slug=:item AND status IN ('active','completed') LIMIT 1");
             $enrollment->execute(['user' => $userId, 'item' => $itemId]);
@@ -140,9 +140,9 @@ final class CommerceRepository
             if ($order['status'] !== 'pending' || strtotime((string) $order['expires_at'] . ' UTC') <= time()) throw new RuntimeException('این سفارش دیگر قابل پرداخت نیست.');
 
             $now = Database::now();
-            $pdo->prepare("UPDATE orders SET status='paid',paid_at=:now,updated_at=:now WHERE id=:id AND status<>'paid'")->execute(['now' => $now, 'id' => $orderId]);
-            $pdo->prepare("UPDATE payment_transactions SET status='verified',reference_id=:reference,gateway_response=:response,verified_at=:now,updated_at=:now WHERE id=:id")
-                ->execute(['reference' => $referenceId !== '' ? $referenceId : null, 'response' => json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR), 'now' => $now, 'id' => $transactionId]);
+            $pdo->prepare("UPDATE orders SET status='paid',paid_at=:paid_at,updated_at=:updated_at WHERE id=:id AND status<>'paid'")->execute(['paid_at' => $now, 'updated_at' => $now, 'id' => $orderId]);
+            $pdo->prepare("UPDATE payment_transactions SET status='verified',reference_id=:reference,gateway_response=:response,verified_at=:verified_at,updated_at=:updated_at WHERE id=:id")
+                ->execute(['reference' => $referenceId !== '' ? $referenceId : null, 'response' => json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR), 'verified_at' => $now, 'updated_at' => $now, 'id' => $transactionId]);
             $sql = Database::driver($pdo) === 'mysql'
                 ? 'INSERT IGNORE INTO enrollments (id,user_id,course_slug,order_id,status,enrolled_at) VALUES (:id,:user,:course,:order_id,:status,:now)'
                 : 'INSERT OR IGNORE INTO enrollments (id,user_id,course_slug,order_id,status,enrolled_at) VALUES (:id,:user,:course,:order_id,:status,:now)';

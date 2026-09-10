@@ -74,6 +74,7 @@ final class EventsController extends Controller
         return $this->view('pages.event-details', [
             'title' => $event['title'] . ' | Events',
             'description' => $event['short_description'],
+            'seoImage' => '/assets/' . ltrim((string) ($event['image'] ?? 'images/mentoris-hero-sage-v2.png'), '/'),
             'seoType' => 'event',
             'structuredData' => [SeoService::eventSchema($event)],
             'event' => $event,

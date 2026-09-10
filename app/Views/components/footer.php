@@ -1,7 +1,7 @@
 <footer class="site-footer">
     <div class="container site-footer__top">
         <div class="site-footer__brand stack">
-            <a class="brand-logo" href="/" aria-label="<?= e(t('brand.home')) ?>"><span class="brand-logo__mark" aria-hidden="true"></span><span class="brand-logo__text"><strong>Mentoris</strong><small>Academy</small></span></a>
+            <a class="brand-logo" href="/" aria-label="<?= e(t('brand.home')) ?>"><img class="brand-logo__mark" src="<?= asset('icons/favicon.svg') ?>" alt="" width="40" height="40"><span class="brand-logo__text"><strong>Mentoris</strong><small>Academy</small></span></a>
             <p><?= e(t('footer.tagline')) ?></p>
         </div>
         <div>

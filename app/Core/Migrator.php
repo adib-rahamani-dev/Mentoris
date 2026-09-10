@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Core;
 
 use PDO;
+use PDOException;
 use RuntimeException;
 
 final class Migrator
@@ -68,7 +69,12 @@ final class Migrator
 
     private function ensureRepository(): void
     {
-        $this->database->exec('CREATE TABLE IF NOT EXISTS migrations (migration VARCHAR(255) PRIMARY KEY, executed_at VARCHAR(32) NOT NULL)');
+        try {
+            $this->database->query('SELECT migration FROM migrations LIMIT 1');
+            return;
+        } catch (PDOException) {
+            $this->database->exec('CREATE TABLE IF NOT EXISTS migrations (migration VARCHAR(255) PRIMARY KEY, executed_at VARCHAR(32) NOT NULL)');
+        }
     }
 
     private function ran(): array
