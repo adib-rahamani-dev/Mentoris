@@ -1,18 +1,18 @@
-<?php use App\Core\Authorization; $maxTrend = max(1, ...array_values($trends['users'] ?: [1])); ?>
+<?php use App\Core\Authorization; $maxTrend = max(1, ...array_values($trends['users'] ?: [1])); $canUsers=Authorization::can($admin,'users.view'); $canOrders=Authorization::can($admin,'orders.view'); $canEngagements=Authorization::can($admin,'engagements.view'); $canSystem=Authorization::can($admin,'system.view'); ?>
 <header class="admin-page-head"><div><span class="eyebrow">Mission Control</span><h1>سلام <?= e(explode(' ', $admin['name'] ?? '')[0] ?: 'مدیر') ?>، آماده‌ای؟</h1><p>تصویر زنده عملیات منتوریس؛ از کاربران و درآمد تا درخواست‌های نیازمند رسیدگی و وضعیت امنیت.</p></div><div class="admin-head-actions"><span class="live-indicator"><i></i> داده زنده</span><span class="admin-role-badge"><?= e(Authorization::roleLabel(Authorization::role($admin))) ?></span></div></header>
 
 <section class="admin-kpis admin-kpis--hero" aria-label="شاخص‌های کلیدی">
-    <a href="/admin/users"><span>کل کاربران</span><strong><?= number_format($stats['users']) ?></strong><small><b>+<?= number_format($stats['new_users_30d']) ?></b> عضو در ۳۰ روز</small></a>
-    <a href="/admin/orders"><span>درآمد ثبت‌شده</span><strong><?= number_format($stats['revenue']) ?></strong><small><?= number_format($stats['revenue_30d']) ?> تومان در ۳۰ روز</small></a>
-    <a href="/admin/orders?status=paid"><span>سفارش موفق</span><strong><?= number_format($stats['paid_orders']) ?></strong><small><?= number_format($stats['pending_orders']) ?> سفارش در انتظار</small></a>
-    <a href="/admin/engagements"><span>نیازمند رسیدگی</span><strong><?= number_format($stats['event_requests'] + $stats['community_requests'] + $stats['unread_messages']) ?></strong><small>پیام، رویداد و عضویت جامعه</small></a>
+    <a href="<?= $canUsers?'/admin/users':'/admin' ?>"><span>کل کاربران</span><strong><?= number_format($stats['users']) ?></strong><small><b>+<?= number_format($stats['new_users_30d']) ?></b> عضو در ۳۰ روز</small></a>
+    <a href="<?= $canOrders?'/admin/orders':'/admin' ?>"><span>درآمد ثبت‌شده</span><strong><?= number_format($stats['revenue']) ?></strong><small><?= number_format($stats['revenue_30d']) ?> تومان در ۳۰ روز</small></a>
+    <a href="<?= $canOrders?'/admin/orders?status=paid':'/admin' ?>"><span>سفارش موفق</span><strong><?= number_format($stats['paid_orders']) ?></strong><small><?= number_format($stats['pending_orders']) ?> سفارش در انتظار</small></a>
+    <a href="<?= $canEngagements?'/admin/engagements':'/admin' ?>"><span>نیازمند رسیدگی</span><strong><?= number_format($stats['event_requests'] + $stats['community_requests'] + $stats['unread_messages']) ?></strong><small>پیام، رویداد و عضویت جامعه</small></a>
 </section>
 
 <section class="admin-command-grid">
-    <a href="/admin/users"><span>◎</span><div><strong>مدیریت کاربران</strong><small>نقش، تعلیق، پرونده و اعلان</small></div></a>
-    <a href="/admin/orders"><span>◇</span><div><strong>امور مالی</strong><small>سفارش، تراکنش و ثبت‌نام</small></div></a>
-    <a href="/admin/engagements"><span>✦</span><div><strong>صندوق عملیات</strong><small>پیام‌ها و درخواست‌های جدید</small></div></a>
-    <a href="/admin/system"><span>⚙</span><div><strong>مرکز امنیت</strong><small>نشست‌ها و سلامت سرویس‌ها</small></div></a>
+    <?php if($canUsers): ?><a href="/admin/users"><span><?= icon('users', 'ui-icon--lg') ?></span><div><strong>مدیریت کاربران</strong><small>نقش، تعلیق، پرونده و اعلان</small></div></a><?php endif; ?>
+    <?php if($canOrders): ?><a href="/admin/orders"><span><?= icon('card', 'ui-icon--lg') ?></span><div><strong>امور مالی</strong><small>سفارش، تراکنش و ثبت‌نام</small></div></a><?php endif; ?>
+    <?php if($canEngagements): ?><a href="/admin/engagements"><span><?= icon('message', 'ui-icon--lg') ?></span><div><strong>صندوق عملیات</strong><small>پیام‌ها و درخواست‌های جدید</small></div></a><?php endif; ?>
+    <?php if($canSystem): ?><a href="/admin/system"><span><?= icon('shield', 'ui-icon--lg') ?></span><div><strong>مرکز امنیت</strong><small>نشست‌ها و سلامت سرویس‌ها</small></div></a><?php endif; ?>
 </section>
 
 <div class="admin-grid admin-grid--wide"><section class="admin-panel"><header><div><span class="eyebrow">Growth</span><h2>رشد کاربران</h2></div><a href="/admin/analytics">گزارش کامل</a></header><div class="trend-chart" role="img" aria-label="روند عضویت کاربران"><?php foreach ($trends['users'] as $period=>$count): ?><div><span style="height:<?= max(8, round($count/$maxTrend*100)) ?>%"><b><?= number_format($count) ?></b></span><small class="ltr"><?= e(substr($period, 5)) ?></small></div><?php endforeach; ?><?php if (!$trends['users']): ?><p>داده‌ای برای نمایش نیست.</p><?php endif; ?></div></section>

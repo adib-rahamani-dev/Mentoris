@@ -27,6 +27,7 @@ final class Database
             PDO::ATTR_STRINGIFY_FETCHES => false,
             PDO::ATTR_EMULATE_PREPARES => false,
             PDO::ATTR_PERSISTENT => false,
+            PDO::ATTR_TIMEOUT => 3,
         ];
 
         if ($driver === 'sqlite') {
@@ -51,6 +52,9 @@ final class Database
 
         if (defined('PDO::MYSQL_ATTR_MULTI_STATEMENTS')) {
             $options[PDO::MYSQL_ATTR_MULTI_STATEMENTS] = false;
+        }
+        if (defined('PDO::MYSQL_ATTR_CONNECT_TIMEOUT')) {
+            $options[PDO::MYSQL_ATTR_CONNECT_TIMEOUT] = 2;
         }
         $sslCa = trim((string) ($config['ssl_ca'] ?? ''));
         if ($sslCa !== '' && defined('PDO::MYSQL_ATTR_SSL_CA')) {

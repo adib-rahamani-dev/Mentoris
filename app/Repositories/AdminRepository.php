@@ -81,6 +81,78 @@ final class AdminRepository
         return $order;
     }
 
+    public function contentEntries(array $filters, int $page = 1, int $perPage = 20): array
+    {
+        $where = []; $params = [];
+        $type = (string) ($filters['type'] ?? 'all');
+        $status = (string) ($filters['status'] ?? 'all');
+        if (in_array($type, ['academy_line','specialization','program','course','event','mentor','article'], true)) { $where[] = 'ce.entity_type=:type'; $params['type'] = $type; }
+        if (in_array($status, ['draft','published','archived'], true)) { $where[] = 'ce.status=:status'; $params['status'] = $status; }
+        $query = trim((string) ($filters['query'] ?? ''));
+        if ($query !== '') { $where[] = '(ce.slug LIKE :q1 OR ct.title LIKE :q2)'; $params['q1'] = $params['q2'] = '%' . $query . '%'; }
+        $clause = $where ? ' WHERE ' . implode(' AND ', $where) : '';
+        $select = "SELECT ce.*,ct.title,ct.subtitle,u.name author_name,(SELECT COUNT(*) FROM content_translations cx WHERE cx.entity_id=ce.id) translation_count FROM content_entities ce LEFT JOIN content_translations ct ON ct.entity_id=ce.id AND ct.locale='fa' LEFT JOIN users u ON u.id=ce.author_id{$clause} ORDER BY ce.updated_at DESC";
+        $count = "SELECT COUNT(*) FROM content_entities ce LEFT JOIN content_translations ct ON ct.entity_id=ce.id AND ct.locale='fa'{$clause}";
+        return $this->paginate($select, $count, $params, $page, $perPage);
+    }
+
+    public function contentEntry(string $id): ?array
+    {
+        $statement = $this->pdo()->prepare('SELECT ce.*,u.name author_name FROM content_entities ce LEFT JOIN users u ON u.id=ce.author_id WHERE ce.id=:id LIMIT 1');
+        $statement->execute(['id' => $id]);
+        $entry = $statement->fetch();
+        if (!is_array($entry)) return null;
+        $translations = $this->pdo()->prepare('SELECT locale,title,subtitle,excerpt,body,metadata FROM content_translations WHERE entity_id=:id ORDER BY locale');
+        $translations->execute(['id' => $id]);
+        $entry['translations'] = [];
+        foreach ($translations->fetchAll() ?: [] as $translation) {
+            $translation['metadata'] = json_decode((string) $translation['metadata'], true) ?: [];
+            $entry['translations'][(string) $translation['locale']] = $translation;
+        }
+        return $entry;
+    }
+
+    public function saveContent(?string $id, array $data, string $authorId): array
+    {
+        $pdo = $this->pdo();
+        $before = $id !== null ? $this->contentEntry($id) : null;
+        $id ??= Security::randomToken(16);
+        $now = Database::now();
+        Database::transaction($pdo, function (PDO $pdo) use ($id, $data, $authorId, $before, $now): void {
+            $publishedAt = $data['status'] === 'published' ? ($before['published_at'] ?? $now) : ($before['published_at'] ?? null);
+            if ($before === null) {
+                $statement = $pdo->prepare('INSERT INTO content_entities (id,entity_type,slug,status,sort_order,author_id,published_at,created_at,updated_at) VALUES (:id,:type,:slug,:status,:sort,:author,:published,:created,:updated)');
+                $statement->execute(['id'=>$id,'type'=>$data['entity_type'],'slug'=>$data['slug'],'status'=>$data['status'],'sort'=>$data['sort_order'],'author'=>$authorId,'published'=>$publishedAt,'created'=>$now,'updated'=>$now]);
+            } else {
+                $statement = $pdo->prepare('UPDATE content_entities SET entity_type=:type,slug=:slug,status=:status,sort_order=:sort,author_id=:author,published_at=:published,updated_at=:updated WHERE id=:id');
+                $statement->execute(['type'=>$data['entity_type'],'slug'=>$data['slug'],'status'=>$data['status'],'sort'=>$data['sort_order'],'author'=>$authorId,'published'=>$publishedAt,'updated'=>$now,'id'=>$id]);
+            }
+            foreach ($data['translations'] as $locale => $translation) {
+                if (trim((string) ($translation['title'] ?? '')) === '' && trim((string) ($translation['body'] ?? '')) === '') {
+                    $delete = $pdo->prepare('DELETE FROM content_translations WHERE entity_id=:entity AND locale=:locale');
+                    $delete->execute(['entity'=>$id,'locale'=>$locale]);
+                    continue;
+                }
+                $translationId = Security::randomToken(16);
+                $statement = $pdo->prepare('INSERT INTO content_translations (id,entity_id,locale,title,subtitle,excerpt,body,metadata,created_at,updated_at) VALUES (:id,:entity,:locale,:title,:subtitle,:excerpt,:body,:metadata,:created,:updated) ON DUPLICATE KEY UPDATE title=VALUES(title),subtitle=VALUES(subtitle),excerpt=VALUES(excerpt),body=VALUES(body),metadata=VALUES(metadata),updated_at=VALUES(updated_at)');
+                $statement->execute(['id'=>$translationId,'entity'=>$id,'locale'=>$locale,'title'=>trim((string)$translation['title']),'subtitle'=>trim((string)$translation['subtitle']),'excerpt'=>trim((string)$translation['excerpt']),'body'=>trim((string)$translation['body']),'metadata'=>json_encode($translation['metadata'], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR),'created'=>$now,'updated'=>$now]);
+            }
+        });
+        return ['id' => $id, 'before' => $before, 'after' => $this->contentEntry($id)];
+    }
+
+    public function setContentStatus(string $id, string $status): ?array
+    {
+        if (!in_array($status, ['draft','published','archived'], true)) throw new RuntimeException('وضعیت محتوا معتبر نیست.');
+        $before = $this->contentEntry($id);
+        if ($before === null) return null;
+        $now = Database::now();
+        $publishedAt = $status === 'published' ? ($before['published_at'] ?: $now) : $before['published_at'];
+        $statement = $this->pdo()->prepare('UPDATE content_entities SET status=:status,published_at=:published,updated_at=:updated WHERE id=:id');
+        $statement->execute(['status'=>$status,'published'=>$publishedAt,'updated'=>$now,'id'=>$id]);
+        return ['before'=>$before,'after'=>$this->contentEntry($id)];
+    }
+
     public function userOperations(string $userId): array
     {
         $queries = [

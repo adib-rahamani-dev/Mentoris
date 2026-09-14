@@ -1,0 +1,59 @@
+-- Mentoris database verification for cPanel / phpMyAdmin
+-- Read-only: this script never creates, updates, or deletes data.
+
+SET NAMES utf8mb4;
+
+SELECT
+    expected.table_name,
+    CASE WHEN actual.table_name IS NULL THEN 'MISSING' ELSE 'OK' END AS status
+FROM (
+    SELECT 'migrations' AS table_name
+    UNION ALL SELECT 'users'
+    UNION ALL SELECT 'password_reset_tokens'
+    UNION ALL SELECT 'notifications'
+    UNION ALL SELECT 'orders'
+    UNION ALL SELECT 'payment_transactions'
+    UNION ALL SELECT 'inventory_locks'
+    UNION ALL SELECT 'enrollments'
+    UNION ALL SELECT 'event_registrations'
+    UNION ALL SELECT 'certificates'
+    UNION ALL SELECT 'community_memberships'
+    UNION ALL SELECT 'contact_messages'
+    UNION ALL SELECT 'rate_limits'
+    UNION ALL SELECT 'sessions'
+    UNION ALL SELECT 'content_entities'
+    UNION ALL SELECT 'content_translations'
+    UNION ALL SELECT 'content_relations'
+    UNION ALL SELECT 'audit_logs'
+) AS expected
+LEFT JOIN information_schema.tables AS actual
+    ON actual.table_schema = DATABASE()
+   AND actual.table_name = expected.table_name
+ORDER BY expected.table_name;
+
+SELECT
+    COUNT(*) AS installed_mentoris_tables,
+    18 AS expected_mentoris_tables,
+    CASE WHEN COUNT(*) = 18 THEN 'SCHEMA_OK' ELSE 'SCHEMA_INCOMPLETE' END AS result
+FROM information_schema.tables
+WHERE table_schema = DATABASE()
+  AND table_name IN (
+      'migrations',
+      'users',
+      'password_reset_tokens',
+      'notifications',
+      'orders',
+      'payment_transactions',
+      'inventory_locks',
+      'enrollments',
+      'event_registrations',
+      'certificates',
+      'community_memberships',
+      'contact_messages',
+      'rate_limits',
+      'sessions',
+      'content_entities',
+      'content_translations',
+      'content_relations',
+      'audit_logs'
+  );

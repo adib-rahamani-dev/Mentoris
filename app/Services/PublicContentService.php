@@ -5,9 +5,13 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Core\Translator;
+use App\Repositories\ContentRepository;
+use Throwable;
 
 final class PublicContentService
 {
+    private static bool $databaseUnavailable = false;
+
     public static function founder(): array
     {
         return self::localized([
@@ -121,27 +125,89 @@ final class PublicContentService
         $items = $titles[$locale] ?? $titles['fa'];
         $copy = $descriptions[$locale] ?? $descriptions['fa'];
         $tones = ['violet','magenta','teal','blue','amber','rose','indigo'];
-        $icons = ['⌁','Ψ','◉','◇','⌕','◎','△'];
-        return array_map(static fn (array $item, int $index): array => [
+        $icons = ['search','users','heart','brain','activity','shield','trending'];
+        $seed = array_map(static fn (array $item, int $index): array => [
             'slug' => $item[0], 'title' => $item[1], 'en' => $item[2], 'tone' => $tones[$index], 'icon' => $icons[$index],
             'description' => $copy[$index], 'promise' => function_exists('t') ? t('empty.text') : '', 'specializations' => [],
         ], $items, array_keys($items));
+        $managed = array_map(static function (array $row): array {
+            $meta = $row['metadata'];
+            return ['slug'=>(string)$row['slug'],'title'=>(string)$row['title'],'en'=>(string)($row['subtitle'] ?: $row['title']),
+                'tone'=>(string)($meta['tone'] ?? 'sage'),'icon'=>(string)($meta['icon'] ?? 'brain'),
+                'description'=>(string)($row['excerpt'] ?: $row['body']),'promise'=>(string)($meta['promise'] ?? t('empty.text')),'specializations'=>[]];
+        }, self::databaseContent('academy_line'));
+        return self::mergeBySlug($seed, $managed);
     }
 
     public static function academyLine(string $slug): ?array
     {
         foreach (self::academyLines() as $line) {
-            if ($line['slug'] === $slug) return $line + ['programs' => []];
+            if ($line['slug'] === $slug) {
+                $line['programs'] = array_values(array_filter(self::programs(), static fn(array $program): bool => ($program['line_slug'] ?? '') === $slug));
+                $line['specializations'] = array_values(array_filter(self::specializations(), static fn(array $item): bool => ($item['line_slug'] ?? '') === $slug));
+                return $line;
+            }
         }
         return null;
     }
 
-    public static function specializations(): array { return []; }
-    public static function specialization(string $slug): ?array { return null; }
-    public static function programs(): array { return []; }
-    public static function program(string $slug): ?array { return null; }
-    public static function courses(): array { return []; }
-    public static function course(string $slug): ?array { return null; }
+    public static function specializations(): array
+    {
+        return array_map(static function (array $row): array {
+            $meta = $row['metadata'];
+            $lineSlug = (string)($meta['line_slug'] ?? 'professional-development');
+            $line = self::findBySlug(self::academyLines(), $lineSlug) ?? self::academyLines()[0];
+            return ['slug'=>(string)$row['slug'],'title'=>(string)$row['title'],'description'=>(string)($row['body'] ?: $row['excerpt']),
+                'line_slug'=>$lineSlug,'line_title'=>$line['title'],'line_tone'=>$line['tone'],'tone'=>(string)($meta['tone'] ?? $line['tone']),
+                'icon'=>(string)($meta['icon'] ?? $line['icon'])];
+        }, self::databaseContent('specialization'));
+    }
+
+    public static function specialization(string $slug): ?array
+    {
+        $specialization = self::findBySlug(self::specializations(), $slug);
+        if ($specialization === null) return null;
+        $specialization['line'] = self::findBySlug(self::academyLines(), $specialization['line_slug']) ?? self::academyLines()[0];
+        return $specialization;
+    }
+    public static function programs(): array
+    {
+        return array_map(static fn (array $row): array => self::programFromContent($row), self::databaseContent('program'));
+    }
+
+    public static function program(string $slug): ?array
+    {
+        foreach (self::programs() as $program) {
+            if ($program['slug'] !== $slug) continue;
+            $program['line'] = self::academyLine($program['line_slug']) ?? self::academyLines()[0];
+            $program['related_courses'] = self::relatedBySlugs(self::courses(), $program['related_course_slugs']);
+            $program['related_events'] = self::relatedBySlugs(self::events(), $program['related_event_slugs']);
+            $program['related_mentors'] = self::relatedBySlugs(self::mentors(), $program['related_mentor_slugs']);
+            return $program;
+        }
+        return null;
+    }
+
+    public static function courses(): array
+    {
+        return array_map(static fn (array $row): array => self::courseFromContent($row), self::databaseContent('course'));
+    }
+
+    public static function course(string $slug): ?array
+    {
+        foreach (self::courses() as $course) {
+            if ($course['slug'] !== $slug) continue;
+            $course['line'] = self::academyLine($course['line_slug']) ?? self::academyLines()[0];
+            $course['instructor'] = self::findBySlug(self::mentors(), $course['instructor_slug']) ?? self::mentors()[0];
+            $course['instructor_bio'] = $course['instructor']['bio'] ?? $course['instructor']['specialty'];
+            $course['related_programs'] = array_values(array_filter(self::programs(), static fn (array $program): bool => in_array($slug, $program['related_course_slugs'], true)));
+            $course['available'] = max(0, $course['capacity'] - $course['enrolled']);
+            $course['can_enroll'] = $course['status'] === 'active' && $course['available'] > 0;
+            $course['status_label'] = self::courseStatusLabels()[$course['status']] ?? $course['status'];
+            return $course;
+        }
+        return null;
+    }
 
     public static function courseCategories(): array
     {
@@ -161,7 +227,7 @@ final class PublicContentService
             'ku' => ['title' => 'بازنەی چارەسەرکاران | یەکەم کۆبوونەوەی پسپۆڕی مێنتۆریس', 'type' => 'کۆبوونەوەی پسپۆڕی', 'date' => 'هەینی 18ی سێپتەمبەری 2026', 'month' => 'سێپتەمبەر', 'time' => '18–20', 'location' => 'تەورێز', 'short' => 'بوارێک بۆ گفتوگۆی پیشەیی، گۆڕینەوەی ئەزموون و باسکردنی ئالنگارییە ڕاستەقینەکانی ڕێگای چارەسەرکاری.', 'description' => 'ئەکادیمی مێنتۆریس زنجیرە بازنە پسپۆڕییەکانی دەروونناسی بە یەکەم بۆنە لە تەورێز دەست پێدەکات. ئەم بازنەیە وانەیەکی ئاسایی نییە؛ بوارێکە بۆ گفتوگۆ، ئەزموون و پەیوەندیی پیشەیی.', 'note' => 'پڕکردنەوەی فۆڕمی سەرەتایی واتای تۆمارکردنی کۆتایی نییە. داواکارییەکان هەڵسەنگێنرێن و لەگەڵ هەڵبژێردراوان پەیوەندی دەگیرێت.'],
             'en' => ['title' => 'Therapists’ Circle | The First Mentoris Professional Gathering', 'type' => 'Professional gathering', 'date' => 'Friday, 18 September 2026', 'month' => 'September', 'time' => '18:00–20:00', 'location' => 'Tabriz', 'short' => 'A space for professional dialogue, shared experience, networking, and honest conversations about the realities of becoming a therapist.', 'description' => 'Mentoris Academy launches its specialist psychology circles with a first gathering in Tabriz. Therapists’ Circle is not a conventional class; it is a space for meaningful professional conversation, experience exchange, and relationship-building.', 'note' => 'Submitting the initial form does not confirm registration. Applications will be reviewed and selected applicants will be contacted to complete registration.'],
         ]);
-        return [[
+        $seed = [[
             'slug' => 'therapists-circle-tabriz', 'day' => '۲۷', 'month' => $copy['month'], 'date' => $copy['date'], 'date_iso' => '2026-09-18', 'time' => $copy['time'],
             'title' => $copy['title'], 'type' => $copy['type'], 'mode' => 'offline', 'location' => $copy['location'], 'tone' => 'sage',
             'image' => 'images/therapists-circle-poster-v1.jpg',
@@ -170,13 +236,15 @@ final class PublicContentService
             'highlights' => [$copy['short'], $copy['note']], 'registration_note' => $copy['note'],
             'external_registration_url' => 'https://forms.gle/BKUrF5Pddj2r7AyT8',
         ]];
+        $managed = array_map(static fn (array $row): array => self::eventFromContent($row), self::databaseContent('event'));
+        return self::mergeBySlug($seed, $managed);
     }
 
     public static function event(string $slug): ?array
     {
         foreach (self::events() as $event) {
             if ($event['slug'] !== $slug) continue;
-            $event['instructor'] = self::mentors()[0] ?? null;
+            $event['instructor'] = self::findBySlug(self::mentors(), (string) ($event['instructor_slug'] ?? '')) ?? (self::mentors()[0] ?? null);
             $event['line'] = self::academyLine($event['line_slug']);
             $event['related_programs'] = [];
             $event['available'] = $event['capacity'] > 0 ? max(0, $event['capacity'] - $event['registered']) : null;
@@ -216,13 +284,178 @@ final class PublicContentService
     public static function mentors(): array
     {
         $founder = self::founder();
-        return [[
+        $seed = [[
             'slug' => $founder['slug'], 'name' => $founder['name'], 'role' => $founder['role'],
-            'specialty' => $founder['short_bio'], 'initials' => $founder['initials'], 'tone' => $founder['tone'], 'image' => $founder['image'],
+            'specialty' => $founder['short_bio'], 'bio' => implode("\n\n", $founder['paragraphs']), 'initials' => $founder['initials'], 'tone' => $founder['tone'], 'image' => $founder['image'],
         ]];
+        $managed = array_map(static fn (array $row): array => self::mentorFromContent($row), self::databaseContent('mentor'));
+        return self::mergeBySlug($seed, $managed);
     }
 
-    public static function articles(): array { return []; }
+    public static function articles(): array
+    {
+        return array_map(static fn (array $row): array => self::articleFromContent($row), self::databaseContent('article'));
+    }
+
+    public static function article(string $slug): ?array
+    {
+        return self::findBySlug(self::articles(), $slug);
+    }
+
+    private static function databaseContent(string $type): array
+    {
+        if (self::$databaseUnavailable) return [];
+        try {
+            return (new ContentRepository())->published($type, Translator::locale());
+        } catch (Throwable) {
+            // The public launch page remains available while MySQL is being
+            // installed, restarted, or migrated. Admin writes still fail loud.
+            self::$databaseUnavailable = true;
+            return [];
+        }
+    }
+
+    private static function programFromContent(array $row): array
+    {
+        $meta = $row['metadata'];
+        $lineSlug = (string) ($meta['line_slug'] ?? 'professional-development');
+        $line = self::academyLine($lineSlug);
+        return [
+            'slug'=>(string)$row['slug'],'title'=>(string)$row['title'],'subtitle'=>(string)($row['subtitle'] ?: 'Mentoris Professional Program'),
+            'short_description'=>(string)($row['excerpt'] ?: $row['body']),'description'=>(string)($row['body'] ?: $row['excerpt']),
+            'line_slug'=>$lineSlug,'line_title'=>$line['title'] ?? $lineSlug,'tone'=>(string)($meta['tone'] ?? 'sage'),
+            'duration'=>(string)($meta['duration'] ?? t('empty.title')),'level'=>(string)($meta['level'] ?? 'Professional'),
+            'format'=>(string)($meta['format'] ?? $meta['type'] ?? 'Mentored'),
+            'target_audience'=>self::stringList($meta['target_audience'] ?? []),'objectives'=>self::stringList($meta['objectives'] ?? []),
+            'related_course_slugs'=>self::stringList($meta['related_courses'] ?? []),'related_event_slugs'=>self::stringList($meta['related_events'] ?? []),
+            'related_mentor_slugs'=>self::stringList($meta['related_mentors'] ?? []),'image'=>self::assetPath($meta['image'] ?? ''),
+        ];
+    }
+
+    private static function courseFromContent(array $row): array
+    {
+        $meta = $row['metadata'];
+        $capacity = max(0, (int) ($meta['capacity'] ?? 0));
+        $enrolled = max(0, min($capacity, (int) ($meta['enrolled'] ?? 0)));
+        $priceAmount = max(0, (int) ($meta['price_amount'] ?? $meta['price'] ?? 0));
+        $status = (string) ($meta['course_status'] ?? 'coming-soon');
+        if (!array_key_exists($status, self::courseStatusLabels())) $status = 'coming-soon';
+        return [
+            'slug'=>(string)$row['slug'],'title'=>(string)$row['title'],'subtitle'=>(string)($row['subtitle'] ?: 'Mentoris Course'),
+            'description'=>(string)($row['body'] ?: $row['excerpt']),'category'=>(string)($meta['category'] ?? 'Mentoris'),
+            'line_slug'=>(string)($meta['line_slug'] ?? 'professional-development'),'tone'=>(string)($meta['tone'] ?? 'sage'),
+            'duration'=>(string)($meta['duration'] ?? t('empty.title')),'schedule'=>(string)($meta['schedule'] ?? t('empty.title')),
+            'type'=>(string)($meta['format'] ?? $meta['type'] ?? 'Online'),'level'=>(string)($meta['level'] ?? 'Professional'),
+            'price_amount'=>$priceAmount,'price'=>$priceAmount > 0 ? number_format($priceAmount) . ' تومان' : 'رایگان',
+            'capacity'=>$capacity,'enrolled'=>$enrolled,'status'=>$status,
+            'audience'=>self::stringList($meta['audience'] ?? []),'curriculum'=>self::structuredList($meta['curriculum'] ?? []),
+            'faq'=>self::faqList($meta['faq'] ?? []),'certificate'=>(string)($meta['certificate'] ?? 'گواهی دیجیتال Mentoris'),
+            'instructor_slug'=>(string)($meta['instructor_slug'] ?? 'maryam-haghani'),'image'=>self::assetPath($meta['image'] ?? ''),
+        ];
+    }
+
+    private static function eventFromContent(array $row): array
+    {
+        $meta = $row['metadata'];
+        $capacity = max(0, (int) ($meta['capacity'] ?? 0));
+        $registered = max(0, min($capacity, (int) ($meta['registered'] ?? 0)));
+        $startsAt = (string) ($meta['starts_at'] ?? '');
+        $timestamp = $startsAt !== '' ? strtotime($startsAt) : false;
+        $type = trim((string) ($meta['category'] ?? ''));
+        if ($type === '') $type = trim((string) ($row['subtitle'] ?? '')) ?: 'رویداد';
+        $status = (string) ($meta['event_status'] ?? 'upcoming');
+        if (!array_key_exists($status, self::eventStatusLabels())) $status = 'upcoming';
+        $mode = (string) ($meta['mode'] ?? $meta['format'] ?? 'online');
+        if (!array_key_exists($mode, self::eventModeLabels())) $mode = 'online';
+        return [
+            'slug'=>(string)$row['slug'],'title'=>(string)$row['title'],'type'=>$type,
+            'short_description'=>(string)($row['excerpt'] ?: $row['body']),'description'=>(string)($row['body'] ?: $row['excerpt']),
+            'day'=>(string)($meta['day'] ?? ($timestamp !== false ? date('d', $timestamp) : '—')),
+            'month'=>(string)($meta['month'] ?? ''),'date'=>(string)(($meta['display_date'] ?? '') ?: ($startsAt ?: t('empty.title'))),
+            'date_iso'=>$timestamp !== false ? date('Y-m-d', $timestamp) : '','starts_at'=>$startsAt,'ends_at'=>(string)($meta['ends_at'] ?? ''),
+            'time'=>(string)($meta['time'] ?? ''),'location'=>(string)($meta['location'] ?? 'Mentoris'),
+            'mode'=>$mode,'tone'=>(string)($meta['tone'] ?? 'sage'),'image'=>self::assetPath($meta['image'] ?? ''),
+            'status'=>$status,'capacity'=>$capacity,'registered'=>$registered,
+            'capacity_label'=>$capacity > 0 ? (string)$capacity : 'ظرفیت محدود','instructor_slug'=>(string)($meta['instructor_slug'] ?? 'maryam-haghani'),
+            'line_slug'=>(string)($meta['line_slug'] ?? 'professional-development'),'highlights'=>self::stringList($meta['highlights'] ?? []),
+            'registration_note'=>(string)($meta['registration_note'] ?? ''),'external_registration_url'=>self::publicUrl($meta['registration_url'] ?? '', '/contact'),
+        ];
+    }
+
+    private static function mentorFromContent(array $row): array
+    {
+        $meta = $row['metadata'];
+        $name = (string) $row['title'];
+        $parts = preg_split('/\s+/u', trim($name)) ?: [];
+        $initials = implode('', array_map(static fn (string $part): string => mb_substr($part, 0, 1), array_slice($parts, 0, 2)));
+        return ['slug'=>(string)$row['slug'],'name'=>$name,'role'=>(string)($row['subtitle'] ?: 'مدرس منتوریس'),
+            'specialty'=>(string)($row['excerpt'] ?: 'روان‌شناسی و رشد حرفه‌ای'),'bio'=>(string)$row['body'],
+            'initials'=>$initials ?: 'M','tone'=>(string)($meta['tone'] ?? 'sage'),'image'=>self::assetPath($meta['image'] ?? '')];
+    }
+
+    private static function articleFromContent(array $row): array
+    {
+        $meta = $row['metadata'];
+        return ['slug'=>(string)$row['slug'],'title'=>(string)$row['title'],'subtitle'=>(string)$row['subtitle'],
+            'excerpt'=>(string)($row['excerpt'] ?: mb_substr(strip_tags((string)$row['body']),0,220)),'body'=>(string)$row['body'],
+            'type'=>(string)($meta['category'] ?? 'مقاله'),'read'=>(string)($meta['read_time'] ?? '۵ دقیقه'),
+            'tone'=>(string)($meta['tone'] ?? 'sage'),'image'=>self::assetPath($meta['image'] ?? ''),'author'=>(string)($meta['author'] ?? $row['author_name'] ?? 'Mentoris Academy'),
+            'published_at'=>(string)($row['published_at'] ?? $row['created_at'])];
+    }
+
+    private static function mergeBySlug(array $seed, array $managed): array
+    {
+        $indexed = [];
+        foreach ([...$seed, ...$managed] as $item) $indexed[(string)$item['slug']] = $item;
+        return array_values($indexed);
+    }
+
+    private static function findBySlug(array $items, string $slug): ?array
+    {
+        foreach ($items as $item) if (($item['slug'] ?? '') === $slug) return $item;
+        return null;
+    }
+
+    private static function relatedBySlugs(array $items, array $slugs): array
+    {
+        return array_values(array_filter($items, static fn (array $item): bool => in_array((string)($item['slug'] ?? ''), $slugs, true)));
+    }
+
+    private static function stringList(mixed $value): array
+    {
+        if (is_string($value)) $value = preg_split('/[\r\n,]+/u', $value) ?: [];
+        return array_values(array_filter(array_map(static fn ($item): string => trim((string)$item), is_array($value) ? $value : [])));
+    }
+
+    private static function structuredList(mixed $value): array
+    {
+        if (!is_array($value)) return [];
+        return array_values(array_filter(array_map(static fn ($item): ?array => is_array($item) ? [
+            'title'=>(string)($item['title'] ?? ''),'duration'=>(string)($item['duration'] ?? ''),'description'=>(string)($item['description'] ?? '')
+        ] : null, $value)));
+    }
+
+    private static function faqList(mixed $value): array
+    {
+        if (!is_array($value)) return [];
+        return array_values(array_filter(array_map(static fn ($item): ?array => is_array($item) ? [
+            'question'=>(string)($item['question'] ?? ''),'answer'=>(string)($item['answer'] ?? '')
+        ] : null, $value)));
+    }
+
+    private static function assetPath(mixed $value): string
+    {
+        $path = trim((string) $value);
+        return $path !== '' && preg_match('#^images/[A-Za-z0-9][A-Za-z0-9._/-]*$#', $path) && !str_contains($path, '..') ? $path : '';
+    }
+
+    private static function publicUrl(mixed $value, string $fallback): string
+    {
+        $url = trim((string) $value);
+        if ($url === '') return $fallback;
+        if (str_starts_with($url, '/') && !str_starts_with($url, '//') && !preg_match('/[\r\n]/', $url)) return $url;
+        return filter_var($url, FILTER_VALIDATE_URL) && str_starts_with(strtolower($url), 'https://') ? $url : $fallback;
+    }
 
     private static function localized(array $variants): array
     {

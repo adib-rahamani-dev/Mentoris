@@ -1,7 +1,7 @@
 <?php use App\Core\Authorization; ?>
 <header class="admin-page-head">
     <div><span class="eyebrow">Users & Access</span><h1>کاربران و نقش‌ها</h1><p>جست‌وجو، مشاهده پرونده، نقش‌بندی و کنترل وضعیت همه حساب‌ها.</p></div>
-    <span class="admin-count"><?= number_format($summary['filtered']) ?> نتیجه از <?= number_format($summary['total']) ?></span>
+    <div class="admin-head-actions"><?php if(Authorization::can($admin,'users.manage')):?><a class="btn btn--primary" href="/admin/users/new?role=instructor"><?=icon('users')?> افزودن مدرس/کاربر</a><?php endif;?><span class="admin-count"><?= number_format($summary['filtered']) ?> نتیجه از <?= number_format($summary['total']) ?></span></div>
 </header>
 
 <section class="admin-kpis" aria-label="خلاصه کاربران">
@@ -30,5 +30,5 @@
     <td class="ltr"><?= e($user['last_login_at'] ? substr((string) $user['last_login_at'], 0, 16) : '—') ?></td>
     <td><a class="table-action" href="/admin/users/<?= e($user['id']) ?>">پرونده کامل ←</a></td>
 </tr><?php endforeach; ?>
-<?php if (!$users): ?><tr><td colspan="6"><div class="content-empty"><span class="content-empty__icon">⌕</span><div><h3>کاربری پیدا نشد</h3><p>فیلترها یا عبارت جست‌وجو را تغییر دهید.</p></div></div></td></tr><?php endif; ?>
+<?php if (!$users): ?><tr><td colspan="6"><div class="content-empty"><span class="content-empty__icon"><?= icon('search', 'ui-icon--lg') ?></span><div><h3>کاربری پیدا نشد</h3><p>فیلترها یا عبارت جست‌وجو را تغییر دهید.</p></div></div></td></tr><?php endif; ?>
 </tbody></table></div>

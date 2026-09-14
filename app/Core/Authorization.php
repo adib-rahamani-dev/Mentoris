@@ -41,4 +41,9 @@ final class Authorization
     {
         return self::ROLES[$role] ?? self::ROLES['student'];
     }
+
+    public static function permissionsForRole(string $role): array
+    {
+        return self::PERMISSIONS[$role] ?? [];
+    }
 }

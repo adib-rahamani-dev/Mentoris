@@ -13,6 +13,8 @@ use App\Controllers\SpecializationsController;
 use App\Controllers\EventsController;
 use App\Controllers\CommunityController;
 use App\Controllers\CoursesController;
+use App\Controllers\ArticlesController;
+use App\Controllers\SitemapController;
 use App\Core\Router;
 
 /** @var Router $router */
@@ -33,5 +35,9 @@ $router->post('/events/{slug:[a-z0-9-]+}/register', [EventsController::class, 'r
 $router->get('/community', [CommunityController::class, 'index'], ['rate:120,60']);
 $router->post('/community/join', [CommunityController::class, 'join'], ['csrf', 'rate:3,60']);
 $router->get('/mentors', [MentorsController::class, 'index'], ['rate:120,60']);
+$router->get('/mentors/{slug:[a-z0-9-]+}', [MentorsController::class, 'show'], ['rate:120,60']);
+$router->get('/articles', [ArticlesController::class, 'index'], ['rate:120,60']);
+$router->get('/articles/{slug:[a-z0-9-]+}', [ArticlesController::class, 'show'], ['rate:120,60']);
+$router->get('/sitemap-content.xml', [SitemapController::class, 'index'], ['rate:30,60']);
 $router->get('/contact', [ContactController::class, 'index'], ['rate:60,60']);
 $router->post('/contact', [ContactController::class, 'store'], ['csrf', 'rate:5,60']);

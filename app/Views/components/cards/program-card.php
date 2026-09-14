@@ -1,7 +1,7 @@
 <article class="card program-card">
     <div class="card__media program-card__media program-card__media--<?= e($program['tone']) ?>">
         <span class="badge badge--brand card__badge"><?= e($program['line_title'] ?? $program['line_slug']) ?></span>
-        <span class="program-card__symbol" aria-hidden="true">Ψ</span>
+        <span class="program-card__symbol"><?= icon('brain', 'ui-icon--lg') ?></span>
     </div>
     <div class="card__body">
         <h3 class="card__title"><?= e($program['title']) ?></h3>

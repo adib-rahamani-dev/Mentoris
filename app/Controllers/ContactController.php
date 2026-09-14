@@ -9,12 +9,12 @@ use App\Core\Request;
 use App\Core\Response;
 use App\Core\Validator;
 use App\Repositories\EngagementRepository;
+use RuntimeException;
 
 final class ContactController extends Controller
 {
     public function index(Request $request): Response
     {
-        if ($valid) (new EngagementRepository())->createContactMessage($data, $request->ip());
         return $this->view('pages.contact', [
             'title' => t('nav.contact') . ' | Mentoris Academy',
             'description' => t('footer.tagline'),
@@ -35,6 +35,20 @@ final class ContactController extends Controller
             'subject' => 'required|string|max:120',
             'message' => 'required|string|min:10|max:2000',
         ]);
+
+        if ($valid) {
+            try {
+                (new EngagementRepository())->createContactMessage($data, $request->ip());
+            } catch (RuntimeException $exception) {
+                return $this->view('pages.contact', [
+                    'title' => t('nav.contact') . ' | Mentoris Academy',
+                    'description' => t('footer.tagline'),
+                    'errors' => ['form' => [$exception->getMessage()]],
+                    'old' => $data,
+                    'success' => false,
+                ]);
+            }
+        }
 
         return $this->view('pages.contact', [
             'title' => t('nav.contact') . ' | Mentoris Academy',

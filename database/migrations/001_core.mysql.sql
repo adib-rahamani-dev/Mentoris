@@ -1,3 +1,14 @@
+-- Mentoris complete MySQL schema (cPanel/phpMyAdmin safe)
+-- Idempotent and non-destructive: no DROP, TRUNCATE, or destructive seed data.
+-- Select the database in phpMyAdmin before importing this file.
+
+SET NAMES utf8mb4;
+
+CREATE TABLE IF NOT EXISTS migrations (
+    migration VARCHAR(255) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY,
+    executed_at VARCHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS users (
     id CHAR(24) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY,
     name VARCHAR(120) NOT NULL,

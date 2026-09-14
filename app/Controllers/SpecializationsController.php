@@ -13,11 +13,13 @@ final class SpecializationsController extends Controller
 {
     public function index(Request $request): Response
     {
+        $specializations = PublicContentService::specializations();
         return $this->view('pages.specializations', [
             'title' => t('nav.specializations') . ' | Mentoris Academy',
             'description' => t('empty.text'),
-            'indexable' => false,
+            'indexable' => $specializations !== [],
             'lines' => PublicContentService::academyLines(),
+            'specializations' => $specializations,
         ]);
     }
 

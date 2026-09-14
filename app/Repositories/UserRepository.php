@@ -70,6 +70,38 @@ final class UserRepository
         }
     }
 
+    public function createManaged(array $attributes): array
+    {
+        $role = (string) ($attributes['account_role'] ?? 'student');
+        $status = (string) ($attributes['status'] ?? 'active');
+        if (!in_array($role, ['super_admin','admin','editor','instructor','support','student'], true) || !in_array($status, ['active','suspended'], true)) {
+            throw new RuntimeException('نقش یا وضعیت حساب معتبر نیست.');
+        }
+        $now = Database::now();
+        $user = [
+            'id' => Security::randomToken(12),
+            'name' => trim((string) ($attributes['name'] ?? '')),
+            'email' => self::normalizeEmail((string) ($attributes['email'] ?? '')),
+            'password_hash' => Security::hashPassword((string) ($attributes['password'] ?? '')),
+            'phone' => trim((string) ($attributes['phone'] ?? '')),
+            'professional_role' => trim((string) ($attributes['professional_role'] ?? '')),
+            'bio' => trim((string) ($attributes['bio'] ?? '')),
+            'account_role' => $role,
+            'status' => $status,
+        ];
+        try {
+            return Database::transaction($this->pdo(), function (PDO $pdo) use ($user, $now): array {
+                $statement = $pdo->prepare('INSERT INTO users (id,name,email,password_hash,phone,professional_role,bio,account_role,status,auth_version,password_changed_at,created_at,updated_at) VALUES (:id,:name,:email,:password_hash,:phone,:professional_role,:bio,:account_role,:status,1,:password_changed_at,:created_at,:updated_at)');
+                $statement->execute($user + ['password_changed_at'=>$now,'created_at'=>$now,'updated_at'=>$now]);
+                $this->insertNotification($pdo, $user['id'], 'حساب Mentoris شما ساخته شد', 'برای حفظ امنیت، پس از اولین ورود رمز عبور خود را تغییر دهید.', $now);
+                return $this->findByIdOn($pdo, $user['id']) ?? throw new RuntimeException('حساب کاربری ایجاد نشد.');
+            });
+        } catch (PDOException $exception) {
+            if ($this->isUniqueViolation($exception)) throw new RuntimeException('این ایمیل قبلاً ثبت شده است.');
+            throw $exception;
+        }
+    }
+
     public function updateProfile(string $id, array $attributes): ?array
     {
         $allowed = ['name' => 'name', 'phone' => 'phone', 'role' => 'professional_role', 'bio' => 'bio'];
@@ -113,6 +145,30 @@ final class UserRepository
         }
         $statement = $this->pdo()->prepare('UPDATE users SET account_role = :account_role, status = :status, auth_version = auth_version + 1, updated_at = :updated_at WHERE id = :id');
         $statement->execute(['account_role' => $accountRole, 'status' => $status, 'updated_at' => Database::now(), 'id' => $id]);
+        return $this->findById($id);
+    }
+
+    public function updateManagedProfile(string $id, array $attributes): ?array
+    {
+        $statement = $this->pdo()->prepare('UPDATE users SET name = :name, email = :email, phone = :phone, professional_role = :professional_role, bio = :bio, updated_at = :updated_at WHERE id = :id');
+        try {
+            $statement->execute([
+                'name'=>trim((string)$attributes['name']),'email'=>self::normalizeEmail((string)$attributes['email']),
+                'phone'=>trim((string)($attributes['phone'] ?? '')),'professional_role'=>trim((string)($attributes['professional_role'] ?? '')),
+                'bio'=>trim((string)($attributes['bio'] ?? '')),'updated_at'=>Database::now(),'id'=>$id,
+            ]);
+        } catch (PDOException $exception) {
+            if ($this->isUniqueViolation($exception)) throw new RuntimeException('این ایمیل قبلاً ثبت شده است.');
+            throw $exception;
+        }
+        return $this->findById($id);
+    }
+
+    public function setManagedPassword(string $id, string $password): ?array
+    {
+        $now = Database::now();
+        $statement = $this->pdo()->prepare('UPDATE users SET password_hash = :password_hash, password_changed_at = :changed_at, auth_version = auth_version + 1, updated_at = :updated_at WHERE id = :id');
+        $statement->execute(['password_hash'=>Security::hashPassword($password),'changed_at'=>$now,'updated_at'=>$now,'id'=>$id]);
         return $this->findById($id);
     }
 

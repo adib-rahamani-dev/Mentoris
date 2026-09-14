@@ -1,5 +1,5 @@
 <article class="card article-card">
-    <div class="article-card__visual article-card__visual--<?= e($article['tone']) ?>"><span aria-hidden="true">∿</span></div>
-    <div class="card__body"><span class="badge badge--neutral"><?= e($article['type']) ?></span><h3 class="card__title mt-4"><?= e($article['title']) ?></h3><div class="card__meta"><span>مطالعه: <?= e($article['read']) ?></span></div></div>
-    <div class="card__footer"><a class="brand" href="#">مطالعه مطلب ←</a></div>
+    <div class="article-card__visual article-card__visual--<?= e($article['tone']) ?>"><?php if (!empty($article['image'])): ?><img src="<?= asset($article['image']) ?>" alt="" width="800" height="520" loading="lazy"><?php else: ?><?= icon('file', 'ui-icon--lg') ?><?php endif; ?></div>
+    <div class="card__body"><span class="badge badge--neutral"><?= e($article['type']) ?></span><h3 class="card__title mt-4"><a href="/articles/<?= e($article['slug']) ?>"><?= e($article['title']) ?></a></h3><p class="card__text"><?= e($article['excerpt'] ?? '') ?></p><div class="card__meta"><span><?= icon('clock') ?> <?= e($article['read']) ?></span><span><?= e($article['author'] ?? 'Mentoris') ?></span></div></div>
+    <div class="card__footer"><a class="brand" href="/articles/<?= e($article['slug']) ?>"><?= e(t('nav.articles')) ?> <?= icon('arrow-left') ?></a></div>
 </article>

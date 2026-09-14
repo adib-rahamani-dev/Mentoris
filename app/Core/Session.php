@@ -32,10 +32,17 @@ final class Session
                 'samesite' => 'Lax',
                 'path' => '/',
             ]);
-            if (!self::$handlerRegistered && env('SESSION_DRIVER', 'files') === 'database') {
+            $driver = (string) env('SESSION_DRIVER', 'files');
+            if (!self::$handlerRegistered && $driver === 'database') {
                 $lifetime = max(300, (int) env('SESSION_LIFETIME', 120) * 60);
                 session_set_save_handler(new DatabaseSessionHandler(Database::connection(), $lifetime), true);
                 self::$handlerRegistered = true;
+            } elseif ($driver === 'files') {
+                $sessionPath = (string) env('SESSION_FILE_PATH', base_path('storage/sessions'));
+                if (!is_dir($sessionPath) || !is_writable($sessionPath)) {
+                    throw new \RuntimeException('The configured session directory is unavailable or not writable.');
+                }
+                ini_set('session.save_path', $sessionPath);
             }
         }
         if (!session_start()) {

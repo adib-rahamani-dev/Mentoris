@@ -32,17 +32,17 @@ $homeCopy = [
 
 <section class="section" id="lines"><div class="container">
     <header class="section__head" data-reveal><div><span class="eyebrow">Academy Lines</span><h2><?= e($homeCopy['lines']) ?></h2><p><?= e($homeCopy['lines_text']) ?></p></div><a class="btn btn--ghost" href="/academy"><?= e(t('nav.lines')) ?></a></header>
-    <div class="academy-lines-grid"><?php foreach ($lines as $index => $line): ?><a class="line-card" href="/academy/<?= e($line['slug']) ?>" data-reveal><span class="line-card__number"><?= str_pad((string) ($index + 1), 2, '0', STR_PAD_LEFT) ?></span><div class="line-card__icon" aria-hidden="true"><?= e($line['icon']) ?></div><h3><?= e($line['title']) ?></h3><span class="line-card__en"><?= e($line['en']) ?></span><p><?= e($line['description']) ?></p></a><?php endforeach; ?></div>
+    <div class="academy-lines-grid"><?php foreach ($lines as $index => $line): ?><a class="line-card" href="/academy/<?= e($line['slug']) ?>" data-reveal><span class="line-card__number"><?= str_pad((string) ($index + 1), 2, '0', STR_PAD_LEFT) ?></span><div class="line-card__icon"><?= icon($line['icon'], 'ui-icon--lg') ?></div><h3><?= e($line['title']) ?></h3><span class="line-card__en"><?= e($line['en']) ?></span><p><?= e($line['description']) ?></p></a><?php endforeach; ?></div>
 </div></section>
 
 <section class="section section--muted" id="events"><div class="container">
     <header class="section__head" data-reveal><div><span class="eyebrow">Events</span><h2><?= e($homeCopy['events']) ?></h2><p><?= e($homeCopy['events_text']) ?></p></div><a class="btn btn--secondary" href="/events"><?= e(t('nav.events')) ?></a></header>
-    <?php if ($events): ?><div class="grid grid--3"><?php foreach ($events as $event): $event = \App\Services\PublicContentService::event($event['slug']) ?? $event; require view_path('components/cards/event-card.php'); endforeach; ?></div><?php else: ?><?php $emptyIcon='◫'; require view_path('components/content-empty.php'); ?><?php endif; ?>
+    <?php if ($events): ?><div class="grid grid--3"><?php foreach ($events as $event): $event = \App\Services\PublicContentService::event($event['slug']) ?? $event; require view_path('components/cards/event-card.php'); endforeach; ?></div><?php else: ?><?php $emptyIcon='calendar'; require view_path('components/content-empty.php'); ?><?php endif; ?>
 </div></section>
 
 <section class="section" id="courses"><div class="container">
     <header class="section__head" data-reveal><div><span class="eyebrow">Learning</span><h2><?= e($homeCopy['courses']) ?></h2></div><a class="btn btn--ghost" href="/courses"><?= e(t('nav.courses')) ?></a></header>
-    <?php $emptyIcon='▤'; require view_path('components/content-empty.php'); ?>
+    <?php $emptyIcon='book'; require view_path('components/content-empty.php'); ?>
 </div></section>
 
 <section class="section section--muted founder-preview"><div class="container founder-preview__grid">
@@ -51,8 +51,8 @@ $homeCopy = [
 </div></section>
 
 <section class="section"><div class="container"><div class="grid grid--2 launch-empty-grid">
-    <div><header class="section__head"><div><span class="eyebrow">Faculty</span><h2><?= e($homeCopy['experts']) ?></h2></div></header><?php $emptyIcon='◎'; require view_path('components/content-empty.php'); ?></div>
-    <div><header class="section__head"><div><span class="eyebrow">Knowledge</span><h2><?= e($homeCopy['content']) ?></h2></div></header><?php $emptyIcon='⌁'; require view_path('components/content-empty.php'); ?></div>
+    <div><header class="section__head"><div><span class="eyebrow">Faculty</span><h2><?= e($homeCopy['experts']) ?></h2></div></header><?php $emptyIcon='users'; require view_path('components/content-empty.php'); ?></div>
+    <div><header class="section__head"><div><span class="eyebrow">Knowledge</span><h2><?= e($homeCopy['content']) ?></h2></div><a href="/articles"><?= e(t('nav.articles')) ?></a></header><?php if ($articles): ?><div class="grid grid--2"><?php foreach (array_slice($articles, 0, 2) as $article) { require view_path('components/cards/article-card.php'); } ?></div><?php else: ?><?php $emptyIcon='file'; require view_path('components/content-empty.php'); ?><?php endif; ?></div>
 </div></div></section>
 
 <section class="section section--muted"><div class="container"><div class="community-launch" data-reveal><div><span class="eyebrow">Community</span><h2><?= e($homeCopy['community']) ?></h2><p><?= e($homeCopy['community_text']) ?></p></div><div class="cluster"><a class="btn btn--primary btn--lg" href="/community"><?= e($homeCopy['join']) ?></a><a class="btn btn--ghost btn--lg" href="/contact"><?= e($homeCopy['contact']) ?></a></div></div></div></section>

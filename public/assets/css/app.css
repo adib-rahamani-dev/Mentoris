@@ -1,7 +1,7 @@
 @import url("./variables.css?v=10.0.0");
 @import url("./reset.css?v=2.0.0");
 @import url("./typography.css?v=10.0.0");
-@import url("./global.css?v=10.0.0");
+@import url("./global.css?v=11.1.0");
 @import url("./utilities.css?v=2.0.0");
 
 @import url("./layout/container.css?v=2.0.0");
@@ -34,6 +34,7 @@
 @import url("./pages/founder.css?v=10.0.0");
 @import url("./pages/courses.css?v=6.0.0");
 @import url("./pages/mentor.css?v=10.0.0");
+@import url("./pages/article.css?v=11.1.0");
 @import url("./pages/contact.css?v=10.0.0");
 @import url("./pages/programs-academy.css?v=4.0.0");
 @import url("./pages/events-community.css?v=5.0.0");
@@ -42,4 +43,4 @@
 @import url("./pages/admin.css?v=9.0.0");
 @import url("./theme.css?v=10.0.0");
 @import url("./responsive.css?v=2.0.0");
-@import url("./brand-2026.css?v=11.0.0");
+@import url("./brand-2026.css?v=11.1.0");

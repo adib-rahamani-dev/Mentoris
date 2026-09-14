@@ -15,3 +15,4 @@ Disallow: /register
 Disallow: /reset-password
 
 Sitemap: https://mentorisacademy.com/sitemap.xml
+Sitemap: https://mentorisacademy.com/sitemap-content.xml

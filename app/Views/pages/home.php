@@ -30,7 +30,7 @@
         <div class="grid grid--3 mt-6">
             <article class="card feature-card" data-reveal><div class="feature-card__icon">Aa</div><h3>تایپوگرافی فارسی</h3><p>فونت محلی، وزن‌های مشخص و مقیاس واکنش‌گرا برای خوانایی بهتر.</p></article>
             <article class="card feature-card" data-reveal><div class="feature-card__icon">↔</div><h3>Spacing چهارپیکسلی</h3><p>ریتم ثابت از ۴ تا ۹۶ پیکسل برای چیدمان قابل پیش‌بینی.</p></article>
-            <article class="card feature-card" data-reveal><div class="feature-card__icon">◫</div><h3>Grid منعطف</h3><p>کانتینر ۱۳۲۰ پیکسلی و شبکه‌های دو، سه و چهارستونه responsive.</p></article>
+            <article class="card feature-card" data-reveal><div class="feature-card__icon"><?= icon('chart', 'ui-icon--lg') ?></div><h3>Grid منعطف</h3><p>کانتینر ۱۳۲۰ پیکسلی و شبکه‌های دو، سه و چهارستونه responsive.</p></article>
         </div>
     </div>
 </section>

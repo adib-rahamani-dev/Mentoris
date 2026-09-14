@@ -176,6 +176,23 @@ final class SeoService
         ];
     }
 
+    public static function articleSchema(array $article): array
+    {
+        return [
+            '@type' => 'Article',
+            '@id' => self::localizedUrl('/articles/' . $article['slug'], Translator::locale()) . '#article',
+            'headline' => $article['title'],
+            'description' => $article['excerpt'],
+            'datePublished' => $article['published_at'],
+            'dateModified' => $article['published_at'],
+            'author' => ['@type' => 'Person', 'name' => $article['author']],
+            'publisher' => ['@id' => self::baseUrl() . '/#organization'],
+            'mainEntityOfPage' => self::localizedUrl('/articles/' . $article['slug'], Translator::locale()),
+            'image' => [self::absoluteUrl('/assets/' . ltrim((string) ($article['image'] ?: 'images/mentoris-hero-sage-v2.png'), '/'))],
+            'inLanguage' => self::LOCALE_MAP[Translator::locale()] ?? self::LOCALE_MAP['fa'],
+        ];
+    }
+
     private static function currentPath(): string
     {
         $path = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH);

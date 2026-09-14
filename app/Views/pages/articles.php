@@ -1,0 +1,2 @@
+<section class="page-hero"><div class="container page-hero__content"><span class="eyebrow">Mentoris Journal</span><h1><?= e(t('articles.title')) ?></h1><p><?= e(t('articles.lead')) ?></p></div></section>
+<section class="section"><div class="container"><?php if ($articles): ?><div class="grid grid--3 articles-grid"><?php foreach ($articles as $article) { require view_path('components/cards/article-card.php'); } ?></div><?php else: ?><?php $emptyIcon='file'; require view_path('components/content-empty.php'); ?><?php endif; ?></div></section>

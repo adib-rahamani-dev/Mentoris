@@ -20,4 +20,18 @@ final class MentorsController extends Controller
             'mentors' => $mentors,
         ]);
     }
+
+    public function show(Request $request, string $slug): Response
+    {
+        foreach (PublicContentService::mentors() as $mentor) {
+            if (($mentor['slug'] ?? '') !== $slug) continue;
+            if ($slug === 'maryam-haghani') return Response::redirect('/founder');
+            return $this->view('pages.mentor-details', [
+                'title' => $mentor['name'] . ' | ' . t('nav.mentors'),
+                'description' => $mentor['specialty'],
+                'mentor' => $mentor,
+            ]);
+        }
+        return Response::html('<h1>404 - Mentor Not Found</h1>', 404);
+    }
 }

@@ -9,6 +9,9 @@ body {
   overflow-x: hidden;
 }
 
+.ui-icon{display:inline-block;width:1.25em;height:1.25em;flex:0 0 auto;vertical-align:-.22em;color:currentColor}
+.ui-icon--sm{width:1em;height:1em}.ui-icon--lg{width:1.6em;height:1.6em}
+
 body::before {
   position: fixed;
   inset: 0;

@@ -1,9 +1,38 @@
 
+## Environment and application secrets
 .env
+.env.*
+auth.json
+credentials.json
+secrets.json
+.netrc
+.npmrc
+.yarnrc
+.htpasswd
+my.cnf
+id_rsa*
+id_ed25519*
+*.pem
+*.key
+*.csr
+*.crt
+*.p12
+*.pfx
+*.jks
+
+## Installed dependencies and local tooling
 /vendor/
+/node_modules/
+/composer.phar
 /.idea/
 /.vscode/
+/.fleet/
 /.phpunit.cache/
+/.phpunit.result.cache
+/coverage/
+/tmp/
+
+## Runtime data (keep only the protected directory placeholders)
 storage/data/*
 storage/cache/*
 storage/logs/*
@@ -12,6 +41,34 @@ storage/temp/*
 storage/exports/*
 storage/uploads/*
 !storage/**/.gitkeep
+public/assets/images/uploads/*
+!public/assets/images/uploads/.gitkeep
+!public/assets/images/uploads/.htaccess
+
+## Local databases, database dumps, and backups
 *.sqlite
 *.sqlite-journal
+*.sqlite-shm
+*.sqlite-wal
+*.sql.gz
+*.sql.zip
+*.dump
+*.bak
+*.backup
+*.old
+/backups/
+/database/backups/
+/database/dumps/
+
+## Logs, OS/editor leftovers, and cPanel local metadata
 *.log
+error_log
+php_errorlog
+access_log
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+Desktop.ini
+.ftpquota
