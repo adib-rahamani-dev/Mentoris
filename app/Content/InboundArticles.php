@@ -40,9 +40,18 @@ final class InboundArticles
                 [['تمرین عامدانه در روان‌درمانی، انتشارات APA','https://www.apa.org/pubs/books/deliberate-practice-cognitive-behavioral-therapy'],['تمرین در آموزش درمانگران، APA','https://www.apa.org/monitor/2018/01/ce-corner']],
             ],
         ];
+        $headings = [
+            'act-psychological-flexibility-therapists'=>['انعطاف‌پذیری روان‌شناختی در ACT','استفاده تأملی از ماتریس ACT','تمرین کوتاه پس از یک جلسه دشوار'],
+            'cbt-case-formulation-therapist-thinking'=>['فرمولاسیون مورد و ثبت افکار چه تفاوتی دارند؟','وقتی درمانگر فکر خودکار را بررسی می‌کند','تمرین عامدانه یک مهارت کوچک'],
+            'schema-therapy-self-sacrifice-clinicians'=>['طرحواره، سبک مقابله و مد را از هم جدا کنیم','ایثار و اطاعت در مرزهای حرفه‌ای','بازبینی الگوها در فضای امن'],
+            'istdp-countertransference-anxiety'=>['احساس، اضطراب و دفاع در ISTDP','مکث در برابر انتقال متقابل','ثبت بی‌نام یک لحظه دشوار'],
+            'deliberate-practice-clinical-skills'=>['از دانستن پروتکل تا اجرای مهارت','چرخه تمرین عامدانه چگونه است؟','جایگاه سوپرویژن منظم'],
+        ];
         return array_map(static fn (array $item): array => [
             'slug'=>$item[0], 'title'=>$item[1], 'subtitle'=>'', 'type'=>$item[2], 'excerpt'=>$item[3],
-            'body'=>$item[4], 'references'=>$item[5], 'read'=>'۴ دقیقه', 'tone'=>'sage', 'image'=>'',
+            'body'=>$item[4], 'references'=>$item[5], 'read'=>'۴ دقیقه', 'tone'=>'sage',
+            'sections'=>array_map(static fn (string $paragraph, int $index): array => ['heading'=>$headings[$item[0]][$index] ?? '', 'body'=>$paragraph], preg_split('/\n\s*\n/u', $item[4]) ?: [], array_keys(preg_split('/\n\s*\n/u', $item[4]) ?: [])),
+            'image'=>$item[0] === 'act-psychological-flexibility-therapists' ? 'images/mentoris-journal-editorial-v1.webp' : '',
             'author'=>'تیم علمی منتوریس', 'published_at'=>'2026-09-30 00:00:00',
         ], $items);
     }

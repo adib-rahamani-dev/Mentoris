@@ -305,12 +305,36 @@ final class PublicContentService
     public static function articles(): array
     {
         $seed = Translator::locale() === 'fa' ? \App\Content\InboundArticles::all() : [];
-        return self::mergeBySlug($seed, array_map(static fn (array $row): array => self::articleFromContent($row), self::databaseContent('article')));
+        $managed = array_filter(self::databaseContent('article'), static fn (array $row): bool => ($row['resolved_locale'] ?? '') === Translator::locale() && trim((string) ($row['title'] ?? '')) !== '' && (trim((string) ($row['body'] ?? '')) !== '' || trim((string) ($row['excerpt'] ?? '')) !== ''));
+        return self::mergeBySlug($seed, array_map(static fn (array $row): array => self::articleFromContent($row), $managed));
     }
 
     public static function article(string $slug): ?array
     {
         return self::findBySlug(self::articles(), $slug);
+    }
+
+    public static function articleLocales(string $slug): array
+    {
+        $isSeed = false;
+        foreach (\App\Content\InboundArticles::all() as $item) {
+            if ($item['slug'] === $slug) { $isSeed = true; break; }
+        }
+        try {
+            $managed = (new ContentRepository())->publishedLocales('article', $slug);
+            return array_values(array_intersect(Translator::SUPPORTED, array_unique([...($isSeed ? ['fa'] : []), ...$managed])));
+        } catch (Throwable) {
+            return $isSeed ? ['fa'] : [Translator::locale()];
+        }
+    }
+
+    public static function articleIndexLocales(): array
+    {
+        try {
+            return array_values(array_intersect(Translator::SUPPORTED, array_unique(['fa', ...(new ContentRepository())->publishedLocalesForType('article')])));
+        } catch (Throwable) {
+            return ['fa'];
+        }
     }
 
     private static function databaseContent(string $type): array
@@ -411,7 +435,8 @@ final class PublicContentService
             'excerpt'=>(string)($row['excerpt'] ?: mb_substr(strip_tags((string)$row['body']),0,220)),'body'=>(string)$row['body'],
             'type'=>(string)($meta['category'] ?? 'مقاله'),'read'=>(string)($meta['read_time'] ?? '۵ دقیقه'),
             'tone'=>(string)($meta['tone'] ?? 'sage'),'image'=>self::assetPath($meta['image'] ?? ''),'author'=>(string)($meta['author'] ?? $row['author_name'] ?? 'Mentoris Academy'),
-            'published_at'=>(string)($row['published_at'] ?? $row['created_at'])];
+            'published_at'=>(string)($row['published_at'] ?? $row['created_at']),
+            'updated_at'=>(string)($row['updated_at'] ?? $row['published_at'] ?? $row['created_at'])];
     }
 
     private static function mergeBySlug(array $seed, array $managed): array

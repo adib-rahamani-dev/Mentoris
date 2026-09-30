@@ -29,7 +29,7 @@ $cardCopy = [
         <h3 class="card__title mt-4"><a href="/events/<?= e($event['slug']) ?>"><?= e($event['title']) ?></a></h3>
         <p class="card__text"><?= e($event['short_description'] ?? '') ?></p>
         <div class="event-card__meta"><span><?= icon('calendar') ?> <?= e($event['date']) ?></span><span><?= icon('pin') ?> <?= e($event['location'] ?? 'Mentoris') ?></span></div>
-        <div class="event-capacity" aria-label="<?= e($capacity > 0 ? ((string)$available . ' ' . $cardCopy['seats']) : $cardCopy['limited']) ?>"><div><span><?= e($cardCopy['capacity']) ?></span><strong><?= e($capacity > 0 ? ((string)$available . ' ' . $cardCopy['seats']) : $cardCopy['limited']) ?></strong></div><?php if ($capacity > 0): ?><div class="event-capacity__track"><span style="width:<?= $progress ?>%"></span></div><?php endif; ?></div>
+        <?php if (!in_array($status, ['completed','canceled'], true)): ?><div class="event-capacity" aria-label="<?= e($capacity > 0 ? ((string)$available . ' ' . $cardCopy['seats']) : $cardCopy['limited']) ?>"><div><span><?= e($cardCopy['capacity']) ?></span><strong><?= e($capacity > 0 ? ((string)$available . ' ' . $cardCopy['seats']) : $cardCopy['limited']) ?></strong></div><?php if ($capacity > 0): ?><div class="event-capacity__track"><span style="width:<?= $progress ?>%"></span></div><?php endif; ?></div><?php endif; ?>
     </div>
     <div class="card__footer"><span class="muted"><?= e($event['instructor']['name'] ?? 'Mentoris Academy') ?></span><a class="btn btn--secondary btn--sm" href="/events/<?= e($event['slug']) ?>"><?= e($status === 'registration-open' && $circleReady ? ($event['slug'] === 'therapists-circle-second' ? $cardCopy['request'] : $cardCopy['register']) : $cardCopy['details']) ?></a></div>
 </article>

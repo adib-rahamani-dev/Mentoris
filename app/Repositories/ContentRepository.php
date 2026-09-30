@@ -26,6 +26,27 @@ final class ContentRepository
         return is_array($row) ? $this->hydrate($row) : null;
     }
 
+    public function publishedLocales(string $type, string $slug): array
+    {
+        $statement = $this->pdo()->prepare("SELECT ct.locale FROM content_entities ce JOIN content_translations ct ON ct.entity_id=ce.id WHERE ce.entity_type=:type AND ce.slug=:slug AND ce.status='published' AND ct.title<>'' AND (COALESCE(ct.body,'')<>'' OR COALESCE(ct.excerpt,'')<>'') ORDER BY FIELD(ct.locale,'fa','ar','ku','en')");
+        $statement->execute(['type' => $type, 'slug' => $slug]);
+        return array_values(array_intersect(['fa', 'ar', 'ku', 'en'], array_map('strval', $statement->fetchAll(PDO::FETCH_COLUMN) ?: [])));
+    }
+
+    public function publishedSlugs(string $type): array
+    {
+        $statement = $this->pdo()->prepare("SELECT ce.slug,ce.updated_at FROM content_entities ce WHERE ce.entity_type=:type AND ce.status='published' AND EXISTS (SELECT 1 FROM content_translations ct WHERE ct.entity_id=ce.id AND ct.title<>'' AND (COALESCE(ct.body,'')<>'' OR COALESCE(ct.excerpt,'')<>'')) ORDER BY ce.updated_at DESC");
+        $statement->execute(['type' => $type]);
+        return $statement->fetchAll() ?: [];
+    }
+
+    public function publishedLocalesForType(string $type): array
+    {
+        $statement = $this->pdo()->prepare("SELECT DISTINCT ct.locale FROM content_entities ce JOIN content_translations ct ON ct.entity_id=ce.id WHERE ce.entity_type=:type AND ce.status='published' AND ct.title<>'' AND (COALESCE(ct.body,'')<>'' OR COALESCE(ct.excerpt,'')<>'')");
+        $statement->execute(['type' => $type]);
+        return array_values(array_intersect(['fa', 'ar', 'ku', 'en'], array_map('strval', $statement->fetchAll(PDO::FETCH_COLUMN) ?: [])));
+    }
+
     private function selectSql(): string
     {
         return <<<'SQL'

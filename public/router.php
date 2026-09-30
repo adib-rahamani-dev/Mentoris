@@ -8,7 +8,7 @@ $uri = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?: '/'
 $requested = realpath(__DIR__ . rawurldecode($uri));
 $public = realpath(__DIR__);
 
-if ($uri !== '/' && $requested !== false && $public !== false && str_starts_with($requested, $public . DIRECTORY_SEPARATOR) && is_file($requested)) {
+if ($uri !== '/' && $uri !== '/sitemap.xml' && $requested !== false && $public !== false && str_starts_with($requested, $public . DIRECTORY_SEPARATOR) && is_file($requested)) {
     return false;
 }
 

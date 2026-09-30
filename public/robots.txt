@@ -6,6 +6,7 @@ Disallow: /checkout
 Disallow: /dashboard
 Disallow: /forgot-password
 Disallow: /login
+Disallow: /live
 Disallow: /my-
 Disallow: /notifications
 Disallow: /orders
@@ -15,4 +16,3 @@ Disallow: /register
 Disallow: /reset-password
 
 Sitemap: https://mentorisacademy.com/sitemap.xml
-Sitemap: https://mentorisacademy.com/sitemap-content.xml

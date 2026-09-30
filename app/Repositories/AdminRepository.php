@@ -35,6 +35,21 @@ final class AdminRepository
         ];
     }
 
+    public function contentBrief(): array
+    {
+        if (!$this->tableExists('content_entities') || !$this->tableExists('content_translations')) {
+            return ['available' => false, 'published' => 0, 'draft' => 0, 'needs_translation' => 0, 'recent' => []];
+        }
+        $recent = $this->pdo()->query("SELECT ce.id,ce.entity_type,ce.slug,ce.status,ce.updated_at,COALESCE(NULLIF(ct.title,''),ce.slug) title FROM content_entities ce LEFT JOIN content_translations ct ON ct.entity_id=ce.id AND ct.locale='fa' ORDER BY ce.updated_at DESC LIMIT 5")->fetchAll() ?: [];
+        return [
+            'available' => true,
+            'published' => $this->scalar("SELECT COUNT(*) FROM content_entities WHERE status='published'"),
+            'draft' => $this->scalar("SELECT COUNT(*) FROM content_entities WHERE status='draft'"),
+            'needs_translation' => $this->scalar("SELECT COUNT(*) FROM content_entities ce WHERE ce.status='published' AND (SELECT COUNT(DISTINCT ct.locale) FROM content_translations ct WHERE ct.entity_id=ce.id AND ct.title<>'')<4"),
+            'recent' => $recent,
+        ];
+    }
+
     public function monthlyMetrics(int $months = 12): array
     {
         $months = max(3, min(24, $months));

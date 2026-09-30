@@ -46,5 +46,6 @@ $router->get('/mentors/{slug:[a-z0-9-]+}', [MentorsController::class, 'show'], [
 $router->get('/articles', [ArticlesController::class, 'index'], ['rate:120,60']);
 $router->get('/articles/{slug:[a-z0-9-]+}', [ArticlesController::class, 'show'], ['rate:120,60']);
 $router->get('/sitemap-content.xml', [SitemapController::class, 'index'], ['rate:30,60']);
+$router->get('/sitemap.xml', [SitemapController::class, 'index'], ['rate:30,60']);
 $router->get('/contact', [ContactController::class, 'index'], ['rate:60,60']);
 $router->post('/contact', [ContactController::class, 'store'], ['csrf', 'rate:5,60']);

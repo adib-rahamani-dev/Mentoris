@@ -26,6 +26,7 @@ final class AdminController extends Controller
         $admin = $this->currentUser();
         return $this->adminView('dashboard', 'مرکز کنترل', [
             'stats' => $repository->dashboard(),
+            'contentBrief' => Authorization::can($admin, 'content.view') ? $repository->contentBrief() : null,
             'trends' => $repository->monthlyMetrics(8),
             'recentUsers' => Authorization::can($admin, 'users.view') ? array_slice((new UserRepository())->all(), 0, 6) : [],
             'recentOrders' => Authorization::can($admin, 'orders.view') ? (new CommerceRepository())->recentOrders(6) : [],

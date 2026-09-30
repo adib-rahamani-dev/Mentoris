@@ -9,6 +9,7 @@ Options -Indexes
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteRule ^(?:app|bootstrap|bin|database|output|routes|storage|tmp|vendor)(?:/|$) - [F,L,NC]
+    RewriteRule ^sitemap\.xml$ public/index.php [QSA,L,NC]
     RewriteRule ^admin/?$ public/index.php [QSA,L,NC]
     RewriteRule ^$ public/ [L]
     RewriteCond %{REQUEST_URI} !^/public/

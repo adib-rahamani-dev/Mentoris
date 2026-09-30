@@ -31,6 +31,7 @@ final class SeoService
         '/forgot-password',
         '/framework',
         '/login',
+        '/live',
         '/my-certificates',
         '/my-courses',
         '/my-events',
@@ -65,7 +66,7 @@ final class SeoService
                 'language' => self::HREFLANG_MAP[$language] ?? $language,
                 'url' => self::localizedUrl($path, $language),
             ], $languages),
-            'x_default' => self::localizedUrl($path, 'fa'),
+            'x_default' => self::localizedUrl($path, in_array('fa', $languages, true) ? 'fa' : $languages[0]),
             'robots' => $indexable ? 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1' : 'noindex, nofollow, noarchive',
             'indexable' => $indexable,
             'base_url' => $baseUrl,
@@ -185,13 +186,52 @@ final class SeoService
             '@id' => self::localizedUrl('/articles/' . $article['slug'], Translator::locale()) . '#article',
             'headline' => $article['title'],
             'description' => $article['excerpt'],
-            'datePublished' => $article['published_at'],
-            'dateModified' => $article['published_at'],
+            'datePublished' => self::isoDate((string) $article['published_at']),
+            'dateModified' => self::isoDate((string) ($article['updated_at'] ?? $article['published_at'])),
             'author' => ['@type' => 'Person', 'name' => $article['author']],
             'publisher' => ['@id' => self::baseUrl() . '/#organization'],
             'mainEntityOfPage' => self::localizedUrl('/articles/' . $article['slug'], Translator::locale()),
             'image' => [self::absoluteUrl('/assets/' . ltrim((string) ($article['image'] ?: 'images/mentoris-hero-sage-v2.png'), '/'))],
+            'articleSection' => $article['type'],
+            'citation' => array_values(array_map(static fn (array $reference): string => (string) ($reference[1] ?? ''), $article['references'] ?? [])),
             'inLanguage' => self::LOCALE_MAP[Translator::locale()] ?? self::LOCALE_MAP['fa'],
+        ];
+    }
+
+    private static function isoDate(string $date): string
+    {
+        $timestamp = strtotime($date . (preg_match('/(?:Z|[+-]\d{2}:?\d{2})$/', $date) ? '' : ' UTC'));
+        return $timestamp === false ? $date : gmdate('Y-m-d\TH:i:s\Z', $timestamp);
+    }
+
+    public static function articleCollectionSchema(array $articles): array
+    {
+        return [
+            '@type' => 'CollectionPage',
+            '@id' => self::localizedUrl('/articles', Translator::locale()) . '#collection',
+            'name' => function_exists('t') ? t('articles.title') : 'Mentoris Journal',
+            'mainEntity' => [
+                '@type' => 'ItemList',
+                'itemListElement' => array_map(static fn (array $item, int $index): array => [
+                    '@type' => 'ListItem',
+                    'position' => $index + 1,
+                    'name' => $item['title'],
+                    'url' => self::localizedUrl('/articles/' . $item['slug'], Translator::locale()),
+                ], $articles, array_keys($articles)),
+            ],
+        ];
+    }
+
+    public static function breadcrumbSchema(array $items): array
+    {
+        return [
+            '@type' => 'BreadcrumbList',
+            'itemListElement' => array_map(static fn (array $item, int $index): array => [
+                '@type' => 'ListItem',
+                'position' => $index + 1,
+                'name' => $item['name'],
+                'item' => self::localizedUrl($item['path'], Translator::locale()),
+            ], $items, array_keys($items)),
         ];
     }
 
