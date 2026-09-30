@@ -7,6 +7,7 @@ Disallow: /dashboard
 Disallow: /forgot-password
 Disallow: /login
 Disallow: /live
+Disallow: /feedback
 Disallow: /my-
 Disallow: /notifications
 Disallow: /orders

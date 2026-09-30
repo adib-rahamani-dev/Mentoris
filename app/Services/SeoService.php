@@ -29,6 +29,7 @@ final class SeoService
         '/dashboard',
         '/design-system',
         '/forgot-password',
+        '/feedback',
         '/framework',
         '/login',
         '/live',

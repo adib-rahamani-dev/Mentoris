@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Controllers\AdminController;
+use App\Controllers\AdminQrController;
 use App\Core\Router;
 
 /** @var Router $router */
@@ -20,6 +21,7 @@ $router->get('/admin/orders/{id:[a-f0-9]+}', [AdminController::class, 'order'], 
 $router->get('/admin/engagements', [AdminController::class, 'engagements'], ['auth', 'can:engagements.view', 'rate:120,60']);
 $router->post('/admin/engagements/{type:[a-z]+}/{id:[a-f0-9]+}', [AdminController::class, 'updateEngagement'], ['auth', 'can:engagements.manage', 'csrf', 'rate:60,60']);
 $router->get('/admin/content', [AdminController::class, 'content'], ['auth', 'can:content.view', 'rate:120,60']);
+$router->get('/admin/qr', [AdminQrController::class, 'index'], ['auth', 'can:content.view', 'rate:120,60']);
 $router->get('/admin/content/new', [AdminController::class, 'createContent'], ['auth', 'can:content.manage', 'rate:120,60']);
 $router->post('/admin/content', [AdminController::class, 'storeContent'], ['auth', 'can:content.manage', 'csrf', 'rate:30,60']);
 $router->get('/admin/content/{id:[a-f0-9]+}/edit', [AdminController::class, 'editContent'], ['auth', 'can:content.manage', 'rate:120,60']);

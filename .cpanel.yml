@@ -5,3 +5,4 @@ deployment:
     - /bin/cp -R app bin bootstrap database output public routes storage $DEPLOYPATH
     - /bin/cp .htaccess composer.json $DEPLOYPATH
     - /bin/rm -f $DEPLOYPATH/public/sitemap.xml
+    - /bin/rm -f $DEPLOYPATH/public/assets/images/mentoris-live-qr.svg $DEPLOYPATH/output/qr/mentoris-live-qr.png

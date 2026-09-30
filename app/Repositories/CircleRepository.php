@@ -154,6 +154,8 @@ final class CircleRepository
 
     public function available(): bool { return $this->tableExists('event_signups'); }
 
+    public function feedbackAvailable(): bool { return $this->tableExists('event_signups') && $this->tableExists('event_feedback'); }
+
     public function therapistAvailable(): bool { return $this->tableExists('therapist_profiles'); }
 
     private function tableExists(string $table): bool
