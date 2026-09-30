@@ -2,4 +2,5 @@
 deployment:
   tasks:
     - export DEPLOYPATH=/home/h419512/public_html/
-    - /bin/cp -R . $DEPLOYPATH
+    - /bin/cp -R app bin bootstrap database output public routes storage $DEPLOYPATH
+    - /bin/cp .htaccess composer.json $DEPLOYPATH
