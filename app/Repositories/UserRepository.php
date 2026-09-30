@@ -275,6 +275,11 @@ final class UserRepository
         $user['auth_version'] = (int) ($user['auth_version'] ?? 1);
         $user['courses'] = $this->column($pdo, 'SELECT course_slug FROM enrollments WHERE user_id = :user_id AND status IN (\'active\', \'completed\') ORDER BY enrolled_at', $user['id']);
         $user['events'] = $this->column($pdo, 'SELECT event_slug FROM event_registrations WHERE user_id = :user_id AND status <> \'canceled\' ORDER BY created_at', $user['id']);
+        try {
+            $user['events'] = array_values(array_unique([...$user['events'], ...$this->column($pdo, 'SELECT event_slug FROM event_signups WHERE user_id = :user_id AND status <> \'rejected\' ORDER BY created_at', $user['id'])]));
+        } catch (PDOException $exception) {
+            if ((string) $exception->getCode() !== '42S02') throw $exception;
+        }
         $certificates = $pdo->prepare('SELECT id, course_slug, certificate_number, issued_at, revoked_at FROM certificates WHERE user_id = :user_id ORDER BY issued_at DESC');
         $certificates->execute(['user_id' => $user['id']]);
         $user['certificates'] = $certificates->fetchAll() ?: [];

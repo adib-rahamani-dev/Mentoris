@@ -15,6 +15,8 @@ use App\Controllers\CommunityController;
 use App\Controllers\CoursesController;
 use App\Controllers\ArticlesController;
 use App\Controllers\SitemapController;
+use App\Controllers\LiveController;
+use App\Controllers\EventCertificateController;
 use App\Core\Router;
 
 /** @var Router $router */
@@ -32,6 +34,11 @@ $router->get('/courses/{slug:[a-z0-9-]+}', [CoursesController::class, 'show'], [
 $router->get('/events', [EventsController::class, 'index'], ['rate:120,60']);
 $router->get('/events/{slug:[a-z0-9-]+}', [EventsController::class, 'show'], ['rate:120,60']);
 $router->post('/events/{slug:[a-z0-9-]+}/register', [EventsController::class, 'register'], ['csrf', 'rate:5,60']);
+$router->get('/live', [LiveController::class, 'index'], ['rate:60,60']);
+$router->post('/live/access', [LiveController::class, 'access'], ['csrf', 'rate:5,60']);
+$router->post('/live/feedback', [LiveController::class, 'feedback'], ['csrf', 'rate:5,60']);
+$router->get('/live/toolbox', [LiveController::class, 'toolbox'], ['rate:20,60']);
+$router->get('/verify/event/{number:[A-Z0-9-]+}', [EventCertificateController::class, 'show'], ['rate:30,60']);
 $router->get('/community', [CommunityController::class, 'index'], ['rate:120,60']);
 $router->post('/community/join', [CommunityController::class, 'join'], ['csrf', 'rate:3,60']);
 $router->get('/mentors', [MentorsController::class, 'index'], ['rate:120,60']);

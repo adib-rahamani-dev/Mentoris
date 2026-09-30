@@ -37,22 +37,21 @@ $homeCopy = [
 
 <section class="section section--muted" id="events"><div class="container">
     <header class="section__head" data-reveal><div><span class="eyebrow">Events</span><h2><?= e($homeCopy['events']) ?></h2><p><?= e($homeCopy['events_text']) ?></p></div><a class="btn btn--secondary" href="/events"><?= e(t('nav.events')) ?></a></header>
-    <?php if ($events): ?><div class="grid grid--3"><?php foreach ($events as $event): $event = \App\Services\PublicContentService::event($event['slug']) ?? $event; require view_path('components/cards/event-card.php'); endforeach; ?></div><?php else: ?><?php $emptyIcon='calendar'; require view_path('components/content-empty.php'); ?><?php endif; ?>
+    <?php if ($events): ?><div class="grid grid--3 home-events <?= count($events) === 1 ? 'home-events--single' : '' ?>"><?php foreach ($events as $event): $event = \App\Services\PublicContentService::event($event['slug']) ?? $event; require view_path('components/cards/event-card.php'); endforeach; ?></div><?php else: ?><?php $emptyIcon='calendar'; require view_path('components/content-empty.php'); ?><?php endif; ?>
 </div></section>
 
+<?php if (!empty($courses)): ?>
 <section class="section" id="courses"><div class="container">
     <header class="section__head" data-reveal><div><span class="eyebrow">Learning</span><h2><?= e($homeCopy['courses']) ?></h2></div><a class="btn btn--ghost" href="/courses"><?= e(t('nav.courses')) ?></a></header>
-    <?php $emptyIcon='book'; require view_path('components/content-empty.php'); ?>
+    <div class="grid grid--3"><?php foreach (array_slice($courses, 0, 3) as $course): require view_path('components/cards/course-card.php'); endforeach; ?></div>
 </div></section>
+<?php endif; ?>
 
 <section class="section section--muted founder-preview"><div class="container founder-preview__grid">
     <div class="founder-preview__portrait" data-reveal><img src="<?= asset($founder['image']) ?>" alt="<?= e($founder['name']) ?>" loading="lazy" width="1024" height="1536"></div>
     <div class="founder-preview__content stack" data-reveal><span class="eyebrow">Founder</span><h2><?= e($homeCopy['founder']) ?></h2><h3><?= e($founder['name']) ?></h3><p class="founder-role"><?= e($founder['role']) ?></p><p><?= e($founder['short_bio']) ?></p><blockquote>«<?= e($founder['quote']) ?>»</blockquote><div><a class="btn btn--primary" href="/founder"><?= e($homeCopy['founder_link']) ?></a></div></div>
 </div></section>
 
-<section class="section"><div class="container"><div class="grid grid--2 launch-empty-grid">
-    <div><header class="section__head"><div><span class="eyebrow">Faculty</span><h2><?= e($homeCopy['experts']) ?></h2></div></header><?php $emptyIcon='users'; require view_path('components/content-empty.php'); ?></div>
-    <div><header class="section__head"><div><span class="eyebrow">Knowledge</span><h2><?= e($homeCopy['content']) ?></h2></div><a href="/articles"><?= e(t('nav.articles')) ?></a></header><?php if ($articles): ?><div class="grid grid--2"><?php foreach (array_slice($articles, 0, 2) as $article) { require view_path('components/cards/article-card.php'); } ?></div><?php else: ?><?php $emptyIcon='file'; require view_path('components/content-empty.php'); ?><?php endif; ?></div>
-</div></div></section>
+<?php if ($articles): ?><section class="section"><div class="container"><header class="section__head"><div><span class="eyebrow">Mentoris Journal</span><h2><?= e($homeCopy['content']) ?></h2></div><a class="btn btn--ghost" href="/articles"><?= e(t('nav.articles')) ?></a></header><div class="grid grid--3"><?php foreach (array_slice($articles, 0, 3) as $article) { require view_path('components/cards/article-card.php'); } ?></div></div></section><?php endif; ?>
 
 <section class="section section--muted"><div class="container"><div class="community-launch" data-reveal><div><span class="eyebrow">Community</span><h2><?= e($homeCopy['community']) ?></h2><p><?= e($homeCopy['community_text']) ?></p></div><div class="cluster"><a class="btn btn--primary btn--lg" href="/community"><?= e($homeCopy['join']) ?></a><a class="btn btn--ghost btn--lg" href="/contact"><?= e($homeCopy['contact']) ?></a></div></div></div></section>

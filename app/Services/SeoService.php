@@ -50,6 +50,8 @@ final class SeoService
         $canonical = self::localizedUrl($path, $locale);
         $image = self::absoluteUrl((string) ($options['image'] ?? '/assets/images/mentoris-hero-sage-v2.png'));
         $indexable = (bool) ($options['indexable'] ?? self::isIndexable($path));
+        $languages = array_values(array_intersect(Translator::SUPPORTED, (array) ($options['languages'] ?? Translator::SUPPORTED)));
+        if ($languages === []) $languages = [$locale];
 
         return [
             'title' => trim($title) !== '' ? trim($title) : 'Mentoris Academy',
@@ -58,11 +60,11 @@ final class SeoService
             'image' => $image,
             'type' => (string) ($options['type'] ?? 'website'),
             'locale' => self::LOCALE_MAP[$locale] ?? self::LOCALE_MAP['fa'],
-            'locale_alternates' => array_values(array_filter(self::LOCALE_MAP, static fn (string $value): bool => $value !== (self::LOCALE_MAP[$locale] ?? self::LOCALE_MAP['fa']))),
+            'locale_alternates' => array_values(array_map(static fn (string $language): string => self::LOCALE_MAP[$language], array_filter($languages, static fn (string $language): bool => $language !== $locale))),
             'alternates' => array_map(static fn (string $language): array => [
                 'language' => self::HREFLANG_MAP[$language] ?? $language,
                 'url' => self::localizedUrl($path, $language),
-            ], Translator::SUPPORTED),
+            ], $languages),
             'x_default' => self::localizedUrl($path, 'fa'),
             'robots' => $indexable ? 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1' : 'noindex, nofollow, noarchive',
             'indexable' => $indexable,

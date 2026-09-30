@@ -3,6 +3,8 @@ $statusLabels = \App\Services\PublicContentService::eventStatusLabels();
 $modeLabels = \App\Services\PublicContentService::eventModeLabels();
 $status = $event['status'] ?? 'upcoming';
 $statusLabel = $event['status_label'] ?? ($statusLabels[$status] ?? $status);
+$circleReady = $event['slug'] !== 'therapists-circle-second' || (new \App\Repositories\CircleRepository())->available();
+if (!$circleReady) $statusLabel = $statusLabels['upcoming'] ?? $statusLabel;
 $mode = $event['mode'] ?? 'offline';
 $modeLabel = $event['mode_label'] ?? ($modeLabels[$mode] ?? $mode);
 $capacity = (int) ($event['capacity'] ?? 0);
@@ -10,16 +12,16 @@ $registered = (int) ($event['registered'] ?? 0);
 $available = $event['available'] ?? ($capacity > 0 ? max(0, $capacity - $registered) : null);
 $progress = $capacity > 0 ? min(100, (int) round(($registered / $capacity) * 100)) : 0;
 $cardCopy = [
-    'fa'=>['capacity'=>'ظرفیت','limited'=>'ظرفیت محدود','seats'=>'جای خالی','register'=>'ثبت‌نام','details'=>'جزئیات'],
-    'ar'=>['capacity'=>'السعة','limited'=>'سعة محدودة','seats'=>'مقاعد متاحة','register'=>'التسجيل','details'=>'التفاصيل'],
-    'ku'=>['capacity'=>'شوێن','limited'=>'شوێنی سنووردار','seats'=>'شوێنی بەتاڵ','register'=>'تۆمارکردن','details'=>'وردەکاری'],
-    'en'=>['capacity'=>'Capacity','limited'=>'Limited capacity','seats'=>'seats available','register'=>'Register','details'=>'Details'],
+    'fa'=>['capacity'=>'ظرفیت','limited'=>'به‌زودی اعلام می‌شود','seats'=>'جای خالی','register'=>'ثبت‌نام','request'=>'درخواست حضور','details'=>'جزئیات'],
+    'ar'=>['capacity'=>'السعة','limited'=>'تُعلن قريباً','seats'=>'مقاعد متاحة','register'=>'التسجيل','request'=>'طلب الحضور','details'=>'التفاصيل'],
+    'ku'=>['capacity'=>'شوێن','limited'=>'بەم زووانە ڕادەگەیەنرێت','seats'=>'شوێنی بەتاڵ','register'=>'تۆمارکردن','request'=>'داواکاری بەشداری','details'=>'وردەکاری'],
+    'en'=>['capacity'=>'Capacity','limited'=>'To be announced','seats'=>'seats available','register'=>'Register','request'=>'Request a place','details'=>'Details'],
 ][locale()];
 ?>
 <article class="card event-card event-card--<?= e($status) ?>">
     <div class="event-card__visual event-card__visual--<?= e($event['tone'] ?? 'sage') ?>">
-        <?php if (!empty($event['image'])): ?><img src="<?= asset($event['image']) ?>" alt="پوستر <?= e($event['title']) ?>" width="1080" height="1920" loading="lazy"><?php endif; ?>
-        <div class="event-card__date"><span><?= e($event['day']) ?></span><small><?= e($event['month']) ?></small></div>
+        <?php if (!empty($event['image'])): ?><img src="<?= asset($event['image']) ?>" alt="پوستر <?= e($event['title']) ?>" width="1080" height="1920" loading="lazy"><?php else: ?><div class="event-card__art" aria-hidden="true"><span>MENTORIS / CIRCLE</span><strong><?= e($event['title']) ?></strong><small><?= e($event['location'] ?? 'Mentoris Academy') ?></small></div><?php endif; ?>
+        <?php if (!empty($event['date_iso'])): ?><div class="event-card__date"><span><?= e($event['day']) ?></span><small><?= e($event['month']) ?></small></div><?php endif; ?>
         <em class="event-status event-status--<?= e($status) ?>"><?= e($statusLabel) ?></em>
     </div>
     <div class="card__body">
@@ -29,5 +31,5 @@ $cardCopy = [
         <div class="event-card__meta"><span><?= icon('calendar') ?> <?= e($event['date']) ?></span><span><?= icon('pin') ?> <?= e($event['location'] ?? 'Mentoris') ?></span></div>
         <div class="event-capacity" aria-label="<?= e($capacity > 0 ? ((string)$available . ' ' . $cardCopy['seats']) : $cardCopy['limited']) ?>"><div><span><?= e($cardCopy['capacity']) ?></span><strong><?= e($capacity > 0 ? ((string)$available . ' ' . $cardCopy['seats']) : $cardCopy['limited']) ?></strong></div><?php if ($capacity > 0): ?><div class="event-capacity__track"><span style="width:<?= $progress ?>%"></span></div><?php endif; ?></div>
     </div>
-    <div class="card__footer"><span class="muted"><?= e($event['instructor']['name'] ?? 'Mentoris Academy') ?></span><a class="btn btn--secondary btn--sm" href="/events/<?= e($event['slug']) ?>"><?= e($status === 'registration-open' ? $cardCopy['register'] : $cardCopy['details']) ?></a></div>
+    <div class="card__footer"><span class="muted"><?= e($event['instructor']['name'] ?? 'Mentoris Academy') ?></span><a class="btn btn--secondary btn--sm" href="/events/<?= e($event['slug']) ?>"><?= e($status === 'registration-open' && $circleReady ? ($event['slug'] === 'therapists-circle-second' ? $cardCopy['request'] : $cardCopy['register']) : $cardCopy['details']) ?></a></div>
 </article>

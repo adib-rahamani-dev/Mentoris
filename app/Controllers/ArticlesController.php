@@ -31,6 +31,7 @@ final class ArticlesController extends Controller
             'title' => $article['title'] . ' | Mentoris',
             'description' => $article['excerpt'],
             'seoType' => 'article',
+            'seoLanguages' => !empty($article['references']) ? ['fa'] : null,
             'seoImage' => !empty($article['image']) ? '/assets/' . ltrim($article['image'], '/') : null,
             'structuredData' => [SeoService::articleSchema($article)],
             'article' => $article,

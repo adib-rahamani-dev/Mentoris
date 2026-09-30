@@ -8,7 +8,7 @@ use App\Core\Controller;
 use App\Core\Request;
 use App\Core\Response;
 use App\Core\Validator;
-use App\Repositories\EngagementRepository;
+use App\Repositories\CircleRepository;
 use App\Services\AuthService;
 use App\Services\PublicContentService;
 use App\Services\SeoService;
@@ -43,16 +43,16 @@ final class EventsController extends Controller
             return Response::html('<h1>404 - Event Not Found</h1>', 404);
         }
         if (!$event['can_register']) {
-            return $this->renderEvent($event, [], $request->only(['name', 'email', 'phone', 'role']), false, 'ثبت‌نام این رویداد در حال حاضر فعال نیست.');
+            return $this->renderEvent($event, [], $request->only(['name', 'phone', 'city']), false, 'درخواست حضور در این رویداد فعلاً فعال نیست.');
         }
 
-        $data = $request->only(['name', 'email', 'phone', 'role']);
+        $data = $request->only(['name', 'phone', 'city']);
+        $data['phone'] = CircleRepository::phone((string) ($data['phone'] ?? ''));
         $validator = new Validator();
         $valid = $validator->validate($data, [
             'name' => 'required|string|min:2|max:80',
-            'email' => 'required|email|max:120',
-            'phone' => 'required|string|max:20',
-            'role' => 'required|string|max:80',
+            'phone' => ['required', 'regex:/^09[0-9]{9}$/'],
+            'city' => 'required|string|min:2|max:80',
         ]);
         if (!$valid) {
             return $this->renderEvent($event, $validator->errors(), $data);
@@ -60,12 +60,12 @@ final class EventsController extends Controller
 
         try {
             $user = (new AuthService())->user();
-            (new EngagementRepository())->registerEvent($slug, $data, $user['id'] ?? null);
+            $circle = new CircleRepository();
+            if (!$circle->available()) return $this->renderEvent($event, [], $data, false, 'ثبت درخواست پس از آماده‌سازی پایگاه داده فعال می‌شود.');
+            $circle->signup($slug, $data, $user['id'] ?? null);
         } catch (RuntimeException $exception) {
             return $this->renderEvent($event, [], $data, false, $exception->getMessage());
         }
-        $event['registered'] = min($event['capacity'], $event['registered'] + 1);
-        $event['available'] = max(0, $event['capacity'] - $event['registered']);
         return $this->renderEvent($event, [], [], true);
     }
 
@@ -74,10 +74,11 @@ final class EventsController extends Controller
         return $this->view('pages.event-details', [
             'title' => $event['title'] . ' | Events',
             'description' => $event['short_description'],
-            'seoImage' => '/assets/' . ltrim((string) ($event['image'] ?? 'images/mentoris-hero-sage-v2.png'), '/'),
+            'seoImage' => '/assets/' . ltrim((string) ($event['image'] ?: 'images/mentoris-hero-sage-v2.png'), '/'),
             'seoType' => 'event',
-            'structuredData' => [SeoService::eventSchema($event)],
+            'structuredData' => !empty($event['date_iso']) ? [SeoService::eventSchema($event)] : [],
             'event' => $event,
+            'registrationReady' => $event['can_register'] && (new CircleRepository())->available(),
             'errors' => $errors,
             'old' => $old,
             'success' => $success,

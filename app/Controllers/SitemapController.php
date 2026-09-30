@@ -31,14 +31,16 @@ final class SitemapController
         foreach (PublicContentService::articles() as $item) $paths['/articles/' . $item['slug']] = ['weekly', '0.8'];
 
         $locales = ['fa' => 'fa', 'ar' => 'ar', 'ku' => 'ckb', 'en' => 'en'];
+        $persianOnlySlugs = array_column(\App\Content\InboundArticles::all(), 'slug');
         $escape = static fn (string $value): string => htmlspecialchars($value, ENT_XML1 | ENT_QUOTES, 'UTF-8');
         $xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
         $xml .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">' . "\n";
         foreach ($paths as $path => [$changeFrequency, $priority]) {
-            foreach ($locales as $locale => $hreflang) {
+            $pathLocales = str_starts_with($path, '/articles/') && in_array(substr($path, strlen('/articles/')), $persianOnlySlugs, true) ? ['fa'=>'fa'] : $locales;
+            foreach ($pathLocales as $locale => $hreflang) {
                 $url = $baseUrl . $path . ($path === '/' ? '?' : '?') . 'lang=' . $locale;
                 $xml .= '  <url><loc>' . $escape($url) . '</loc><changefreq>' . $changeFrequency . '</changefreq><priority>' . $priority . '</priority>';
-                foreach ($locales as $alternateLocale => $alternateHreflang) {
+                foreach ($pathLocales as $alternateLocale => $alternateHreflang) {
                     $alternateUrl = $baseUrl . $path . ($path === '/' ? '?' : '?') . 'lang=' . $alternateLocale;
                     $xml .= '<xhtml:link rel="alternate" hreflang="' . $alternateHreflang . '" href="' . $escape($alternateUrl) . '"/>';
                 }

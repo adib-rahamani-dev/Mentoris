@@ -156,8 +156,9 @@ final class AdminController extends Controller
     public function engagements(Request $request): Response
     {
         $type = (string) $request->query('type', 'messages');
-        if (!in_array($type, ['messages','events','community'], true)) $type = 'messages';
+        if (!in_array($type, ['messages','events','circle','community'], true)) $type = 'messages';
         $filters = ['query' => trim((string) $request->query('q', '')), 'status' => (string) $request->query('status', 'all')];
+        if ($type === 'circle' && !(new \App\Repositories\CircleRepository())->available()) return $this->adminView('engagements', 'مرکز ارتباطات', ['items' => [], 'pagination' => ['page'=>1,'per_page'=>20,'total'=>0,'pages'=>1], 'type'=>'circle', 'statuses'=>['requested','approved','rejected','attended'], 'filters'=>$filters]);
         $result = (new AdminRepository())->engagements($type, $filters, (int) $request->query('page', 1));
         return $this->adminView('engagements', 'مرکز ارتباطات', [...$result, 'filters' => $filters]);
     }

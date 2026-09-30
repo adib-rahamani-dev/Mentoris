@@ -8,19 +8,19 @@ use RuntimeException;
 
 final class Crypto
 {
-    public static function encrypt(string $plaintext): string
+    public static function encrypt(string $plaintext, string $context = 'mentoris-session-v1'): string
     {
         $iv = random_bytes(12);
         $tag = '';
-        $ciphertext = openssl_encrypt($plaintext, 'aes-256-gcm', self::key(), OPENSSL_RAW_DATA, $iv, $tag, 'mentoris-session-v1');
+        $ciphertext = openssl_encrypt($plaintext, 'aes-256-gcm', self::key(), OPENSSL_RAW_DATA, $iv, $tag, $context);
         if (!is_string($ciphertext) || strlen($tag) !== 16) throw new RuntimeException('Session encryption failed.');
         return "MTR1" . $iv . $tag . $ciphertext;
     }
 
-    public static function decrypt(string $payload): ?string
+    public static function decrypt(string $payload, string $context = 'mentoris-session-v1'): ?string
     {
         if (!str_starts_with($payload, 'MTR1') || strlen($payload) < 32) return null;
-        $plaintext = openssl_decrypt(substr($payload, 32), 'aes-256-gcm', self::key(), OPENSSL_RAW_DATA, substr($payload, 4, 12), substr($payload, 16, 16), 'mentoris-session-v1');
+        $plaintext = openssl_decrypt(substr($payload, 32), 'aes-256-gcm', self::key(), OPENSSL_RAW_DATA, substr($payload, 4, 12), substr($payload, 16, 16), $context);
         return is_string($plaintext) ? $plaintext : null;
     }
 

@@ -61,3 +61,13 @@ php bin/console admin:promote email@example.com
 - پیش از انتشار واقعی، `APP_ENV=production`، `APP_DEBUG=false`، `APP_URL` دامنه HTTPS و یک `APP_KEY` تصادفی تنظیم شود.
 - سپس `php bin/console migrate` و `php bin/console migrate:status` اجرا شود.
 - نقشه ثابت در `/sitemap.xml` و نقشه محتوای منتشرشده در `/sitemap-content.xml` در دسترس است.
+
+## حلقه درمانگران و صفحه سالن
+
+- عضویت عمومی `/register` و پنل `/dashboard` مستقل از هر رویداد هستند.
+- صفحه نشست دوم در `/events/therapists-circle-second` درخواست حضور با نام، موبایل و شهر می‌گیرد. تا زمانی که تاریخ و فرآیند نهایی اعلام نشود، این درخواست بلیت یا ثبت‌نام قطعی محسوب نمی‌شود.
+- `/live` برای ورود حاضران به شماره ثبت‌شده و `LIVE_ACCESS_CODE` نیاز دارد. این کد را فقط در سالن اعلام کنید و در محیط انتشار هم به‌صورت متغیر محیطی تنظیم کنید.
+- بازخورد در `/live` ثبت می‌شود. دانلود PDF پس از ساخت حساب و تکمیل پروفایل تخصصی باز می‌شود. مدیر حضور واقعی را در `/admin/engagements?type=circle` با وضعیت `attended` تأیید می‌کند؛ سپس گواهی قابل رهگیری در `/my-certificates` صادر می‌شود.
+- فایل شیت کارگاه در `output/pdf/anchoring-grace-toolkit.pdf` و کیوآر آماده اسلاید در `output/qr/mentoris-live-qr.png` قرار دارد.
+- جدول‌های این جریان در `003_therapist_circle.mysql.sql` هستند. اجرای `php bin/console migrate` به حساب MySQL دارای مجوز `CREATE` نیاز دارد. برنامه تا پیش از اعمال مایگریشن، فرم‌های جدید را فعال نمی‌کند.
+- درگاه پرداخت، OTP و پیامک خودکار در این نسخه به این جریان متصل نیستند.

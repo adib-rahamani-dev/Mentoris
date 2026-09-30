@@ -1,4 +1,4 @@
-<?php $labels=['messages'=>'پیام‌های تماس','events'=>'ثبت‌نام رویداد','community'=>'عضویت جامعه']; ?>
+<?php $labels=['messages'=>'پیام‌های تماس','events'=>'فرم قدیمی رویداد','circle'=>'حلقه درمانگران','community'=>'عضویت جامعه']; ?>
 <header class="admin-page-head"><div><span class="eyebrow">Operations inbox</span><h1>مرکز ارتباطات</h1><p>همه پیام‌ها و درخواست‌های ورودی در یک صندوق عملیاتی قابل پیگیری.</p></div><span class="admin-count"><?=number_format($pagination['total'])?> مورد</span></header>
 <nav class="admin-tabs" aria-label="نوع درخواست"><?php foreach($labels as $key=>$label):?><a class="<?=$type===$key?'is-active':''?>" href="/admin/engagements?type=<?=e($key)?>"><?=e($label)?></a><?php endforeach;?></nav>
 <?php if(isset($_GET['updated'])):?><div class="alert alert--success">وضعیت درخواست به‌روزرسانی شد.</div><?php endif;?>

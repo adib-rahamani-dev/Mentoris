@@ -59,6 +59,7 @@ final class CommunityController extends Controller
             'errors' => $errors,
             'old' => $old,
             'success' => $success,
+            'user' => (new AuthService())->user(),
         ]);
     }
 }

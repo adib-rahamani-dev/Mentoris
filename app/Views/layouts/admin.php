@@ -7,7 +7,7 @@
     <meta name="robots" content="noindex,nofollow">
     <title><?= e($title ?? 'Mentoris Admin') ?></title>
     <script nonce="<?= e(\App\Core\Security::cspNonce()) ?>">try{document.documentElement.dataset.theme=localStorage.getItem('mentoris-theme')||'light'}catch(e){document.documentElement.dataset.theme='light'}</script>
-    <link rel="stylesheet" href="<?= asset('css/app.css') ?>?v=11.1.0">
+    <link rel="stylesheet" href="<?= asset('css/app.css') ?>?v=11.3.1">
     <script type="module" src="<?= asset('js/app.js') ?>?v=10.0.0" defer></script>
 </head>
 <body class="admin-body">

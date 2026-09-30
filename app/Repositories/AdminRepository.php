@@ -26,7 +26,7 @@ final class AdminRepository
             'revenue' => $this->scalar("SELECT COALESCE(SUM(amount),0) FROM orders WHERE status='paid'"),
             'revenue_30d' => $this->scalar("SELECT COALESCE(SUM(amount),0) FROM orders WHERE status='paid' AND paid_at>=UTC_TIMESTAMP()-INTERVAL 30 DAY"),
             'enrollments' => $this->scalar("SELECT COUNT(*) FROM enrollments WHERE status IN ('active','completed')"),
-            'event_requests' => $this->scalar("SELECT COUNT(*) FROM event_registrations WHERE status='pending'"),
+            'event_requests' => $this->tableExists('event_signups') ? $this->scalar("SELECT COUNT(*) FROM event_signups WHERE status='requested'") : 0,
             'community_requests' => $this->scalar("SELECT COUNT(*) FROM community_memberships WHERE status='pending'"),
             'unread_messages' => $this->scalar("SELECT COUNT(*) FROM contact_messages WHERE status='new'"),
             'active_sessions' => $this->scalar('SELECT COUNT(*) FROM sessions WHERE expires_at>UTC_TIMESTAMP()'),
@@ -187,7 +187,8 @@ final class AdminRepository
     {
         $config = $this->engagementConfig($type);
         if (!in_array($status, $config['statuses'], true)) throw new RuntimeException('وضعیت انتخاب‌شده معتبر نیست.');
-        $statement = $this->pdo()->prepare("UPDATE {$config['table']} SET status=:status,updated_at=:updated_at WHERE id=:id");
+        $attended = $type === 'circle' ? ',attended_at=' . ($status === 'attended' ? 'COALESCE(attended_at,UTC_TIMESTAMP())' : 'NULL') : '';
+        $statement = $this->pdo()->prepare("UPDATE {$config['table']} SET status=:status,updated_at=:updated_at{$attended} WHERE id=:id");
         $statement->execute(['status' => $status, 'updated_at' => Database::now(), 'id' => $id]);
         return $statement->rowCount() === 1;
     }
@@ -227,6 +228,7 @@ final class AdminRepository
     {
         return match ($type) {
             'events' => ['table' => 'event_registrations', 'name' => 'applicant_name', 'email' => 'applicant_email', 'statuses' => ['pending','approved','rejected','canceled'], 'select' => 'id,event_slug AS context,applicant_name AS name,applicant_email AS email,applicant_phone AS phone,professional_role AS detail,status,created_at,updated_at'],
+            'circle' => ['table' => 'event_signups', 'name' => 'name', 'email' => 'phone', 'statuses' => ['requested','approved','rejected','attended'], 'select' => "id,event_slug AS context,name,'' AS email,phone,city AS detail,status,created_at,updated_at"],
             'community' => ['table' => 'community_memberships', 'name' => 'name', 'email' => 'email', 'statuses' => ['pending','approved','rejected','suspended'], 'select' => 'id,\'community\' AS context,name,email,\'\' AS phone,professional_role AS detail,status,created_at,updated_at'],
             'messages' => ['table' => 'contact_messages', 'name' => 'name', 'email' => 'email', 'statuses' => ['new','in_progress','resolved','spam'], 'select' => 'id,subject AS context,name,email,phone,message AS detail,status,created_at,updated_at'],
             default => throw new RuntimeException('بخش مدیریتی نامعتبر است.'),
@@ -244,6 +246,11 @@ final class AdminRepository
     }
 
     private function scalar(string $sql): int { return (int) $this->pdo()->query($sql)->fetchColumn(); }
+    private function tableExists(string $table): bool
+    {
+        try { $this->pdo()->query('SELECT 1 FROM ' . $table . ' LIMIT 0'); return true; }
+        catch (\PDOException $exception) { if ((string) $exception->getCode() === '42S02') return false; throw $exception; }
+    }
     private function keyValues(array $rows, string $key = 'period'): array { $result = []; foreach ($rows as $row) $result[(string) $row[$key]] = (int) $row['total']; return $result; }
     private function pdo(): PDO { return $this->database ?? Database::connection(); }
 }

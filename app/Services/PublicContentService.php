@@ -231,10 +231,20 @@ final class PublicContentService
             'slug' => 'therapists-circle-tabriz', 'day' => '۲۷', 'month' => $copy['month'], 'date' => $copy['date'], 'date_iso' => '2026-09-18', 'time' => $copy['time'],
             'title' => $copy['title'], 'type' => $copy['type'], 'mode' => 'offline', 'location' => $copy['location'], 'tone' => 'sage',
             'image' => 'images/therapists-circle-poster-v1.jpg',
-            'status' => 'registration-open', 'capacity' => 0, 'registered' => 0, 'capacity_label' => 'ظرفیت محدود', 'instructor_slug' => 'maryam-haghani', 'line_slug' => 'therapist-development',
+            'status' => 'completed', 'capacity' => 0, 'registered' => 0, 'capacity_label' => 'برگزار شده', 'instructor_slug' => 'maryam-haghani', 'line_slug' => 'therapist-development',
             'short_description' => $copy['short'], 'description' => $copy['description'],
             'highlights' => [$copy['short'], $copy['note']], 'registration_note' => $copy['note'],
             'external_registration_url' => 'https://forms.gle/BKUrF5Pddj2r7AyT8',
+        ], [
+            'slug' => 'therapists-circle-second', 'day' => '—', 'month' => '', 'date' => 'زمان دقیق به‌زودی اعلام می‌شود', 'date_iso' => '', 'time' => 'ساعت ۱۸',
+            'title' => 'نشست دوم حلقه درمانگران منتوریس', 'type' => 'نشست تخصصی', 'mode' => 'offline', 'location' => 'باشگاه فرهنگیان تبریز', 'tone' => 'sage',
+            'image' => '', 'status' => 'registration-open', 'capacity' => 0, 'registered' => 0, 'capacity_label' => 'درخواست حضور',
+            'instructor_slug' => 'maryam-haghani', 'line_slug' => 'therapist-development',
+            'short_description' => 'گفت‌وگویی درباره تمرین عامدانه، لنگراندازی و مراقبت از درمانگر در مسیر بالینی.',
+            'description' => 'در نشست دوم حلقه درمانگران، درباره تمرین عامدانه، لنگراندازی و چالش‌های واقعی کار بالینی گفت‌وگو می‌کنیم. زمان دقیق و جزئیات نهایی پس از اعلام رسمی در همین صفحه منتشر می‌شود.',
+            'highlights' => ['تمرین عامدانه در کار بالینی', 'لنگراندازی و مدل GRACE', 'گفت‌وگوی حرفه‌ای میان همکاران'],
+            'registration_note' => 'این فرم درخواست حضور است. ثبت آن به معنی رزرو قطعی، پرداخت یا صدور بلیت نیست.',
+            'external_registration_url' => '',
         ]];
         $managed = array_map(static fn (array $row): array => self::eventFromContent($row), self::databaseContent('event'));
         return self::mergeBySlug($seed, $managed);
@@ -294,7 +304,8 @@ final class PublicContentService
 
     public static function articles(): array
     {
-        return array_map(static fn (array $row): array => self::articleFromContent($row), self::databaseContent('article'));
+        $seed = Translator::locale() === 'fa' ? \App\Content\InboundArticles::all() : [];
+        return self::mergeBySlug($seed, array_map(static fn (array $row): array => self::articleFromContent($row), self::databaseContent('article')));
     }
 
     public static function article(string $slug): ?array

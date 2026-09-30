@@ -20,6 +20,7 @@ $router->post('/reset-password/{token:[a-f0-9]+}', [AuthController::class, 'rese
 $router->get('/dashboard', [UserAreaController::class, 'dashboard'], ['auth', 'rate:120,60']);
 $router->get('/profile', [UserAreaController::class, 'profile'], ['auth', 'rate:120,60']);
 $router->post('/profile', [UserAreaController::class, 'updateProfile'], ['auth', 'csrf', 'rate:10,60']);
+$router->post('/profile/therapist', [UserAreaController::class, 'updateTherapistProfile'], ['auth', 'csrf', 'rate:10,60']);
 $router->get('/my-courses', [UserAreaController::class, 'courses'], ['auth', 'rate:120,60']);
 $router->get('/my-events', [UserAreaController::class, 'events'], ['auth', 'rate:120,60']);
 $router->get('/my-certificates', [UserAreaController::class, 'certificates'], ['auth', 'rate:120,60']);
