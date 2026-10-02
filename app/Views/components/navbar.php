@@ -4,6 +4,13 @@ use App\Core\Translator;
 
 $currentPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 $authIdentity = (new \App\Core\Session())->get('auth.user');
+$notificationCount=0;
+if (!empty($authIdentity['id'])) {
+    try {
+        $notificationQuery=\App\Core\Database::connection()->prepare('SELECT COUNT(*) FROM notifications WHERE user_id=:id AND read_at IS NULL');
+        $notificationQuery->execute(['id'=>$authIdentity['id']]); $notificationCount=(int)$notificationQuery->fetchColumn();
+    } catch (\PDOException) { $notificationCount=0; }
+}
 $accountPaths = ['/dashboard', '/profile', '/my-courses', '/my-events', '/my-certificates', '/notifications', '/orders'];
 ?>
 <header class="site-header">
@@ -35,6 +42,7 @@ $accountPaths = ['/dashboard', '/profile', '/my-courses', '/my-events', '/my-cer
         </nav>
 
         <div class="navbar__actions">
+            <?php if($authIdentity):?><a class="navbar-notifications" href="/notifications" aria-label="اعلان‌ها، <?= $notificationCount ?> خوانده‌نشده"><?= icon('bell') ?><?php if($notificationCount):?><b><?= $notificationCount>99 ? '99+' : $notificationCount ?></b><?php endif;?></a><?php endif;?>
             <div class="language-switcher dropdown">
                 <button class="language-switcher__trigger dropdown__trigger" type="button" aria-expanded="false" aria-label="<?= e(t('language.select')) ?>"><?= icon('globe') ?><b><?= e(strtoupper(locale())) ?></b></button>
                 <div class="dropdown__menu language-switcher__menu">

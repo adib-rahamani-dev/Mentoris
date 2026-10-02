@@ -36,26 +36,17 @@ final class AdminController extends Controller
 
     public function users(Request $request): Response
     {
-        $users = (new UserRepository())->all();
-        $query = mb_strtolower(trim((string) $request->query('q', '')));
-        $role = (string) $request->query('role', 'all');
-        $status = (string) $request->query('status', 'all');
-        $users = array_values(array_filter($users, static fn (array $user): bool =>
-            ($query === '' || str_contains(mb_strtolower(($user['name'] ?? '') . ' ' . ($user['email'] ?? '') . ' ' . ($user['phone'] ?? '')), $query))
-            && ($role === 'all' || ($user['account_role'] ?? 'student') === $role)
-            && ($status === 'all' || ($user['status'] ?? 'active') === $status)
-        ));
-        return $this->adminView('users', 'کاربران و نقش‌ها', [
-            'users' => $users, 'filters' => compact('query', 'role', 'status'), 'roles' => Authorization::ROLES,
-            'summary' => ['total' => count((new UserRepository())->all()), 'active' => count(array_filter($users, static fn ($u) => ($u['status'] ?? '') === 'active')), 'filtered' => count($users)],
-        ]);
+        $filters=(array)$request->query();
+        $result=(new \App\Repositories\MemberProfileRepository())->search($filters);
+        return $this->adminView('users','اعضا و پروفایل‌ها',['result'=>$result,'users'=>$result['rows'],'filters'=>$filters,'roles'=>Authorization::ROLES]);
     }
 
     public function user(Request $request, string $id): Response
     {
         $user = (new UserRepository())->findById($id);
         if ($user === null) return Response::html('<h1>404 - کاربر پیدا نشد</h1>', 404);
-        return $this->adminView('user-details', 'پرونده کاربر', ['user' => $user, 'operations' => (new AdminRepository())->userOperations($id), 'roles' => Authorization::ROLES]);
+        $profiles=new \App\Repositories\MemberProfileRepository();
+        return $this->adminView('user-details', 'پرونده کاربر', ['user' => $user, 'operations' => (new AdminRepository())->userOperations($id), 'roles' => Authorization::ROLES,'member'=>$profiles->find($id),'memberEnabled'=>$profiles->available()]);
     }
 
     public function createUser(Request $request): Response
@@ -104,9 +95,9 @@ final class AdminController extends Controller
         $data = $request->only(['title', 'message']); $validator = new Validator();
         $validator->validate($data, ['title' => 'required|string|min:3|max:190', 'message' => 'required|string|min:5|max:2000']);
         if ($validator->fails()) return Response::redirect('/admin/users/' . $id . '?error=notification');
-        (new AdminRepository())->notifyUser($id, (string) $data['title'], (string) $data['message']);
+        $delivery=(new \App\Services\NotificationService())->notify($user,(string)$data['title'],(string)$data['message'],$request->input('send_email')==='1');
         Audit::record('user.notification.sent', 'user', $id, $this->currentUser()['id'] ?? null, [], ['title' => $data['title']], $request->ip());
-        return Response::redirect('/admin/users/' . $id . '?notified=1');
+        return Response::redirect('/admin/users/' . $id . '?notified=1&email='.$delivery);
     }
 
     public function updateUserProfile(Request $request, string $id): Response

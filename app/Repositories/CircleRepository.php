@@ -100,7 +100,7 @@ final class CircleRepository
             $statement = $this->pdo()->prepare('SELECT * FROM therapist_profiles WHERE user_id=:user_id LIMIT 1');
             $statement->execute(['user_id' => $userId]);
         } catch (PDOException $exception) {
-            if ((string) $exception->getCode() !== '42S02') throw $exception;
+            if (!MemberProfileRepository::missingTable($exception)) throw $exception;
             return [];
         }
         $row = $statement->fetch() ?: [];
@@ -161,6 +161,6 @@ final class CircleRepository
     private function tableExists(string $table): bool
     {
         try { $this->pdo()->query('SELECT 1 FROM ' . $table . ' LIMIT 0'); return true; }
-        catch (PDOException $exception) { if ((string) $exception->getCode() === '42S02') return false; throw $exception; }
+        catch (PDOException $exception) { if (MemberProfileRepository::missingTable($exception)) return false; throw $exception; }
     }
 }

@@ -51,15 +51,17 @@ final class UserRepository
         ];
 
         try {
-            return Database::transaction($this->pdo(), function (PDO $pdo) use ($user, $now): array {
+            return Database::transaction($this->pdo(), function (PDO $pdo) use ($user, $now, $attributes): array {
                 $statement = $pdo->prepare('INSERT INTO users (id, name, email, password_hash, phone, professional_role, bio, account_role, status, auth_version, password_changed_at, created_at, updated_at) VALUES (:id, :name, :email, :password_hash, :phone, :professional_role, :bio, :account_role, :status, :auth_version, :password_changed_at, :created_at, :updated_at)');
                 $statement->execute([
                     'id' => $user['id'], 'name' => $user['name'], 'email' => $user['email'],
-                    'password_hash' => $user['password_hash'], 'phone' => '', 'professional_role' => '', 'bio' => '',
+                    'password_hash' => $user['password_hash'], 'phone' => (string)($attributes['phone'] ?? ''), 'professional_role' => \App\Services\MemberProfileService::OPTIONS['member_type'][$attributes['member_type'] ?? 'other'] ?? 'سایر', 'bio' => '',
                     'account_role' => $user['account_role'], 'status' => 'active', 'auth_version' => 1,
                     'password_changed_at' => $now, 'created_at' => $now, 'updated_at' => $now,
                 ]);
-                $this->insertNotification($pdo, $user['id'], 'به Mentoris خوش آمدید', 'پروفایل خود را کامل کنید و مسیر یادگیری مناسب را انتخاب کنید.', $now);
+                $profiles = new MemberProfileRepository($pdo);
+                if ($profiles->available()) $profiles->save($user['id'], ['member_type'=>$attributes['member_type'] ?? 'other','marketing_consent'=>($attributes['marketing_consent'] ?? '')==='1'], false, true);
+                $this->insertNotification($pdo, $user['id'], 'به Mentoris خوش آمدید', 'حساب شما آماده است. اطلاعات تکمیلی را از بخش «پروفایل من» هر زمان خواستید ذخیره کنید.', $now);
                 return $this->findByIdOn($pdo, $user['id']) ?? throw new RuntimeException('حساب کاربری ایجاد نشد.');
             });
         } catch (PDOException $exception) {
@@ -232,6 +234,12 @@ final class UserRepository
         $statement->execute(['now' => Database::now(), 'user_id' => $id]);
     }
 
+    public function markNotificationRead(string $userId, string $notificationId): void
+    {
+        $s=$this->pdo()->prepare('UPDATE notifications SET read_at=:now WHERE id=:id AND user_id=:user_id AND read_at IS NULL');
+        $s->execute(['now'=>Database::now(),'id'=>$notificationId,'user_id'=>$userId]);
+    }
+
     public function addCourse(string $id, string $courseSlug): ?array
     {
         return Database::transaction($this->pdo(), function (PDO $pdo) use ($id, $courseSlug): ?array {
@@ -278,7 +286,7 @@ final class UserRepository
         try {
             $user['events'] = array_values(array_unique([...$user['events'], ...$this->column($pdo, 'SELECT event_slug FROM event_signups WHERE user_id = :user_id AND status <> \'rejected\' ORDER BY created_at', $user['id'])]));
         } catch (PDOException $exception) {
-            if ((string) $exception->getCode() !== '42S02') throw $exception;
+            if (!MemberProfileRepository::missingTable($exception)) throw $exception;
         }
         $certificates = $pdo->prepare('SELECT id, course_slug, certificate_number, issued_at, revoked_at FROM certificates WHERE user_id = :user_id ORDER BY issued_at DESC');
         $certificates->execute(['user_id' => $user['id']]);

@@ -12,6 +12,7 @@ $router->get('/admin/users', [AdminController::class, 'users'], ['auth', 'can:us
 $router->get('/admin/users/new', [AdminController::class, 'createUser'], ['auth', 'can:users.manage', 'rate:60,60']);
 $router->post('/admin/users', [AdminController::class, 'storeUser'], ['auth', 'can:users.manage', 'csrf', 'rate:15,60']);
 $router->get('/admin/users/{id:[a-f0-9]+}', [AdminController::class, 'user'], ['auth', 'can:users.view', 'rate:120,60']);
+$router->post('/admin/users/{id:[a-f0-9]+}/member-profile', [\App\Controllers\MemberProfileController::class, 'adminSave'], ['auth', 'can:users.manage', 'csrf', 'rate:30,60']);
 $router->post('/admin/users/{id:[a-f0-9]+}/access', [AdminController::class, 'updateUserAccess'], ['auth', 'can:users.manage', 'csrf', 'rate:30,60']);
 $router->post('/admin/users/{id:[a-f0-9]+}/notify', [AdminController::class, 'notifyUser'], ['auth', 'can:notifications.manage', 'csrf', 'rate:30,60']);
 $router->post('/admin/users/{id:[a-f0-9]+}/profile', [AdminController::class, 'updateUserProfile'], ['auth', 'can:users.manage', 'csrf', 'rate:30,60']);
@@ -22,6 +23,7 @@ $router->get('/admin/engagements', [AdminController::class, 'engagements'], ['au
 $router->post('/admin/engagements/{type:[a-z]+}/{id:[a-f0-9]+}', [AdminController::class, 'updateEngagement'], ['auth', 'can:engagements.manage', 'csrf', 'rate:60,60']);
 $router->get('/admin/content', [AdminController::class, 'content'], ['auth', 'can:content.view', 'rate:120,60']);
 $router->get('/admin/qr', [AdminQrController::class, 'index'], ['auth', 'can:content.view', 'rate:120,60']);
+$router->get('/admin/feedback', [\App\Controllers\AdminFeedbackController::class, 'index'], ['auth', 'can:engagements.view', 'rate:120,60']);
 $router->get('/admin/content/new', [AdminController::class, 'createContent'], ['auth', 'can:content.manage', 'rate:120,60']);
 $router->post('/admin/content', [AdminController::class, 'storeContent'], ['auth', 'can:content.manage', 'csrf', 'rate:30,60']);
 $router->get('/admin/content/{id:[a-f0-9]+}/edit', [AdminController::class, 'editContent'], ['auth', 'can:content.manage', 'rate:120,60']);

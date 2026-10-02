@@ -236,18 +236,27 @@ final class PublicContentService
             'highlights' => [$copy['short'], $copy['note']], 'registration_note' => $copy['note'],
             'external_registration_url' => 'https://forms.gle/BKUrF5Pddj2r7AyT8',
         ], [
-            'slug' => 'therapists-circle-second', 'day' => '—', 'month' => '', 'date' => 'زمان دقیق به‌زودی اعلام می‌شود', 'date_iso' => '', 'time' => 'ساعت ۱۸',
+            'slug' => 'therapists-circle-second', 'day' => '—', 'month' => '', 'date' => 'برگزار شده', 'date_iso' => '', 'time' => 'ساعت ۱۸',
             'title' => 'نشست دوم حلقه درمانگران منتوریس', 'type' => 'نشست تخصصی', 'mode' => 'offline', 'location' => 'باشگاه فرهنگیان تبریز', 'tone' => 'sage',
-            'image' => '', 'status' => 'registration-open', 'capacity' => 0, 'registered' => 0, 'capacity_label' => 'درخواست حضور',
+            'image' => '', 'status' => 'completed', 'capacity' => 0, 'registered' => 0, 'capacity_label' => 'ثبت‌نام پایان یافته',
             'instructor_slug' => 'maryam-haghani', 'line_slug' => 'therapist-development',
             'short_description' => 'گفت‌وگویی درباره تمرین عامدانه، لنگراندازی و مراقبت از درمانگر در مسیر بالینی.',
-            'description' => 'در نشست دوم حلقه درمانگران، درباره تمرین عامدانه، لنگراندازی و چالش‌های واقعی کار بالینی گفت‌وگو می‌کنیم. زمان دقیق و جزئیات نهایی پس از اعلام رسمی در همین صفحه منتشر می‌شود.',
+            'description' => 'نشست دوم حلقه درمانگران با محور تمرین عامدانه، لنگراندازی و چالش‌های واقعی کار بالینی برگزار شد. همکاران می‌توانند بازخورد این نشست را در صفحه نظرسنجی ثبت کنند.',
             'highlights' => ['تمرین عامدانه در کار بالینی', 'لنگراندازی و مدل GRACE', 'گفت‌وگوی حرفه‌ای میان همکاران'],
             'registration_note' => 'این فرم درخواست حضور است. ثبت آن به معنی رزرو قطعی، پرداخت یا صدور بلیت نیست.',
             'external_registration_url' => '',
         ]];
         $managed = array_map(static fn (array $row): array => self::eventFromContent($row), self::databaseContent('event'));
-        return self::mergeBySlug($seed, $managed);
+        return array_map(static function(array $event): array {
+            // These archived gatherings stay visible, including when database content overrides a seed.
+            if (in_array($event['slug'], ['therapists-circle-tabriz','therapists-circle-second'], true)) {
+                $event['status']='completed'; $event['capacity_label']='ثبت‌نام پایان یافته';
+                $event['registration_note']='این نشست برگزار شده و ثبت‌نام آن پایان یافته است.';
+                $event['external_registration_url']='';
+                $event['highlights']=array_values(array_filter($event['highlights'],fn($text)=>!str_contains($text,'ثبت فرم اولیه') && !str_contains($text,'Submitting the initial form')));
+            }
+            return $event;
+        }, self::mergeBySlug($seed, $managed));
     }
 
     public static function event(string $slug): ?array

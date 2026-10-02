@@ -18,6 +18,7 @@ final class AuthService
     {
         $user = $this->users->create($data);
         $this->loginUser($user);
+        (new EmailService())->send($user['email'], 'به منتوریس خوش آمدید', $user['name'].' عزیز، حساب شما ایجاد شد. پروفایل خود را اینجا تکمیل کنید: '.rtrim((string)env('APP_URL','https://mentorisacademy.com'),'/').'/profile');
         return UserRepository::publicUser($user);
     }
 
@@ -47,6 +48,7 @@ final class AuthService
 
     public function refresh(array $user): void
     {
+        if (!isset($user['auth_version'])) $user = $this->users->findById($user['id']) ?? $user;
         $this->session->put('auth.user', ['id' => $user['id'], 'name' => $user['name'], 'email' => $user['email'], 'account_role' => $user['account_role'] ?? 'student', 'auth_version' => (int) ($user['auth_version'] ?? 1)]);
     }
 

@@ -20,9 +20,11 @@ $router->post('/reset-password/{token:[a-f0-9]+}', [AuthController::class, 'rese
 $router->get('/dashboard', [UserAreaController::class, 'dashboard'], ['auth', 'rate:120,60']);
 $router->get('/profile', [UserAreaController::class, 'profile'], ['auth', 'rate:120,60']);
 $router->post('/profile', [UserAreaController::class, 'updateProfile'], ['auth', 'csrf', 'rate:10,60']);
+$router->post('/profile/member', [\App\Controllers\MemberProfileController::class, 'save'], ['auth', 'csrf', 'rate:10,60']);
 $router->post('/profile/therapist', [UserAreaController::class, 'updateTherapistProfile'], ['auth', 'csrf', 'rate:10,60']);
 $router->get('/my-courses', [UserAreaController::class, 'courses'], ['auth', 'rate:120,60']);
 $router->get('/my-events', [UserAreaController::class, 'events'], ['auth', 'rate:120,60']);
 $router->get('/my-certificates', [UserAreaController::class, 'certificates'], ['auth', 'rate:120,60']);
 $router->get('/notifications', [UserAreaController::class, 'notifications'], ['auth', 'rate:120,60']);
 $router->post('/notifications/read-all', [UserAreaController::class, 'readNotifications'], ['auth', 'csrf', 'rate:10,60']);
+$router->post('/notifications/{id:[a-f0-9]+}/read', [UserAreaController::class, 'readNotification'], ['auth', 'csrf', 'rate:60,60']);

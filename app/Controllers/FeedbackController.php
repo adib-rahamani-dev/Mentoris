@@ -16,14 +16,48 @@ use RuntimeException;
 final class FeedbackController extends Controller
 {
     private const EVENT = 'therapists-circle-second';
+    private const EVENTS = ['therapists-circle-tabriz', 'therapists-circle-second'];
+
+    private function eventSlug(): string
+    {
+        $value=(new Session())->get('feedback.event',self::EVENT);
+        return in_array($value,self::EVENTS,true) ? $value : self::EVENT;
+    }
 
     public function index(Request $request): Response
     {
+        $slug=$request->query('event');
+        if (is_string($slug) && in_array($slug,self::EVENTS,true) && $slug!==$this->eventSlug()) {
+            (new Session())->put('feedback.event',$slug);
+            (new Session())->put('feedback.signup','');
+        }
         return $this->render();
     }
 
     public function access(Request $request): Response
     {
+        $event=$request->input('event',self::EVENT);
+        if (!is_string($event) || !in_array($event,self::EVENTS,true)) return $this->render(['access'=>'نشست معتبر انتخاب کنید.']);
+        (new Session())->put('feedback.event',$event);
+        (new Session())->put('feedback.signup','');
+        $identity=(new AuthService())->user();
+        if ($identity && $request->input('member_access')==='1') {
+            if ($request->input('participated')!=='1') return $this->render(['access'=>'شرکت در نشست انتخاب‌شده را مشخص کنید.']);
+            $repository=new CircleRepository();
+            if (!$repository->feedbackAvailable()) return $this->render(['access'=>'ابتدا ساختار پایگاه داده رویداد آماده شود.']);
+            $phone=CircleRepository::phone((string)$identity['phone']);
+            if (!preg_match('/^09[0-9]{9}$/',$phone)) return $this->render(['access'=>'شماره موبایل را در پروفایل خود وارد کنید.']);
+            $signup=$repository->findSignup($event,$phone);
+            if ($signup && ($signup['user_id'] ?? null)!==$identity['id']) return $this->render(['access'=>'برای اتصال پروندهٔ حضور قبلی به حساب خود با برگزارکننده تماس بگیرید یا از کد سالن استفاده کنید.']);
+            if (!$signup) {
+                // Self-reported participation enables feedback, never attendance or a certificate.
+                try { $signup=$repository->signup($event,['name'=>$identity['name'],'phone'=>$phone,'city'=>''],$identity['id']); }
+                catch (RuntimeException $e) { return $this->render(['access'=>$e->getMessage()]); }
+            }
+            if ($signup['status']==='rejected') return $this->render(['access'=>'پروندهٔ حضور شما نیاز به بررسی برگزارکننده دارد.']);
+            (new Session())->put('feedback.signup',$signup['id']);
+            return $this->redirect('/feedback');
+        }
         $phone = CircleRepository::phone((string) $request->input('phone', ''));
         $code = trim((string) $request->input('access_code', ''));
         $expected = $this->accessCode();
@@ -32,8 +66,9 @@ final class FeedbackController extends Controller
         }
         $repository = new CircleRepository();
         if (!$repository->feedbackAvailable()) return $this->render(['access' => 'فضای نشست پس از آماده‌سازی پایگاه داده فعال می‌شود.']);
-        $signup = $repository->findSignup(self::EVENT, $phone);
-        if (!$signup) return $this->render(['access' => 'برای این شماره درخواست حضور ثبت نشده است. ابتدا فرم رویداد را تکمیل کنید.']);
+        $signup = $repository->findSignup($this->eventSlug(), $phone);
+        if (!$signup || $signup['status']==='rejected') return $this->render(['access' => 'پروندهٔ حضور برای این شماره پیدا نشد. وارد حساب شوید یا با برگزارکننده تماس بگیرید.']);
+        if ($identity && $signup['user_id']!==null && $signup['user_id']!==$identity['id']) return $this->render(['access'=>'این پرونده به حساب دیگری متصل است.']);
         (new Session())->put('feedback.signup', $signup['id']);
         return $this->redirect('/feedback');
     }
@@ -64,7 +99,7 @@ final class FeedbackController extends Controller
             (new Session())->put('auth.intended', '/feedback');
             return $this->redirect('/register');
         }
-        if (!(new CircleRepository())->profileComplete((string) $user['id'])) return $this->redirect('/profile');
+        if (!(new CircleRepository())->profileComplete((string) $user['id']) && empty((new \App\Repositories\MemberProfileRepository())->find($user['id'])['completed_at'])) return $this->redirect('/profile');
         $path = base_path('output/pdf/anchoring-grace-toolkit.pdf');
         if (!is_file($path)) return Response::html('فایل کارگاه فعلاً در دسترس نیست.', 503);
         return new Response((string) file_get_contents($path), 200, [
@@ -82,13 +117,13 @@ final class FeedbackController extends Controller
         $repository = new CircleRepository();
         if (!$repository->feedbackAvailable()) return null;
         // Session contains an opaque signup ID; only a matching event row is accepted.
-        $signup = $repository->findSignupById(self::EVENT, $id);
-        if (!$signup) return null;
+        $signup = $repository->findSignupById($this->eventSlug(), $id);
+        if (!$signup || $signup['status']==='rejected') return null;
         $identity = (new AuthService())->user();
         if ($identity) {
             if ($signup['user_id'] === null) {
                 $repository->claimSignup($id, (string) $identity['id']);
-                $signup = $repository->findSignupById(self::EVENT, $id);
+                $signup = $repository->findSignupById($this->eventSlug(), $id);
             }
             if (($signup['user_id'] ?? null) !== $identity['id']) return null;
         }
@@ -98,15 +133,17 @@ final class FeedbackController extends Controller
     private function render(array $errors = [], array $old = []): Response
     {
         $signup = $this->activeSignup();
-        $ready = (new CircleRepository())->feedbackAvailable() && $this->accessCode() !== '';
+        $ready = (new CircleRepository())->feedbackAvailable();
         $feedback = $signup ? (new CircleRepository())->feedback($signup['id']) : null;
         $identity = (new AuthService())->user();
-        $profileComplete = $signup && $identity && (new CircleRepository())->profileComplete((string) $identity['id']);
+        $profileComplete = $signup && $identity && ((new CircleRepository())->profileComplete((string) $identity['id']) || !empty((new \App\Repositories\MemberProfileRepository())->find($identity['id'])['completed_at']));
         return $this->view('pages.feedback', [
             'title' => 'همراه نشست دوم | منتوریس',
             'description' => 'بازخورد نشست، جعبه‌ابزار لنگراندازی و عضویت در جامعه منتوریس.',
             'indexable' => false,
-            'event' => PublicContentService::event(self::EVENT),
+            'event' => PublicContentService::event($this->eventSlug()),
+            'events'=>array_map(fn($slug)=>PublicContentService::event($slug),self::EVENTS),
+            'identity'=>$identity,'hallCodeEnabled'=>$this->accessCode()!=='',
             'signup' => $signup,
             'feedback' => $feedback,
             'profileComplete' => $profileComplete,

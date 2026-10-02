@@ -8,6 +8,7 @@ $unread = count(array_filter($user['notifications'] ?? [], fn ($item) => empty($
         <a class="<?= $userPath === '/dashboard' ? 'is-active' : '' ?>" href="/dashboard"><span><?= icon('home') ?></span>نمای کلی</a>
         <a class="<?= $userPath === '/my-courses' ? 'is-active' : '' ?>" href="/my-courses"><span><?= icon('book') ?></span>دوره‌های من</a>
         <a class="<?= $userPath === '/my-events' ? 'is-active' : '' ?>" href="/my-events"><span><?= icon('calendar') ?></span>رویدادهای من</a>
+        <a href="/feedback"><span><?= icon('message') ?></span>بازخورد نشست‌ها</a>
         <a class="<?= $userPath === '/orders' || str_starts_with((string) $userPath, '/orders/') ? 'is-active' : '' ?>" href="/orders"><span><?= icon('package') ?></span>سفارش‌ها</a>
         <a class="<?= $userPath === '/my-certificates' ? 'is-active' : '' ?>" href="/my-certificates"><span><?= icon('certificate') ?></span>گواهی‌های من</a>
         <a class="<?= $userPath === '/notifications' ? 'is-active' : '' ?>" href="/notifications"><span><?= icon('bell') ?></span>اعلان‌ها<?php if ($unread): ?><em><?= $unread ?></em><?php endif; ?></a>

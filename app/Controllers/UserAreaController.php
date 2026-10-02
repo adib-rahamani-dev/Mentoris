@@ -26,10 +26,13 @@ final class UserAreaController extends Controller
     public function updateProfile(Request $request): Response
     {
         $user = $this->user();
-        $data = $request->only(['name', 'phone', 'role', 'bio']);
+        $data = $request->only(['name', 'phone']);
+        $data['phone']=CircleRepository::phone(is_string($data['phone'] ?? null) ? $data['phone'] : '');
         $validator = new Validator();
-        $validator->validate($data, ['name' => 'required|string|min:2|max:80', 'phone' => 'string|max:20', 'role' => 'string|max:80', 'bio' => 'string|max:500']);
-        if ($validator->fails()) { $circle = new CircleRepository(); return $this->page('profile', 'پروفایل من', $user, ['errors' => $validator->errors(), 'old' => $data, 'therapist' => $circle->profile($user['id']), 'therapistEnabled' => $circle->therapistAvailable()]); }
+        $validator->validate($data, ['name' => 'required|string|min:2|max:80', 'phone' => 'required|string|max:20', 'role' => 'string|max:80', 'bio' => 'string|max:2000']);
+        $errors=$validator->errors();
+        if (!preg_match('/^09[0-9]{9}$/',$data['phone'])) $errors['phone']=['شمارهٔ موبایل معتبر با ۰۹ وارد کنید.'];
+        if ($errors) { $circle = new CircleRepository(); return $this->page('profile', 'پروفایل من', $user, ['errors' => $errors, 'old' => $data, 'therapist' => $circle->profile($user['id']), 'therapistEnabled' => $circle->therapistAvailable()]); }
         $updated = (new UserRepository())->updateProfile($user['id'], $data) ?? $user;
         (new AuthService())->refresh($updated);
         $circle = new CircleRepository();
@@ -99,10 +102,20 @@ final class UserAreaController extends Controller
         return $this->redirect('/notifications');
     }
 
+    public function readNotification(Request $request, string $id): Response
+    {
+        (new UserRepository())->markNotificationRead($this->user()['id'], $id);
+        return $this->redirect('/notifications');
+    }
+
     private function user(): array { return (new AuthService())->user() ?? []; }
 
     private function page(string $view, string $title, array $user, array $extra = []): Response
     {
+        if ($view === 'profile') {
+            $profiles = new \App\Repositories\MemberProfileRepository();
+            $extra += ['member'=>$profiles->find($user['id']), 'memberEnabled'=>$profiles->available()];
+        }
         return $this->view('user.' . $view, ['title' => $title . ' | Mentoris', 'description' => 'ناحیه کاربری Mentoris', 'user' => $user, 'errors' => [], 'old' => [], 'success' => false, ...$extra]);
     }
 

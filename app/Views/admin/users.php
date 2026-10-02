@@ -1,34 +1,16 @@
-<?php use App\Core\Authorization; ?>
-<header class="admin-page-head">
-    <div><span class="eyebrow">Users & Access</span><h1>کاربران و نقش‌ها</h1><p>جست‌وجو، مشاهده پرونده، نقش‌بندی و کنترل وضعیت همه حساب‌ها.</p></div>
-    <div class="admin-head-actions"><?php if(Authorization::can($admin,'users.manage')):?><a class="btn btn--primary" href="/admin/users/new?role=instructor"><?=icon('users')?> افزودن مدرس/کاربر</a><?php endif;?><span class="admin-count"><?= number_format($summary['filtered']) ?> نتیجه از <?= number_format($summary['total']) ?></span></div>
-</header>
-
-<section class="admin-kpis" aria-label="خلاصه کاربران">
-    <div><span>کل کاربران</span><strong><?= number_format($summary['total']) ?></strong><small>همه حساب‌های ثبت‌شده</small></div>
-    <div><span>نمایش فعلی</span><strong><?= number_format($summary['filtered']) ?></strong><small>مطابق فیلتر انتخابی</small></div>
-    <div><span>حساب فعال در نتیجه</span><strong><?= number_format($summary['active']) ?></strong><small>امکان ورود به سامانه</small></div>
-    <div><span>نقش‌های قابل مدیریت</span><strong><?= number_format(count($roles)) ?></strong><small>از کاربر تا مدیرکل</small></div>
-</section>
-
-<?php if (isset($_GET['updated'])): ?><div class="alert alert--success" role="status">دسترسی کاربر با موفقیت به‌روزرسانی شد.</div><?php endif; ?>
-<?php if (($_GET['error'] ?? '') === 'self-access'): ?><div class="alert alert--danger" role="alert">برای جلوگیری از قفل‌شدن پنل، نمی‌توانید دسترسی حساب فعلی را کاهش دهید.</div><?php endif; ?>
-
-<form class="admin-filters" method="get" action="/admin/users">
-    <label><span class="sr-only">جست‌وجو</span><input class="form-control" type="search" name="q" value="<?= e($filters['query']) ?>" placeholder="نام، ایمیل یا شماره تماس..."></label>
-    <label><span class="sr-only">نقش</span><select class="form-select" name="role"><option value="all">همه نقش‌ها</option><?php foreach ($roles as $key => $label): ?><option value="<?= e($key) ?>" <?= $filters['role'] === $key ? 'selected' : '' ?>><?= e($label) ?></option><?php endforeach; ?></select></label>
-    <label><span class="sr-only">وضعیت</span><select class="form-select" name="status"><option value="all">همه وضعیت‌ها</option><option value="active" <?= $filters['status'] === 'active' ? 'selected' : '' ?>>فعال</option><option value="suspended" <?= $filters['status'] === 'suspended' ? 'selected' : '' ?>>تعلیق‌شده</option></select></label>
-    <button class="btn btn--primary" type="submit">اعمال فیلتر</button>
-</form>
-
-<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>کاربر</th><th>نقش</th><th>وضعیت</th><th>عضویت</th><th>آخرین ورود</th><th></th></tr></thead><tbody>
-<?php foreach ($users as $user): ?><tr>
-    <td><a class="table-user" href="/admin/users/<?= e($user['id']) ?>"><span><?= e(mb_substr($user['name'], 0, 1)) ?></span><div><strong><?= e($user['name']) ?></strong><small class="ltr"><?= e($user['email']) ?></small><?php if ($user['phone']): ?><small class="ltr"><?= e($user['phone']) ?></small><?php endif; ?></div></a></td>
-    <td><?= e(Authorization::roleLabel(Authorization::role($user))) ?></td>
-    <td><span class="order-status order-status--<?= e($user['status']) ?>"><?= $user['status'] === 'active' ? 'فعال' : 'تعلیق‌شده' ?></span></td>
-    <td class="ltr"><?= e(substr((string) $user['created_at'], 0, 10)) ?></td>
-    <td class="ltr"><?= e($user['last_login_at'] ? substr((string) $user['last_login_at'], 0, 16) : '—') ?></td>
-    <td><a class="table-action" href="/admin/users/<?= e($user['id']) ?>">پرونده کامل ←</a></td>
-</tr><?php endforeach; ?>
-<?php if (!$users): ?><tr><td colspan="6"><div class="content-empty"><span class="content-empty__icon"><?= icon('search', 'ui-icon--lg') ?></span><div><h3>کاربری پیدا نشد</h3><p>فیلترها یا عبارت جست‌وجو را تغییر دهید.</p></div></div></td></tr><?php endif; ?>
-</tbody></table></div>
+<?php use App\Core\Authorization; $options=\App\Services\MemberProfileService::OPTIONS; ?>
+<header class="admin-page-head"><div><span class="eyebrow">Members & Profiles</span><h1>اعضا و پروفایل‌ها</h1><p>پروندهٔ تحصیلی، حرفه‌ای و سوابق آموزش اعضا را بررسی و ویرایش کنید.</p></div><?php if(Authorization::can($admin,'users.manage')):?><a class="btn btn--primary" href="/admin/users/new">افزودن کاربر</a><?php endif;?></header>
+<section class="admin-kpis"><?php foreach(['total'=>'کل کاربران','student'=>'دانشجو','therapist'=>'درمانگر','completed'=>'پروفایل تکمیل‌شده','consented'=>'رضایت دریافت ایمیل'] as $key=>$label):?><div><span><?= e($label) ?></span><strong><?= number_format($result['stats'][$key]) ?></strong></div><?php endforeach;?></section>
+<?php if(!$result['enabled']):?><div class="alert alert--danger">فیلترهای تخصصی با اجرای مایگریشن ۰۰۴ فعال می‌شوند.</div><?php endif;?>
+<form class="member-filters" method="get" action="/admin/users">
+<label><span>نام، ایمیل یا موبایل</span><input class="form-control" type="search" name="q" value="<?= e($filters['q'] ?? '') ?>"></label>
+<?php foreach(['member_type'=>'نوع عضو','degree'=>'مقطع تحصیلی','practice_status'=>'وضعیت فعالیت حرفه‌ای'] as $key=>$label):?><label><span><?= e($label) ?></span><select class="form-select" name="<?= e($key) ?>"><option value="">همه</option><?php foreach($options[$key] as $v=>$text):?><option value="<?= e($v) ?>" <?= ($filters[$key] ?? '')===$v ? 'selected' : '' ?>><?= e($text) ?></option><?php endforeach;?></select></label><?php endforeach;?>
+<?php foreach(['field_of_study'=>'رشته','university'=>'دانشگاه','city'=>'شهر','specialty_fields'=>'حوزهٔ تخصصی'] as $key=>$label):?><label><span><?= e($label) ?></span><input class="form-control" name="<?= e($key) ?>" value="<?= e($filters[$key] ?? '') ?>" maxlength="160"></label><?php endforeach;?>
+<label><span>نقش دسترسی</span><select class="form-select" name="account_role"><option value="">همه</option><?php foreach($roles as $v=>$text):?><option value="<?= e($v) ?>" <?= ($filters['account_role'] ?? '')===$v ? 'selected' : '' ?>><?= e($text) ?></option><?php endforeach;?></select></label>
+<label><span>وضعیت حساب</span><select class="form-select" name="status"><option value="">همه</option><option value="active" <?= ($filters['status'] ?? '')==='active' ? 'selected' : '' ?>>فعال</option><option value="suspended" <?= ($filters['status'] ?? '')==='suspended' ? 'selected' : '' ?>>تعلیق‌شده</option></select></label>
+<button class="btn btn--primary" type="submit">اعمال فیلتر</button><a class="btn btn--ghost" href="/admin/users">پاک‌کردن فیلترها</a>
+</form><p><?= number_format($result['total']) ?> نتیجه · ۵۰ کاربر در هر صفحه</p>
+<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>کاربر</th><th>نوع عضو / نقش دسترسی</th><th>تحصیلات</th><th>فعالیت حرفه‌ای</th><th>تکمیل پروفایل</th><th></th></tr></thead><tbody>
+<?php foreach($users as $user):?><tr><td><a class="table-user" href="/admin/users/<?= e($user['id']) ?>"><span><?= e(mb_substr($user['name'],0,1)) ?></span><div><strong><?= e($user['name']) ?></strong><small class="ltr"><?= e($user['email']) ?></small><small class="ltr"><?= e($user['phone']) ?></small></div></a></td><td><?= e($options['member_type'][$user['member_type'] ?? ''] ?? 'ثبت نشده') ?><small><?= e(Authorization::roleLabel($user['account_role'])) ?> · <?= $user['status']==='active' ? 'فعال' : 'تعلیق‌شده' ?></small></td><td><?= e($user['field_of_study'] ?? '—') ?><small><?= e($options['degree'][$user['degree'] ?? ''] ?? '') ?> · <?= e($user['university'] ?? '') ?></small></td><td><?= e($user['city'] ?? '—') ?><small><?= e($options['practice_status'][$user['practice_status'] ?? ''] ?? '') ?></small><small><?= e($user['specialty_fields'] ?? '') ?></small></td><td><?= !empty($user['completed_at']) ? 'تکمیل‌شده' : 'در حال تکمیل' ?></td><td><a class="table-action" href="/admin/users/<?= e($user['id']) ?>">پروندهٔ کامل ←</a></td></tr><?php endforeach;?>
+<?php if(!$users):?><tr><td colspan="6">کاربری با این فیلترها پیدا نشد.</td></tr><?php endif;?></tbody></table></div>
+<nav class="member-pagination" aria-label="صفحه‌های کاربران"><?php if($result['page']>1):?><a class="btn btn--ghost" href="?<?= e(http_build_query(array_replace($filters,['page'=>$result['page']-1]))) ?>">قبلی</a><?php endif;?><span>صفحه <?= $result['page'] ?> از <?= $result['pages'] ?></span><?php if($result['page']<$result['pages']):?><a class="btn btn--ghost" href="?<?= e(http_build_query(array_replace($filters,['page'=>$result['page']+1]))) ?>">بعدی</a><?php endif;?></nav>

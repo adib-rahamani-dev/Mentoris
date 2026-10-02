@@ -3,14 +3,14 @@
 <div class="qr-studio" data-qr-studio data-site-origin="<?= e($baseUrl) ?>">
     <section class="qr-studio__controls admin-panel">
         <header><div><span class="eyebrow">01 / Create</span><h2>ساخت کد</h2></div></header>
-        <form class="stack" data-qr-form>
+        <div class="member-form__actions"><button class="btn btn--ghost btn--sm" type="button" data-qr-event="therapists-circle-tabriz">QR همایش اول</button><button class="btn btn--ghost btn--sm" type="button" data-qr-event="therapists-circle-second">QR همایش دوم</button><a class="btn btn--ghost btn--sm" href="/admin/feedback">گزارش نظرسنجی</a></div><form class="stack" data-qr-form>
             <label class="form-group"><span class="form-label">آدرس صفحه در سایت</span><input class="form-control ltr" type="text" name="path" value="/feedback" maxlength="300" spellcheck="false" required><small>مانند /feedback یا /live؛ کد فقط برای صفحه‌های همین دامنه ساخته می‌شود.</small></label>
             <label class="form-group"><span class="form-label">عنوان کارت چاپی</span><input class="form-control" type="text" name="title" value="بازخورد نشست منتوریس" maxlength="80" required></label>
             <fieldset class="qr-palette"><legend>پالت رنگ</legend><div class="qr-palette__options"><label><input type="radio" name="palette" value="forest" checked><span class="qr-palette__swatch qr-palette__swatch--forest"></span><strong>جنگلی</strong></label><label><input type="radio" name="palette" value="ink"><span class="qr-palette__swatch qr-palette__swatch--ink"></span><strong>مرکبی</strong></label><label><input type="radio" name="palette" value="plum"><span class="qr-palette__swatch qr-palette__swatch--plum"></span><strong>آلویی</strong></label></div></fieldset>
             <button class="btn btn--primary" type="submit">ساخت و نمایش QR <?= icon('arrow-left') ?></button>
             <p class="qr-studio__error" data-qr-error role="alert" hidden></p>
         </form>
-        <div class="qr-studio__note"><strong>وضعیت صفحه بازخورد</strong><p><?= $feedbackReady ? 'جدول‌های ثبت‌نام و کد ورود سالن آماده‌اند. پیش از چاپ، فرم را با یک ثبت‌نام واقعی امتحان کنید.' : 'برای فعال‌شدن فرم، جدول‌های رویداد باید موجود باشند و FEEDBACK_ACCESS_CODE در تنظیمات سرور تعریف شود.' ?></p></div>
+        <div class="qr-studio__note"><strong>وضعیت صفحه بازخورد</strong><p><?= $feedbackReady ? 'نظرسنجی هر دو نشست آماده است. اعضا بدون کد تأیید وارد می‌شوند؛ ورود با کد سالن هم در صورت تنظیم فعال است.' : 'برای فعال‌شدن نظرسنجی، مایگریشن ۰۰۳ را اجرا کنید. کد سالن اختیاری است.' ?></p></div>
     </section>
 
     <section class="qr-studio__preview admin-panel">
@@ -20,4 +20,4 @@
         <p class="qr-studio__hint">قبل از چاپ انبوه، کد را با دوربین دو گوشی مختلف اسکن کنید. رنگ روشن پشت کد و حاشیه سفید برای خوانایی آن حفظ می‌شود.</p>
     </section>
 </div>
-<script type="module" src="<?= asset('js/admin-qr.js') ?>?v=1.0.0"></script>
+<script type="module" src="<?= asset('js/admin-qr.js') ?>?v=2.0.0"></script>
