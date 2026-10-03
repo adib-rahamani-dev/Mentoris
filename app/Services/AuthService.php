@@ -27,7 +27,7 @@ final class AuthService
     {
         $identifier=trim($identifier);
         if (str_contains($identifier,'@')) return mb_strtolower($identifier);
-        return \App\Repositories\CircleRepository::phone(preg_replace('/[\s().-]+/u','',$identifier) ?? '');
+        return \App\Core\PhoneNumber::normalize($identifier);
     }
 
     public function attempt(string $identifier, string $password, ?callable $beforePassword = null): bool

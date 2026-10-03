@@ -21,11 +21,11 @@ final class AuthController extends Controller
     public function register(Request $request): Response
     {
         $data = $request->only(['name', 'phone', 'email', 'password', 'password_confirmation', 'accept', 'member_type', 'marketing_consent']);
-        $data['phone'] = \App\Repositories\CircleRepository::phone(is_string($data['phone'] ?? null) ? $data['phone'] : '');
+        $data['phone'] = is_string($data['phone'] ?? null) && strlen($data['phone']) <= 240 ? \App\Core\PhoneNumber::normalize($data['phone']) : '';
         $validator = new Validator();
         $validator->validate($data, ['name' => 'required|string|min:2|max:80', 'email' => 'required|email|max:120', 'password' => 'required|string|min:8|max:128', 'password_confirmation' => 'required|same:password', 'accept' => 'required']);
         $errors = $validator->errors();
-        if (!preg_match('/^09[0-9]{9}$/', $data['phone'])) $errors['phone'] = ['شماره موبایل ۱۱ رقمی با ۰۹ وارد کنید.'];
+        if (!preg_match('/^09[0-9]{9}$/', $data['phone'])) $errors['phone'] = ['شماره موبایل معتبر وارد کنید؛ فرمت ۰۹ یا ‎+۹۸ پذیرفته می‌شود.'];
         if (!is_string($data['member_type'] ?? null) || !isset(\App\Services\MemberProfileService::OPTIONS['member_type'][$data['member_type']])) $errors['member_type'] = ['نوع عضویت را انتخاب کنید.'];
         if (($data['accept'] ?? '') !== '1') $errors['accept'] = ['پذیرش قوانین ضروری است.'];
         if (!isset($errors['password']) && (!preg_match('/[A-Za-z]/', (string) ($data['password'] ?? '')) || !preg_match('/\d/', (string) ($data['password'] ?? '')))) {
@@ -36,7 +36,7 @@ final class AuthController extends Controller
         try {
             (new AuthService())->register($data);
         } catch (RuntimeException $exception) {
-            return $this->authView('register', ['email' => [$exception->getMessage()]], $this->safeOld($data));
+            return $this->authView('register', [$exception->getCode() === 409 ? 'phone' : 'email' => [$exception->getMessage()]], $this->safeOld($data));
         }
         return $this->redirect('/profile?welcome=1');
     }

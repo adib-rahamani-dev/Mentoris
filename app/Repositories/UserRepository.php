@@ -53,6 +53,8 @@ final class UserRepository
 
     public function create(array $attributes): array
     {
+        $attributes['phone'] = \App\Core\PhoneNumber::normalize((string) ($attributes['phone'] ?? ''));
+        if (!preg_match('/^09[0-9]{9}$/', $attributes['phone'])) throw new RuntimeException('شماره موبایل معتبر وارد کنید.', 409);
         $email = self::normalizeEmail((string) ($attributes['email'] ?? ''));
         $name = trim((string) ($attributes['name'] ?? ''));
         $password = (string) ($attributes['password'] ?? '');
@@ -68,6 +70,21 @@ final class UserRepository
 
         try {
             return Database::transaction($this->pdo(), function (PDO $pdo) use ($user, $now, $attributes): array {
+                // Serialize public signups using an existing DB row, including on hosts without CREATE permission.
+                // Insert before reading also acquires SQLite's write lock; MySQL locks the same row until commit.
+                $key = hash('sha256', 'mentoris-public-registration-mutex');
+                $mutex = $pdo->prepare((Database::driver($pdo) === 'mysql' ? 'INSERT IGNORE' : 'INSERT OR IGNORE').' INTO rate_limits (key_hash,hits,reset_at,updated_at) VALUES (:key,0,:reset,:now)');
+                $mutex->execute(['key'=>$key, 'reset'=>'2099-01-01 00:00:00', 'now'=>$now]);
+                $lock = $pdo->prepare('SELECT key_hash FROM rate_limits WHERE key_hash=:key'.(Database::driver($pdo) === 'mysql' ? ' FOR UPDATE' : ''));
+                $lock->execute(['key'=>$key]); $lock->fetchColumn();
+                // Compare historical formatted numbers too, without rewriting or merging existing accounts.
+                $existing = $pdo->query("SELECT phone FROM users WHERE phone <> ''");
+                $duplicate = false;
+                while (($phone = $existing->fetchColumn()) !== false) {
+                    if (\App\Core\PhoneNumber::normalize((string)$phone) === $attributes['phone']) { $duplicate = true; break; }
+                }
+                $existing->closeCursor();
+                if ($duplicate) throw new RuntimeException('این شماره موبایل قبلاً ثبت شده است. از صفحهٔ ورود وارد حساب خود شوید یا رمزتان را بازیابی کنید.', 409);
                 $statement = $pdo->prepare('INSERT INTO users (id, name, email, password_hash, phone, professional_role, bio, account_role, status, auth_version, password_changed_at, created_at, updated_at) VALUES (:id, :name, :email, :password_hash, :phone, :professional_role, :bio, :account_role, :status, :auth_version, :password_changed_at, :created_at, :updated_at)');
                 $statement->execute([
                     'id' => $user['id'], 'name' => $user['name'], 'email' => $user['email'],

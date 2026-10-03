@@ -21,6 +21,15 @@ use App\Controllers\AuthController;
 use App\Controllers\MemberProfileController;
 use App\Controllers\FeedbackController;
 
+if (($argv[1] ?? '') === '--signup-worker') {
+ $db=Database::connect(['driver'=>'sqlite','database'=>$argv[2]]);
+ try {
+  (new UserRepository($db))->create(['name'=>'عضو هم‌زمان','email'=>'worker'.$argv[3].'@example.test','phone'=>$argv[3]%2 ? '+98 (912) 555-4444' : '۰۹۱۲۵۵۵۴۴۴۴','password'=>'Concurrent123']);
+  echo 'created';
+ } catch (RuntimeException $e) { if ($e->getCode()!==409) throw $e; echo 'duplicate'; }
+ exit;
+}
+
 $_ENV['APP_ENV']='local'; $_ENV['MAIL_MAILER']='log'; $_ENV['SESSION_DRIVER']='files'; $_ENV['APP_URL']='http://127.0.0.1:8098';
 $_ENV['APP_KEY']=\App\Core\Crypto::generateKey();
 $initialMailFiles=\App\Core\PrivateRecords::files('mail-outbox');
@@ -301,7 +310,7 @@ $check(!$auth->attempt('09121119999','LoginPass123'),'Unknown phone cannot authe
 $pdo->prepare("UPDATE users SET status='suspended' WHERE id=:id")->execute(['id'=>$loginMember['id']]);
 $check(!$auth->attempt('09121112222','LoginPass123'),'Suspended accounts cannot log in by phone.');
 $pdo->prepare("UPDATE users SET status='active' WHERE id=:id")->execute(['id'=>$loginMember['id']]);
-$duplicateMember=$users->create(['name'=>'شماره تکراری','email'=>'duplicate@example.test','phone'=>'09121112222','password'=>'OtherPass123']);
+$duplicateMember=$users->createManaged(['name'=>'شماره تکراری','email'=>'duplicate@example.test','phone'=>'09121112222','password'=>'OtherPass123']);
 $check(!$auth->attempt('09121112222','LoginPass123'),'Ambiguous unverified phones cannot select an arbitrary account.');
 $check($auth->attempt('LOGIN@EXAMPLE.TEST','LoginPass123') && $auth->user()['id']===$loginMember['id'],'Email remains available for old and duplicate-phone accounts.');
 $auth->logout();
@@ -324,6 +333,46 @@ $check(csrf_token()!==$beforeCsrf,'Successful phone login rotates CSRF token.');
 $auth->logout();
 $legacyResponse=$authController->login(new Request(body:['email'=>'login@example.test','password'=>'LoginPass123']));
 $check(($legacyResponse->headers()['Location'] ?? '')==='/dashboard' && $auth->user()['id']===$loginMember['id'],'Cached legacy email form submissions still sign into the correct account.');
+// Signup accepts phone formatting, rejects malformed inputs, and prevents a second public account.
+foreach(['09127776666','+98 (912) 777-6666','989127776666','00989127776666','۰۹۱۲ ۷۷۷ ۶۶۶۶','+٩٨٩١٢٧٧٧٦٦٦٦'] as $phone) {
+ $check(\App\Core\PhoneNumber::normalize($phone)==='09127776666','Supported phone formats share a canonical identity.');
+}
+$auth->logout();
+$formatted=array_replace($register,['email'=>'formatted@example.test','phone'=>'+۹۸ (۹۱۲) ۷۷۷-۶۶۶۶']);
+$result=$authController->register(new Request(body:$formatted));
+$check(($result->headers()['Location'] ?? '')==='/profile?welcome=1' && $users->findByEmail($formatted['email'])['phone']==='09127776666','Formatted Persian international signup creates a canonical phone and immediately opens profile.');
+$auth->logout();
+$count=(int)$pdo->query('SELECT COUNT(*) FROM users')->fetchColumn();
+foreach(['09127776666','+989127776666','00989127776666','۰۹۱۲۷۷۷۶۶۶۶'] as $phone) {
+ $result=$authController->register(new Request(body:array_replace($formatted,['email'=>'new-address@example.test','phone'=>$phone])));
+ $check(str_contains($result->content(),'این شماره موبایل قبلاً ثبت شده') && (int)$pdo->query('SELECT COUNT(*) FROM users')->fetchColumn()===$count && $auth->user()===null,'Alternate format or email cannot create or authenticate a duplicate account.');
+}
+foreach([['bad'],'0912abc1234','+979127776666','091277766666',str_repeat('0',241)] as $phone) {
+ $result=$authController->register(new Request(body:array_replace($formatted,['email'=>'bad-phone@example.test','phone'=>$phone])));
+ $check(str_contains($result->content(),'شماره موبایل معتبر وارد کنید') && $users->findByEmail('bad-phone@example.test')===null,'Malformed phone signup fails cleanly without account creation.');
+}
+$legacy=$users->createManaged(['name'=>'عضو قدیمی','email'=>'old-format@example.test','phone'=>'+۹۸ (۹۱۲) ۷۷۷-۵۵۵۵','password'=>'LegacyPass123']);
+$result=$authController->register(new Request(body:array_replace($formatted,['email'=>'legacy-duplicate@example.test','phone'=>'09127775555'])));
+$check(str_contains($result->content(),'این شماره موبایل قبلاً ثبت شده') && $users->findByEmail('legacy-duplicate@example.test')===null,'Historical formatted phone blocks duplicate public registration without modifying its owner.');
+$check(strpos($pages['register'],'name="phone"') < strpos($pages['register'],'name="name"') && str_contains($pages['register'],'inputmode="tel"'),'Phone comes first with the mobile keypad.');
+$parallelPath=STORAGE_PATH.'/temp/signup-test-'.bin2hex(random_bytes(8)).'.sqlite';
+$parallel=Database::connect(['driver'=>'sqlite','database'=>$parallelPath]);
+foreach($schemas as $table=>$columns) $parallel->exec('CREATE TABLE '.$table.' ('.$columns.')');
+$workers=[];
+try {
+ for($i=0;$i<8;$i++) {
+  $process=proc_open([PHP_BINARY,__FILE__,'--signup-worker',$parallelPath,(string)$i],[1=>['pipe','w'],2=>['pipe','w']],$pipes);
+  if(!is_resource($process)) throw new RuntimeException('Cannot launch signup concurrency worker.');
+  $workers[]=[$process,$pipes];
+ }
+ $created=0;
+ foreach($workers as [$process,$pipes]) {
+  $output=stream_get_contents($pipes[1]); $error=stream_get_contents($pipes[2]); fclose($pipes[1]); fclose($pipes[2]);
+  $check(proc_close($process)===0 && $error==='' && in_array($output,['created','duplicate'],true),'Concurrent signup worker must finish cleanly: '.$error);
+  $created+=(int)($output==='created');
+ }
+ $check($created===1 && (int)$parallel->query('SELECT COUNT(*) FROM users')->fetchColumn()===1,'Eight simultaneous public signups with alternate formats create exactly one account.');
+} finally { unset($parallel); if(is_file($parallelPath)) unlink($parallelPath); }
 if(in_array('--preview',$argv,true)) {
  foreach($pages as $name=>$html) file_put_contents(BASE_PATH.'/storage/temp/preview-'.$name.'.html',$html);
 }
