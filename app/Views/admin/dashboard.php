@@ -10,6 +10,8 @@
 <section class="admin-quick-actions" aria-label="دسترسی سریع"><div><span class="eyebrow">اقدام سریع</span><h2>امروز چه کاری پیش می‌بریم؟</h2></div><nav>
     <?php if($canManageContent): ?><a href="/admin/content/new?type=article"><?= icon('file') ?> نوشتن مقاله</a><a href="/admin/content/new?type=event"><?= icon('calendar') ?> ساخت رویداد</a><?php endif; ?>
     <?php if($canEngagements): ?><a href="/admin/engagements?type=circle&status=requested"><?= icon('message') ?> بررسی درخواست‌ها</a><?php endif; ?>
+    <?php if($canEngagements): ?><a href="/admin/telegram"><?= icon('message') ?> پرسش‌های تلگرام</a><a href="/admin/feedback"><?= icon('chart') ?> آمار نظرسنجی</a><?php endif; ?>
+    <?php if($canContent): ?><a href="/admin/qr"><?= icon('activity') ?> ساخت و چاپ QR</a><?php endif; ?>
     <?php if($canUsers): ?><a href="/admin/users"><?= icon('users') ?> مدیریت کاربران</a><?php endif; ?>
 </nav></section>
 

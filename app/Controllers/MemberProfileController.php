@@ -28,9 +28,9 @@ final class MemberProfileController extends Controller
     private function persist(Request $request, array $user, bool $admin): Response
     {
         $repo=new MemberProfileRepository();
-        if (!$repo->available()) return Response::html('<h1>ابتدا مایگریشن ۰۰۴ را اجرا کنید.</h1>',503);
         $complete=$request->input('mode')==='complete';
         [$data,$errors]=MemberProfileService::validate((array)$request->input(),$complete);
+        if(!$errors && !$complete) $complete=$data['member_type']==='other' || ($data['field_of_study']!=='' && $data['university']!=='');
         $old=$repo->find($user['id']);
         $data['avatar_path']=$old['avatar_path'] ?? '';
         if (!$errors) {
@@ -48,9 +48,11 @@ final class MemberProfileController extends Controller
                 throw $e;
             }
             if ($admin) Audit::record('user.member_profile.updated','user',$user['id'],(new AuthService())->user()['id'] ?? null,[],['member_type'=>$data['member_type'],'complete'=>$complete],$request->ip());
+            if ($request->expectsJson()) return Response::json(['message'=>'اطلاعات شما ذخیره شد.','complete'=>$complete]);
             return $this->redirect($admin ? '/admin/users/'.$user['id'].'?member_saved=1' : '/profile?saved=1');
         }
         $extra=['member'=>$data,'memberErrors'=>$errors,'memberEnabled'=>true];
+        if ($request->expectsJson()) return Response::json(['message'=>'فیلدهای مشخص‌شده را بررسی کنید.','errors'=>$errors],422);
         if ($admin) return $this->view('admin.user-details',['title'=>'پرونده کاربر','admin'=>(new AuthService())->user(),'user'=>$user,'operations'=>(new \App\Repositories\AdminRepository())->userOperations($user['id']),'roles'=>Authorization::ROLES,...$extra],'layouts.admin');
         $circle=new \App\Repositories\CircleRepository();
         return $this->view('user.profile',['title'=>'پروفایل من','user'=>$user,'old'=>[],'errors'=>[],'success'=>false,'therapist'=>$circle->profile($user['id']),'therapistEnabled'=>$circle->therapistAvailable(),...$extra]);

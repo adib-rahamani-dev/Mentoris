@@ -8,6 +8,7 @@ use PDOException;
 
 final class MemberProfileRepository
 {
+    private bool $importing=false;
     public function __construct(private readonly ?PDO $database = null) {}
     private function pdo(): PDO { return $this->database ?? Database::connection(); }
     public function available(): bool
@@ -19,7 +20,13 @@ final class MemberProfileRepository
     { return (string)$e->getCode() === '42S02' || str_contains($e->getMessage(), 'no such table'); }
     public function find(string $id): array
     {
-        if (!$this->available()) return [];
+        $pending=\App\Core\PrivateRecords::read('member-profiles',$id);
+        if (!$this->available()) return $pending ?? [];
+        if ($pending && !$this->importing) {
+            $this->importing=true;
+            try { $this->save($id,$pending,!empty($pending['completed_at'])); \App\Core\PrivateRecords::delete('member-profiles',$id); }
+            finally { $this->importing=false; }
+        }
         $s = $this->pdo()->prepare('SELECT * FROM member_profiles WHERE user_id = :id');
         $s->execute(['id'=>$id]); $row = $s->fetch();
         if (!$row) return [];
@@ -27,12 +34,20 @@ final class MemberProfileRepository
     }
     public function save(string $id, array $data, bool $complete = false, bool $acceptTerms = false): void
     {
+        if (!$this->available()) {
+            $old=\App\Core\PrivateRecords::read('member-profiles',$id) ?? [];
+            $data['terms_accepted_at']=$old['terms_accepted_at'] ?? ($acceptTerms ? Database::now() : null);
+            $data['completed_at']=$complete ? Database::now() : null;
+            $data['updated_at']=Database::now();
+            \App\Core\PrivateRecords::write('member-profiles',$id,$data);
+            return;
+        }
         $columns = ['member_type','education_status','field_of_study','degree','university','city','practice_status','specialty_fields'];
         $old = $this->find($id);
         $values = ['user_id'=>$id];
         foreach ($columns as $key) $values[$key] = (string)($data[$key] ?? '');
         $details = array_diff_key($data, array_flip([...$columns,'training_courses','marketing_consent','terms_accepted_at','completed_at','updated_at','user_id','details']));
-        $values += ['details'=>json_encode($details, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), 'training_courses'=>json_encode($data['training_courses'] ?? [], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), 'marketing_consent'=>!empty($data['marketing_consent']) ? 1 : 0, 'terms_accepted_at'=>$old['terms_accepted_at'] ?? ($acceptTerms ? Database::now() : null), 'completed_at'=>$complete ? Database::now() : null, 'updated_at'=>Database::now()];
+        $values += ['details'=>json_encode($details, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), 'training_courses'=>json_encode($data['training_courses'] ?? [], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), 'marketing_consent'=>!empty($data['marketing_consent']) ? 1 : 0, 'terms_accepted_at'=>$data['terms_accepted_at'] ?? $old['terms_accepted_at'] ?? ($acceptTerms ? Database::now() : null), 'completed_at'=>$complete ? Database::now() : null, 'updated_at'=>Database::now()];
         $keys = array_keys($values);
         $update = implode(', ', array_map(fn($k)=>$k . ' = ' . (Database::driver($this->pdo()) === 'mysql' ? 'VALUES('.$k.')' : 'excluded.'.$k), array_slice($keys, 1)));
         $sql = 'INSERT INTO member_profiles ('.implode(',',$keys).') VALUES (:'.implode(',:',$keys).') ' . (Database::driver($this->pdo()) === 'mysql' ? 'ON DUPLICATE KEY UPDATE ' : 'ON CONFLICT(user_id) DO UPDATE SET ') . $update;
@@ -40,7 +55,14 @@ final class MemberProfileRepository
     }
     public function search(array $filters): array
     {
-        $enabled = $this->available(); $where=[]; $args=[];
+        $enabled = $this->available();
+        if (!$enabled) return $this->fallbackSearch($filters);
+        // Import staged profiles before filtering, including members who have not logged in again.
+        foreach(\App\Core\PrivateRecords::files('member-profiles') as $path) {
+            $id=basename($path,'.sealed'); $exists=$this->pdo()->prepare('SELECT 1 FROM users WHERE id=:id'); $exists->execute(['id'=>$id]);
+            if($exists->fetchColumn()) $this->find($id);
+        }
+        $where=[]; $args=[];
         foreach (['member_type','field_of_study','degree','university','city','specialty_fields','practice_status'] as $key) {
             $value = trim(is_string($filters[$key] ?? null) ? $filters[$key] : '');
             if ($value !== '' && $enabled) { $where[] = 'p.'.$key.' LIKE :'.$key; $args[$key]='%'.mb_substr($value,0,160).'%'; }
@@ -64,5 +86,24 @@ final class MemberProfileRepository
             $stats['consented']=(int)$this->pdo()->query('SELECT COUNT(*) FROM member_profiles WHERE marketing_consent=1')->fetchColumn();
         }
         return ['rows'=>$s->fetchAll(),'total'=>$total,'page'=>$page,'pages'=>max(1,(int)ceil($total/50)),'stats'=>$stats,'enabled'=>$enabled];
+    }
+    private function fallbackSearch(array $filters): array
+    {
+        $rows=$this->pdo()->query('SELECT id,name,email,phone,professional_role AS role,account_role,status,created_at FROM users ORDER BY created_at DESC')->fetchAll();
+        $stats=['total'=>count($rows),'student'=>0,'therapist'=>0,'completed'=>0,'consented'=>0]; $filtered=[];
+        foreach($rows as $user) {
+            $profile=$this->find($user['id']); $user=array_replace($user,array_intersect_key($profile,array_flip(['member_type','field_of_study','degree','university','city','practice_status','specialty_fields','completed_at'])));
+            if (isset($stats[$profile['member_type'] ?? ''])) $stats[$profile['member_type']]++;
+            if (!empty($profile['completed_at'])) $stats['completed']++;
+            if (!empty($profile['marketing_consent'])) $stats['consented']++;
+            $match=true;
+            foreach(['member_type','field_of_study','degree','university','city','specialty_fields','practice_status','account_role','status'] as $key) {
+                if (is_string($filters[$key] ?? null) && $filters[$key]!=='' && !str_contains(mb_strtolower((string)($user[$key] ?? '')),mb_strtolower($filters[$key]))) $match=false;
+            }
+            if (is_string($filters['q'] ?? null) && $filters['q']!=='' && !str_contains(mb_strtolower($user['name'].' '.$user['email'].' '.$user['phone']),mb_strtolower($filters['q']))) $match=false;
+            if($match) $filtered[]=$user;
+        }
+        $total=count($filtered); $pages=max(1,(int)ceil($total/50)); $page=max(1,min((int)($filters['page'] ?? 1),$pages));
+        return ['rows'=>array_slice($filtered,($page-1)*50,50),'total'=>$total,'page'=>$page,'pages'=>$pages,'stats'=>$stats,'enabled'=>false];
     }
 }

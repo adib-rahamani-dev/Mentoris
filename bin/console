@@ -23,6 +23,41 @@ if (is_file($envFile)) {
 
 $command = $argv[1] ?? 'help';
 try {
+    if (str_starts_with($command,'telegram:')) {
+        if($command==='telegram:secret') {
+            $contents=is_file($envFile) ? (string)file_get_contents($envFile) : '';
+            if(trim((string)env('TELEGRAM_WEBHOOK_SECRET',''))!=='') { echo "Webhook secret already configured.\n"; exit(0); }
+            $contents=preg_match('/^TELEGRAM_WEBHOOK_SECRET=.*$/m',$contents) ? (string)preg_replace('/^TELEGRAM_WEBHOOK_SECRET=.*$/m','TELEGRAM_WEBHOOK_SECRET='.bin2hex(random_bytes(32)),$contents) : rtrim($contents).PHP_EOL.'TELEGRAM_WEBHOOK_SECRET='.bin2hex(random_bytes(32)).PHP_EOL;
+            $temporary=$envFile.'.tmp';
+            if(file_put_contents($temporary,$contents,LOCK_EX)===false || !rename($temporary,$envFile)) throw new RuntimeException('Could not save the private webhook secret.');
+            echo "Private webhook secret configured.\n"; exit(0);
+        }
+        $api=new \App\Services\TelegramApi();
+        if($command==='telegram:work') { echo json_encode((new \App\Services\TelegramWorker())->run(),JSON_THROW_ON_ERROR).PHP_EOL; exit(0); }
+        if($command==='telegram:check') {
+            $bot=$api->call('getMe'); $webhook=$api->call('getWebhookInfo');
+            echo 'Bot: @'.($bot['username'] ?? '').PHP_EOL;
+            echo 'Webhook: '.($webhook['url'] ?? '').PHP_EOL;
+            echo 'Pending updates: '.($webhook['pending_update_count'] ?? 0).PHP_EOL;
+            echo 'Last delivery error: '.($webhook['last_error_message'] ?? 'none').PHP_EOL; exit(0);
+        }
+        if($command==='telegram:setup') {
+            $bot=$api->call('getMe');
+            $api->call('setMyCommands',['commands'=>[['command'=>'start','description'=>'منوی اصلی منتوریس'],['command'=>'menu','description'=>'همایش‌ها، ابزارها و پرسش‌ها'],['command'=>'help','description'=>'راهنمای استفاده'],['command'=>'cancel','description'=>'لغو و برگشت به منو']]]);
+            $api->call('setMyDescription',['description'=>'همراه منتوریس برای درمانگران و دانشجویان؛ اطلاعات نشست‌ها، ابزارهای رایگان، عضویت و ارسال سؤال به تیم.']);
+            $api->call('setMyShortDescription',['short_description'=>'همراه منتوریس | نشست‌ها، ابزارهای رایگان و پاسخ تیم']);
+            echo 'Menu and description configured for @'.($bot['username'] ?? '').PHP_EOL; exit(0);
+        }
+        if($command==='telegram:webhook') {
+            $url=rtrim((string)env('APP_URL',''),'/').'/api/telegram/webhook'; $secret=(string)env('TELEGRAM_WEBHOOK_SECRET','');
+            if(!str_starts_with($url,'https://') || !preg_match('/^[A-Za-z0-9_-]{16,256}$/',$secret)) throw new RuntimeException('Set public HTTPS APP_URL and a private TELEGRAM_WEBHOOK_SECRET (16-256 letters, numbers, hyphen or underscore).');
+            if(!(new \App\Repositories\TelegramRepository())->available()) throw new RuntimeException('Run migration 005 first.');
+            $api->call('setWebhook',['url'=>$url,'secret_token'=>$secret,'allowed_updates'=>['message','callback_query'],'max_connections'=>10]);
+            echo 'Webhook configured. Schedule telegram:work every minute.'.PHP_EOL; exit(0);
+        }
+        throw new RuntimeException('Unknown Telegram command.');
+    }
+    if ($command === 'mail:work') { echo json_encode((new \App\Services\MailQueueService())->run(),JSON_THROW_ON_ERROR).PHP_EOL; exit(0); }
     if ($command === 'key:generate') {
         $key = Crypto::generateKey();
         $contents = is_file($envFile) ? (string) file_get_contents($envFile) : '';
@@ -69,7 +104,7 @@ try {
         }
         exit(0);
     }
-    echo "Mentoris console\n\nCommands:\n  key:generate\n  db:create\n  db:check\n  migrate\n  migrate:status\n  admin:promote you@example.com\n";
+    echo "Mentoris console\n\nCommands:\n  key:generate\n  db:create\n  db:check\n  migrate\n  migrate:status\n  admin:promote you@example.com\n  mail:work\n  telegram:secret\n  telegram:setup\n  telegram:webhook\n  telegram:check\n  telegram:work\n";
 } catch (Throwable $exception) {
     fwrite(STDERR, 'ERROR: ' . $exception->getMessage() . PHP_EOL);
     exit(1);

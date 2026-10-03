@@ -27,6 +27,23 @@ final class EngagementRepository
         }
     }
 
+    public function communityForUser(array $user): ?array
+    {
+        $s=$this->pdo()->prepare('SELECT id,user_id,status FROM community_memberships WHERE user_id=:id OR email=:email ORDER BY created_at DESC LIMIT 1');
+        $s->execute(['id'=>$user['id'],'email'=>$user['email']]); $row=$s->fetch();
+        return is_array($row) && ($row['user_id']===null || $row['user_id']===$user['id']) ? $row : null;
+    }
+    public function setCommunity(array $user,bool $requested,string $interests=''): ?array
+    {
+        $old=$this->communityForUser($user);
+        if ($old) {
+            if ($requested && in_array($old['status'],['rejected','suspended'],true)) throw new RuntimeException('درخواست قبلی نیاز به بررسی پشتیبانی دارد.');
+            $status=$requested ? ($old['status']==='withdrawn' ? 'pending' : $old['status']) : 'withdrawn';
+            $this->pdo()->prepare('UPDATE community_memberships SET user_id=:user_id,status=:status,interests=:interests,updated_at=:now WHERE id=:id')->execute(['user_id'=>$user['id'],'status'=>$status,'interests'=>mb_substr($interests,0,500),'now'=>Database::now(),'id'=>$old['id']]);
+        } elseif ($requested) $this->joinCommunity(['name'=>$user['name'],'email'=>$user['email'],'role'=>$user['role'] ?? '','interests'=>$interests],$user['id']);
+        return $this->communityForUser($user);
+    }
+
     public function createContactMessage(array $data, string $ip): void
     {
         $now = Database::now();

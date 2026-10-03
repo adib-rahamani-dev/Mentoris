@@ -24,6 +24,10 @@ $router->post('/admin/engagements/{type:[a-z]+}/{id:[a-f0-9]+}', [AdminControlle
 $router->get('/admin/content', [AdminController::class, 'content'], ['auth', 'can:content.view', 'rate:120,60']);
 $router->get('/admin/qr', [AdminQrController::class, 'index'], ['auth', 'can:content.view', 'rate:120,60']);
 $router->get('/admin/feedback', [\App\Controllers\AdminFeedbackController::class, 'index'], ['auth', 'can:engagements.view', 'rate:120,60']);
+$router->get('/admin/telegram', [\App\Controllers\AdminTelegramController::class, 'index'], ['auth', 'can:engagements.view', 'rate:120,60']);
+$router->post('/admin/telegram/questions/{id:[a-f0-9]+}/answer', [\App\Controllers\AdminTelegramController::class, 'answer'], ['auth', 'can:engagements.manage', 'csrf', 'rate:30,60']);
+$router->post('/admin/telegram/requests/{id:[a-f0-9]+}', [\App\Controllers\AdminTelegramController::class, 'updateRequest'], ['auth', 'can:engagements.manage', 'csrf', 'rate:30,60']);
+$router->post('/admin/telegram/retry', [\App\Controllers\AdminTelegramController::class, 'retry'], ['auth', 'can:engagements.manage', 'csrf', 'rate:5,60']);
 $router->get('/admin/content/new', [AdminController::class, 'createContent'], ['auth', 'can:content.manage', 'rate:120,60']);
 $router->post('/admin/content', [AdminController::class, 'storeContent'], ['auth', 'can:content.manage', 'csrf', 'rate:30,60']);
 $router->get('/admin/content/{id:[a-f0-9]+}/edit', [AdminController::class, 'editContent'], ['auth', 'can:content.manage', 'rate:120,60']);

@@ -11,6 +11,7 @@
                 <li><a href="/founder"><?= e(t('nav.founder')) ?></a></li>
                 <li><a href="/events"><?= e(t('nav.events')) ?></a></li>
                 <li><a href="/articles"><?= e(t('nav.articles')) ?></a></li>
+                <li><a href="/resources">ابزارهای رایگان</a></li>
                 <li><a href="/community"><?= e(t('nav.community')) ?></a></li>
             </ul>
         </div>

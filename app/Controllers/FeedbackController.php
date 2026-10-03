@@ -31,6 +31,7 @@ final class FeedbackController extends Controller
             (new Session())->put('feedback.event',$slug);
             (new Session())->put('feedback.signup','');
         }
+        if(!(new AuthService())->user()) (new Session())->put('auth.intended','/feedback?event='.$this->eventSlug());
         return $this->render();
     }
 
@@ -75,19 +76,29 @@ final class FeedbackController extends Controller
 
     public function feedback(Request $request): Response
     {
+        $event=$request->input('event');
+        if(is_string($event) && in_array($event,self::EVENTS,true) && $event!==$this->eventSlug()) { (new Session())->put('feedback.event',$event); (new Session())->put('feedback.signup',''); }
         $signup = $this->activeSignup();
-        if (!$signup) return $this->redirect('/feedback');
         $data = $request->only(['content_rating','hosting_rating','challenge','comment']);
         $errors = [];
         foreach (['content_rating','hosting_rating'] as $field) if (!in_array((string) ($data[$field] ?? ''), ['1','2','3','4','5'], true)) $errors[$field] = 'امتیاز ۱ تا ۵ را انتخاب کنید.';
-        if (!in_array((string) ($data['challenge'] ?? ''), ['burnout','technique','countertransference','supervision'], true)) $errors['challenge'] = 'یک گزینه انتخاب کنید.';
+        $data['challenge']=$data['challenge'] ?? 'none';
+        if($data['challenge']==='') $data['challenge']='none';
+        if (!in_array($data['challenge'], ['none','burnout','technique','countertransference','supervision'], true)) $errors['challenge'] = 'گزینه معتبر انتخاب کنید.';
         if (!is_string($data['comment'] ?? '') || mb_strlen((string) ($data['comment'] ?? '')) > 1000) $errors['comment'] = 'متن باید حداکثر ۱۰۰۰ نویسه باشد.';
-        if ($errors) return $this->render($errors, $data);
+        if ($errors) return $request->expectsJson() ? Response::json(['message'=>'دو امتیاز را انتخاب کنید.','errors'=>$errors],422) : $this->render($errors, $data);
+        if(!$signup && (new AuthService())->user() && $request->input('member_access')==='1') {
+            $access=$this->access($request); $signup=$this->activeSignup();
+            if(!$signup) return $request->expectsJson() ? Response::json(['message'=>'شماره پروفایل یا اتصال پرونده حضور را بررسی کنید.'],422) : $access;
+        }
+        if (!$signup) return $request->expectsJson() ? Response::json(['message'=>'برای ثبت نظر وارد حساب شوید.'],401) : $this->redirect('/feedback');
         try {
             (new CircleRepository())->saveFeedback($signup['id'], $data);
         } catch (RuntimeException $exception) {
+            if($request->expectsJson()) return Response::json(['message'=>$exception->getMessage(),'recorded'=>(new CircleRepository())->feedback($signup['id'])!==null]);
             return $this->render(['feedback' => $exception->getMessage()]);
         }
+        if($request->expectsJson()) return Response::json(['message'=>'بازخورد شما ثبت شد. ممنون از همراهی‌تان.','recorded'=>true]);
         return $this->redirect('/feedback?done=1');
     }
 
@@ -99,7 +110,6 @@ final class FeedbackController extends Controller
             (new Session())->put('auth.intended', '/feedback');
             return $this->redirect('/register');
         }
-        if (!(new CircleRepository())->profileComplete((string) $user['id']) && empty((new \App\Repositories\MemberProfileRepository())->find($user['id'])['completed_at'])) return $this->redirect('/profile');
         $path = base_path('output/pdf/anchoring-grace-toolkit.pdf');
         if (!is_file($path)) return Response::html('فایل کارگاه فعلاً در دسترس نیست.', 503);
         return new Response((string) file_get_contents($path), 200, [

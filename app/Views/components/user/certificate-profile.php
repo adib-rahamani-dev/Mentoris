@@ -1,0 +1,21 @@
+<?php
+$therapist = $therapist ?? [];
+$therapistErrors = $therapistErrors ?? [];
+$choices = [
+    'education_level' => ['masters_student'=>'دانشجوی ارشد','masters'=>'کارشناسی ارشد','phd_student'=>'دانشجوی دکتری','phd'=>'دکتری تخصصی'],
+    'specialization' => ['clinical'=>'بالینی','health'=>'سلامت','general'=>'عمومی','counseling'=>'مشاوره','other'=>'سایر'],
+    'experience' => ['under_1'=>'کمتر از ۱ سال','1_3'=>'۱ تا ۳ سال','3_7'=>'۳ تا ۷ سال','over_7'=>'بیش از ۷ سال'],
+    'approaches' => ['ACT'=>'ACT','CBT'=>'CBT','schema'=>'طرحواره‌درمانی','psychodynamic'=>'روان‌پویشی','CFT'=>'متمرکز بر شفقت','other'=>'سایر'],
+    'practice_areas' => ['adult'=>'فردی بزرگسال','trauma'=>'تروما','couples'=>'زوج','child'=>'کودک و نوجوان','other'=>'سایر'],
+];
+?>
+<section class="section therapist-profile"><div class="container container--md"><details class="member-section"><summary>اطلاعات اختیاری صدور گواهی رویداد</summary><div class="user-panel"><header><div><span class="eyebrow">Professional Profile</span><h2>اطلاعات اختیاری صدور گواهی</h2><p>عضویت در سایت به رویداد وابسته نیست. این بخش را هر زمان خواستید تکمیل کنید؛ اطلاعات هویتی فقط برای بررسی گواهی احتمالی استفاده می‌شود.</p></div></header>
+<?php if (!empty($therapistSuccess)): ?><div class="alert alert--success" role="status">اطلاعات تخصصی ذخیره شد.</div><?php endif; ?>
+<?php if ($therapistErrors): ?><div class="alert alert--danger" role="alert">لطفاً فیلدهای مشخص‌شده را اصلاح کنید.</div><?php endif; ?>
+<?php if (empty($therapistEnabled)): ?><div class="alert alert--danger" role="status">فرم تخصصی پس از اعمال ساختار جدید پایگاه داده فعال می‌شود.</div><?php else: ?><form class="stack" method="post" action="/profile/therapist"><?= csrf_field() ?>
+<div class="grid grid--2">
+<?php foreach (['latin_name'=>'نام انگلیسی','national_id'=>'کد ملی','professional_number'=>'شماره نظام / دانشجویی','university'=>'دانشگاه محل تحصیل'] as $field=>$label): ?><label class="form-group"><span class="form-label"><?= e($label) ?></span><input class="form-control <?= in_array($field, ['latin_name','national_id'], true) ? 'ltr' : '' ?>" name="<?= e($field) ?>" value="<?= e($therapist[$field] ?? '') ?>" maxlength="<?= $field === 'university' ? 160 : 120 ?>" <?= $field === 'national_id' ? 'inputmode="numeric"' : '' ?>><?php if (isset($therapistErrors[$field])): ?><small class="form-error"><?= e($therapistErrors[$field][0]) ?></small><?php endif; ?></label><?php endforeach; ?>
+<?php foreach (['education_level'=>'مقطع تحصیلی','specialization'=>'گرایش تخصصی','experience'=>'سابقه کار بالینی'] as $field=>$label): ?><label class="form-group"><span class="form-label"><?= e($label) ?></span><select class="form-select" name="<?= e($field) ?>"><option value="">انتخاب کنید</option><?php foreach ($choices[$field] as $value=>$text): ?><option value="<?= e($value) ?>" <?= ($therapist[$field] ?? '') === $value ? 'selected' : '' ?>><?= e($text) ?></option><?php endforeach; ?></select><?php if (isset($therapistErrors[$field])): ?><small class="form-error"><?= e($therapistErrors[$field][0]) ?></small><?php endif; ?></label><?php endforeach; ?>
+<label class="form-group"><span class="form-label">لینک اینستاگرام یا لینکدین</span><input class="form-control ltr" type="url" name="social_link" value="<?= e($therapist['social_link'] ?? '') ?>" maxlength="255" placeholder="https://..."><?php if (isset($therapistErrors['social_link'])): ?><small class="form-error"><?= e($therapistErrors['social_link'][0]) ?></small><?php endif; ?></label></div>
+<?php foreach (['approaches'=>'رویکردهای درمانی','practice_areas'=>'حیطه‌های تخصصی'] as $field=>$label): ?><fieldset class="profile-choice"><legend><?= e($label) ?></legend><div class="profile-choice__grid"><?php foreach ($choices[$field] as $value=>$text): ?><label class="check"><input type="checkbox" name="<?= e($field) ?>[]" value="<?= e($value) ?>" <?= in_array($value, $therapist[$field] ?? [], true) ? 'checked' : '' ?>><span><?= e($text) ?></span></label><?php endforeach; ?></div><?php if (isset($therapistErrors[$field])): ?><small class="form-error"><?= e($therapistErrors[$field][0]) ?></small><?php endif; ?></fieldset><?php endforeach; ?>
+<button class="btn btn--primary" type="submit">ذخیره پروفایل تخصصی</button></form><?php endif; ?></div></details></div></section>

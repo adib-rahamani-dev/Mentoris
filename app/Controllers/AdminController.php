@@ -46,7 +46,7 @@ final class AdminController extends Controller
         $user = (new UserRepository())->findById($id);
         if ($user === null) return Response::html('<h1>404 - کاربر پیدا نشد</h1>', 404);
         $profiles=new \App\Repositories\MemberProfileRepository();
-        return $this->adminView('user-details', 'پرونده کاربر', ['user' => $user, 'operations' => (new AdminRepository())->userOperations($id), 'roles' => Authorization::ROLES,'member'=>$profiles->find($id),'memberEnabled'=>$profiles->available()]);
+        return $this->adminView('user-details', 'پرونده کاربر', ['user' => $user, 'operations' => (new AdminRepository())->userOperations($id), 'roles' => Authorization::ROLES,'member'=>$profiles->find($id),'memberEnabled'=>true]);
     }
 
     public function createUser(Request $request): Response
@@ -214,7 +214,7 @@ final class AdminController extends Controller
     public function analytics(Request $request): Response
     {
         $repository = new AdminRepository();
-        return $this->adminView('analytics', 'تحلیل و گزارش‌ها', ['stats' => $repository->dashboard(), 'trends' => $repository->monthlyMetrics(12), 'roles' => $repository->roleCounts(), 'orderStatuses' => $repository->orderStatusCounts()]);
+        return $this->adminView('analytics', 'تحلیل و گزارش‌ها', ['stats' => $repository->dashboard(), 'trends' => $repository->monthlyMetrics(12), 'roles' => $repository->roleCounts(), 'orderStatuses' => $repository->orderStatusCounts(), 'resources'=>(new \App\Repositories\ResourceRepository())->stats()]);
     }
 
     public function audit(Request $request): Response
@@ -227,9 +227,15 @@ final class AdminController extends Controller
     {
         $roleKeys = array_keys(Authorization::ROLES);
         $permissionMatrix = array_combine($roleKeys, array_map(static fn(string $role): array => Authorization::permissionsForRole($role), $roleKeys));
-        return $this->adminView('system', 'امنیت و سلامت سیستم', ['health' => (new AdminRepository())->systemHealth(), 'roles'=>Authorization::ROLES, 'permissionMatrix'=>$permissionMatrix, 'environment' => ['php' => PHP_VERSION, 'app_env' => env('APP_ENV', 'local'), 'debug' => (bool) env('APP_DEBUG', false), 'session_driver' => env('SESSION_DRIVER', 'files'), 'rate_driver' => env('RATE_LIMIT_DRIVER', 'session'), 'https' => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')]]);
+        return $this->adminView('system', 'امنیت و سلامت سیستم', ['health' => (new AdminRepository())->systemHealth(), 'roles'=>Authorization::ROLES, 'permissionMatrix'=>$permissionMatrix, 'environment' => ['mail_queue'=>count(\App\Core\PrivateRecords::files('mail-outbox')), 'mail_worker'=>self::workerTime('mail'), 'telegram_worker'=>self::workerTime('telegram'), 'php' => PHP_VERSION, 'app_env' => env('APP_ENV', 'local'), 'debug' => (bool) env('APP_DEBUG', false), 'session_driver' => env('SESSION_DRIVER', 'files'), 'rate_driver' => env('RATE_LIMIT_DRIVER', 'session'), 'https' => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')]]);
     }
 
+    private static function workerTime(string $name): string
+    {
+        $path=BASE_PATH.'/storage/data/'.$name.'-worker-status.json';
+        $record=is_file($path) ? json_decode((string)file_get_contents($path),true) : null;
+        return is_array($record) ? (string)($record['at'] ?? '') : '';
+    }
     private function currentUser(): array { return (new AuthService())->user() ?? []; }
     private function adminView(string $view, string $title, array $data = []): Response { return $this->view('admin.' . $view, ['title' => $title . ' | Mentoris Admin', 'admin' => $this->currentUser(), ...$data], 'layouts.admin'); }
 

@@ -38,16 +38,13 @@ final class UserRepository
         $name = trim((string) ($attributes['name'] ?? ''));
         $password = (string) ($attributes['password'] ?? '');
         $now = Database::now();
-        $adminEmails = array_values(array_filter(array_map(
-            static fn (string $value): string => self::normalizeEmail($value),
-            explode(',', (string) env('SUPER_ADMIN_EMAILS', ''))
-        )));
         $user = [
             'id' => Security::randomToken(12),
             'name' => $name,
             'email' => $email,
             'password_hash' => Security::hashPassword($password),
-            'account_role' => in_array($email, $adminEmails, true) ? 'super_admin' : 'student',
+            // Email is not verified during public registration. Grant admin access explicitly.
+            'account_role' => 'student',
         ];
 
         try {
@@ -60,7 +57,7 @@ final class UserRepository
                     'password_changed_at' => $now, 'created_at' => $now, 'updated_at' => $now,
                 ]);
                 $profiles = new MemberProfileRepository($pdo);
-                if ($profiles->available()) $profiles->save($user['id'], ['member_type'=>$attributes['member_type'] ?? 'other','marketing_consent'=>($attributes['marketing_consent'] ?? '')==='1'], false, true);
+                $profiles->save($user['id'], ['member_type'=>$attributes['member_type'] ?? 'other','marketing_consent'=>($attributes['marketing_consent'] ?? '')==='1'], false, true);
                 $this->insertNotification($pdo, $user['id'], 'به Mentoris خوش آمدید', 'حساب شما آماده است. اطلاعات تکمیلی را از بخش «پروفایل من» هر زمان خواستید ذخیره کنید.', $now);
                 return $this->findByIdOn($pdo, $user['id']) ?? throw new RuntimeException('حساب کاربری ایجاد نشد.');
             });

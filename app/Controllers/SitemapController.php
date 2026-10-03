@@ -24,6 +24,8 @@ final class SitemapController
         if (PublicContentService::programs()) $paths['/programs'] = ['weekly', '0.8'];
         if (PublicContentService::courses()) $paths['/courses'] = ['weekly', '0.8'];
         $paths['/articles'] = ['weekly', '0.8'];
+        $paths['/resources'] = ['monthly','0.7'];
+        foreach(\App\Services\ResourceService::all() as $slug=>$tool) $paths['/resources/'.$slug]=['monthly','0.6'];
         foreach (PublicContentService::academyLines() as $item) $paths['/academy/' . $item['slug']] = ['monthly', '0.7'];
         foreach (PublicContentService::specializations() as $item) $paths['/specializations/' . $item['slug']] = ['monthly', '0.7'];
         foreach (PublicContentService::programs() as $item) $paths['/programs/' . $item['slug']] = ['weekly', '0.7'];
@@ -48,6 +50,7 @@ final class SitemapController
         $xml .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">' . "\n";
         foreach ($paths as $path => $_) {
             $pathLocales = isset($articleLocales[$path]) ? array_intersect_key($locales, array_flip($articleLocales[$path])) : ($path === '/articles' ? array_intersect_key($locales, array_flip(PublicContentService::articleIndexLocales())) : $locales);
+            if(str_starts_with($path,'/resources')) $pathLocales=['fa'=>'fa'];
             foreach ($pathLocales as $locale => $hreflang) {
                 $url = $baseUrl . $path . ($path === '/' ? '?' : '?') . 'lang=' . $locale;
                 $xml .= '  <url><loc>' . $escape($url) . '</loc>';

@@ -2,7 +2,7 @@ import { $$ } from '../core/dom.js?v=2.0.0';
 
 export const initReveal = () => {
   const items = $$('[data-reveal]');
-  if (!('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  if (!('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce), (max-width: 900px)').matches) {
     items.forEach((item) => item.classList.add('is-visible')); return null;
   }
   const observer = new IntersectionObserver((entries) => entries.forEach((entry) => {

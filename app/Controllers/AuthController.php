@@ -23,12 +23,11 @@ final class AuthController extends Controller
         $data = $request->only(['name', 'phone', 'email', 'password', 'password_confirmation', 'accept', 'member_type', 'marketing_consent']);
         $data['phone'] = \App\Repositories\CircleRepository::phone(is_string($data['phone'] ?? null) ? $data['phone'] : '');
         $validator = new Validator();
-        $validator->validate($data, ['name' => 'required|string|min:2|max:80', 'email' => 'required|email|max:120', 'password' => 'required|string|min:12|max:128', 'password_confirmation' => 'required|same:password', 'accept' => 'required']);
+        $validator->validate($data, ['name' => 'required|string|min:2|max:80', 'email' => 'required|email|max:120', 'password' => 'required|string|min:8|max:128', 'password_confirmation' => 'required|same:password', 'accept' => 'required']);
         $errors = $validator->errors();
         if (!preg_match('/^09[0-9]{9}$/', $data['phone'])) $errors['phone'] = ['شماره موبایل ۱۱ رقمی با ۰۹ وارد کنید.'];
         if (!is_string($data['member_type'] ?? null) || !isset(\App\Services\MemberProfileService::OPTIONS['member_type'][$data['member_type']])) $errors['member_type'] = ['نوع عضویت را انتخاب کنید.'];
         if (($data['accept'] ?? '') !== '1') $errors['accept'] = ['پذیرش قوانین ضروری است.'];
-        if (!(new \App\Repositories\MemberProfileRepository())->available()) $errors['setup']=['ثبت‌نام پس از به‌روزرسانی پایگاه داده در دسترس قرار می‌گیرد.'];
         if (!isset($errors['password']) && (!preg_match('/[A-Za-z]/', (string) ($data['password'] ?? '')) || !preg_match('/\d/', (string) ($data['password'] ?? '')))) {
             $errors['password'][] = 'رمز عبور باید حداقل یک حرف و یک عدد داشته باشد.';
         }
@@ -93,7 +92,7 @@ final class AuthController extends Controller
         if (strlen($token) !== 64 || $repository->findByResetToken($token) === null) return $this->resetView($token, false);
         $data = $request->only(['password', 'password_confirmation']);
         $validator = new Validator();
-        $validator->validate($data, ['password' => 'required|string|min:12|max:128', 'password_confirmation' => 'required|same:password']);
+        $validator->validate($data, ['password' => 'required|string|min:8|max:128', 'password_confirmation' => 'required|same:password']);
         $errors = $validator->errors();
         if (!isset($errors['password']) && (!preg_match('/[A-Za-z]/', (string) ($data['password'] ?? '')) || !preg_match('/\d/', (string) ($data['password'] ?? '')))) $errors['password'][] = 'رمز عبور باید حداقل یک حرف و یک عدد داشته باشد.';
         if ($errors) return $this->resetView($token, true, $errors);

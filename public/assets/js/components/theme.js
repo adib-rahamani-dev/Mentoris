@@ -9,7 +9,7 @@ export class Theme {
       button.setAttribute('aria-label', theme === 'dark' ? (button.dataset.labelLight || 'Switch to light theme') : (button.dataset.labelDark || 'Switch to dark theme'));
       button.setAttribute('aria-pressed', String(theme === 'light'));
       document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#050914' : '#f6f7fb');
-      if (persist) localStorage.setItem(Theme.key, theme);
+      if (persist) { try { localStorage.setItem(Theme.key, theme); } catch {} }
     };
     button.addEventListener('click', () => apply(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light'));
     apply(document.documentElement.dataset.theme || 'dark', false);

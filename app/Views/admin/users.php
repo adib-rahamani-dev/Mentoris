@@ -1,7 +1,7 @@
 <?php use App\Core\Authorization; $options=\App\Services\MemberProfileService::OPTIONS; ?>
 <header class="admin-page-head"><div><span class="eyebrow">Members & Profiles</span><h1>اعضا و پروفایل‌ها</h1><p>پروندهٔ تحصیلی، حرفه‌ای و سوابق آموزش اعضا را بررسی و ویرایش کنید.</p></div><?php if(Authorization::can($admin,'users.manage')):?><a class="btn btn--primary" href="/admin/users/new">افزودن کاربر</a><?php endif;?></header>
 <section class="admin-kpis"><?php foreach(['total'=>'کل کاربران','student'=>'دانشجو','therapist'=>'درمانگر','completed'=>'پروفایل تکمیل‌شده','consented'=>'رضایت دریافت ایمیل'] as $key=>$label):?><div><span><?= e($label) ?></span><strong><?= number_format($result['stats'][$key]) ?></strong></div><?php endforeach;?></section>
-<?php if(!$result['enabled']):?><div class="alert alert--danger">فیلترهای تخصصی با اجرای مایگریشن ۰۰۴ فعال می‌شوند.</div><?php endif;?>
+<?php if(!$result['enabled']):?><div class="alert alert--danger">پروفایل‌ها فعلاً در فضای خصوصی ذخیره می‌شوند؛ برای انتقال خودکار به دیتابیس، فایل SQL به‌روزرسانی را اجرا کنید.</div><?php endif;?>
 <form class="member-filters" method="get" action="/admin/users">
 <label><span>نام، ایمیل یا موبایل</span><input class="form-control" type="search" name="q" value="<?= e($filters['q'] ?? '') ?>"></label>
 <?php foreach(['member_type'=>'نوع عضو','degree'=>'مقطع تحصیلی','practice_status'=>'وضعیت فعالیت حرفه‌ای'] as $key=>$label):?><label><span><?= e($label) ?></span><select class="form-select" name="<?= e($key) ?>"><option value="">همه</option><?php foreach($options[$key] as $v=>$text):?><option value="<?= e($v) ?>" <?= ($filters[$key] ?? '')===$v ? 'selected' : '' ?>><?= e($text) ?></option><?php endforeach;?></select></label><?php endforeach;?>

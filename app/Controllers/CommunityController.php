@@ -44,6 +44,17 @@ final class CommunityController extends Controller
         return $this->renderCommunity([], [], true);
     }
 
+    public function profileJoin(Request $request): Response
+    {
+        $user=(new AuthService())->user();
+        if (!$user) return Response::json(['message'=>'لطفاً وارد حساب شوید.'],401);
+        try {
+            $profile=(new \App\Repositories\MemberProfileRepository())->find($user['id']);
+            $membership=(new EngagementRepository())->setCommunity($user,$request->input('requested')==='1',(string)($profile['interests'] ?? ''));
+        } catch (RuntimeException $e) { return $request->expectsJson() ? Response::json(['message'=>$e->getMessage()],422) : $this->redirect('/profile?community_error=1'); }
+        return $request->expectsJson() ? Response::json(['status'=>$membership['status'] ?? 'none','requested'=>in_array($membership['status'] ?? '',['pending','approved'],true),'message'=>$request->input('requested')==='1' ? 'درخواست عضویت ثبت شد.' : 'درخواست عضویت غیرفعال شد.']) : $this->redirect('/profile?community_saved=1');
+    }
+
     private function renderCommunity(array $errors = [], array $old = [], bool $success = false): Response
     {
         $events = array_slice(array_values(array_filter(

@@ -244,7 +244,7 @@ final class AdminRepository
         return match ($type) {
             'events' => ['table' => 'event_registrations', 'name' => 'applicant_name', 'email' => 'applicant_email', 'statuses' => ['pending','approved','rejected','canceled'], 'select' => 'id,event_slug AS context,applicant_name AS name,applicant_email AS email,applicant_phone AS phone,professional_role AS detail,status,created_at,updated_at'],
             'circle' => ['table' => 'event_signups', 'name' => 'name', 'email' => 'phone', 'statuses' => ['requested','approved','rejected','attended'], 'select' => "id,event_slug AS context,name,'' AS email,phone,city AS detail,status,created_at,updated_at"],
-            'community' => ['table' => 'community_memberships', 'name' => 'name', 'email' => 'email', 'statuses' => ['pending','approved','rejected','suspended'], 'select' => 'id,\'community\' AS context,name,email,\'\' AS phone,professional_role AS detail,status,created_at,updated_at'],
+            'community' => ['table' => 'community_memberships', 'name' => 'name', 'email' => 'email', 'statuses' => ['pending','approved','rejected','suspended','withdrawn'], 'select' => 'id,\'community\' AS context,name,email,\'\' AS phone,professional_role AS detail,status,created_at,updated_at'],
             'messages' => ['table' => 'contact_messages', 'name' => 'name', 'email' => 'email', 'statuses' => ['new','in_progress','resolved','spam'], 'select' => 'id,subject AS context,name,email,phone,message AS detail,status,created_at,updated_at'],
             default => throw new RuntimeException('بخش مدیریتی نامعتبر است.'),
         };

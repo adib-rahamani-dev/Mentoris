@@ -18,7 +18,8 @@ final class AuthService
     {
         $user = $this->users->create($data);
         $this->loginUser($user);
-        (new EmailService())->send($user['email'], 'به منتوریس خوش آمدید', $user['name'].' عزیز، حساب شما ایجاد شد. پروفایل خود را اینجا تکمیل کنید: '.rtrim((string)env('APP_URL','https://mentorisacademy.com'),'/').'/profile');
+        try { (new MailQueueService())->enqueue($user['email'], 'به منتوریس خوش آمدید', $user['name'].' عزیز، حساب شما ایجاد شد. پروفایل خود را اینجا تکمیل کنید: '.rtrim((string)env('APP_URL','https://mentorisacademy.com'),'/').'/profile'); }
+        catch (\Throwable) { error_log('Welcome mail could not be queued. Account creation succeeded.'); }
         return UserRepository::publicUser($user);
     }
 
