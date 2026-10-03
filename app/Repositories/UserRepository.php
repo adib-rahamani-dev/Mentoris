@@ -117,8 +117,7 @@ final class UserRepository
             return $this->findById($id);
         }
         $sets[] = 'updated_at = :updated_at';
-        $statement = $this->pdo()->prepare('UPDATE users SET ' . implode(', ', $sets) . ' WHERE id = :id');
-        $statement->execute($values);
+        $this->saveIdentity('UPDATE users SET ' . implode(', ', $sets) . ' WHERE id = :id', $values);
         return $this->findById($id);
     }
 
@@ -149,9 +148,8 @@ final class UserRepository
 
     public function updateManagedProfile(string $id, array $attributes): ?array
     {
-        $statement = $this->pdo()->prepare('UPDATE users SET name = :name, email = :email, phone = :phone, professional_role = :professional_role, bio = :bio, updated_at = :updated_at WHERE id = :id');
         try {
-            $statement->execute([
+            $this->saveIdentity('UPDATE users SET name = :name, email = :email, phone = :phone, professional_role = :professional_role, bio = :bio, updated_at = :updated_at WHERE id = :id', [
                 'name'=>trim((string)$attributes['name']),'email'=>self::normalizeEmail((string)$attributes['email']),
                 'phone'=>trim((string)($attributes['phone'] ?? '')),'professional_role'=>trim((string)($attributes['professional_role'] ?? '')),
                 'bio'=>trim((string)($attributes['bio'] ?? '')),'updated_at'=>Database::now(),'id'=>$id,
@@ -161,6 +159,25 @@ final class UserRepository
             throw $exception;
         }
         return $this->findById($id);
+    }
+
+    /** Release a previously verified number atomically when either user or admin changes it. */
+    private function saveIdentity(string $sql, array $values): void
+    {
+        $pdo=$this->pdo(); $tables=[];
+        if(array_key_exists('phone',$values)) foreach(['phone_verifications','sms_challenges'] as $table) {
+            try { $pdo->query('SELECT 1 FROM '.$table.' LIMIT 1'); $tables[]=$table; }
+            catch(PDOException $e) {
+                if((string)$e->getCode()!=='42S02' && !str_contains($e->getMessage(),'no such table')) throw $e;
+            }
+        }
+        $save=static function(PDO $pdo) use ($sql,$values,$tables): void {
+            $query=$pdo->prepare('SELECT phone FROM users WHERE id=:id'.(Database::driver($pdo)==='mysql' ? ' FOR UPDATE' : ''));
+            $query->execute(['id'=>$values['id']]); $previous=$query->fetchColumn();
+            $pdo->prepare($sql)->execute($values);
+            if(array_key_exists('phone',$values) && $previous!==$values['phone']) foreach($tables as $table) $pdo->prepare('DELETE FROM '.$table.' WHERE user_id=:id')->execute(['id'=>$values['id']]);
+        };
+        if($pdo->inTransaction()) $save($pdo); else Database::transaction($pdo,$save);
     }
 
     public function setManagedPassword(string $id, string $password): ?array

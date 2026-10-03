@@ -12,7 +12,8 @@ import { initEventFilters } from './pages/events.js?v=5.0.0';
 import { Theme } from './components/theme.js?v=10.1.0';
 import { initContentSeoPreview } from './pages/content-seo.js?v=1.0.0';
 import { initMemberProfile } from './pages/member-profile.js?v=2.0.0';
-import { initProfileExperience } from './pages/profile-experience.js?v=2.0.0';
+import { initProfileExperience } from './pages/profile-experience.js?v=3.0.0';
+import { initPhoneVerification } from './pages/phone-verification.js?v=1.0.1';
 
 import { initProfileWizard } from './pages/profile-wizard.js?v=1.0.0';
 import { initSurveyClocks } from './pages/survey-clock.js?v=1.0.0';
@@ -20,6 +21,7 @@ import { initSurveyClocks } from './pages/survey-clock.js?v=1.0.0';
 ready(() => {
   initMemberProfile();
   initProfileExperience();
+  initPhoneVerification();
   initProfileWizard();
   initSurveyClocks();
   Theme.init(); Modal.init(); Dropdown.init(); Tabs.init(); Accordion.init(); Slider.init(); Navbar.init(); initReveal(); initProgramFilters(); initCourseFilters(); initEventFilters(); initContentSeoPreview();

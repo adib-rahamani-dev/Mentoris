@@ -59,6 +59,7 @@ public/assets/images/uploads/*
 /backups/
 /database/backups/
 /database/dumps/
+/output/sms/
 
 ## Logs, OS/editor leftovers, and cPanel local metadata
 *.log

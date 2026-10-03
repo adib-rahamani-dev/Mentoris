@@ -7,6 +7,7 @@ namespace App\Core;
 final class Request
 {
     private array $routeParams = [];
+    private ?string $routePattern = null;
 
     public function __construct(
         private readonly array $query = [],
@@ -130,6 +131,9 @@ final class Request
     {
         $this->routeParams = $params;
     }
+
+    public function setRoutePattern(string $pattern): void { $this->routePattern = $pattern; }
+    public function routePattern(): string { return $this->routePattern ?? $this->uri(); }
 
     public function route(?string $key = null, mixed $default = null): mixed
     {

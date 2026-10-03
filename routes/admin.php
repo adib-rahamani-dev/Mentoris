@@ -37,6 +37,7 @@ $router->post('/admin/content/{id:[a-f0-9]+}/status', [AdminController::class, '
 $router->get('/admin/analytics', [AdminController::class, 'analytics'], ['auth', 'can:analytics.view', 'rate:120,60']);
 $router->get('/admin/audit', [AdminController::class, 'audit'], ['auth', 'can:audit.view', 'rate:120,60']);
 $router->get('/admin/system', [AdminController::class, 'system'], ['auth', 'can:system.view', 'rate:120,60']);
+$router->get('/admin/sms', [\App\Controllers\AdminSmsController::class, 'index'], ['auth', 'can:system.view', 'rate:120,60']);
 $router->get('/admin/seo', [AdminController::class, 'seo'], ['auth', 'can:content.view', 'rate:120,60']);
 // Separate URLs, fixed entity types and dedicated field sets for each workspace.
 $router->get('/admin/{module:articles|events|courses|programs|mentors|academy-lines|specializations}', [AdminController::class, 'workspace'], ['auth', 'can:content.view', 'rate:120,60']);

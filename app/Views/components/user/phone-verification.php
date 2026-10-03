@@ -1,0 +1,10 @@
+<?php $phoneVerification=$phoneVerification ?? ['ready'=>false,'verified'=>false,'phone'=>$user['phone'] ?? '', 'retry_after'=>0,'pending'=>false]; ?>
+<section class="user-panel phone-verification" id="phone-verification" data-phone-verification data-ready="<?= $phoneVerification['ready'] ? 'true' : 'false' ?>" data-verified="<?= $phoneVerification['verified'] ? 'true' : 'false' ?>" data-retry="<?= (int)$phoneVerification['retry_after'] ?>">
+<header><div><span class="eyebrow">شمارهٔ تماس شما</span><h2><?= icon('shield') ?> تأیید موبایل</h2></div><span class="badge" data-phone-badge><?= $phoneVerification['verified'] ? 'تأییدشده' : 'اختیاری' ?></span></header>
+<p>شماره: <bdi data-phone-number><?= e($phoneVerification['phone']) ?></bdi> · <a href="#account-contact">ویرایش شماره</a></p>
+<p class="form-hint">حساب شما فعال است. با تأیید شماره، راه ارتباطی خود را معتبر کنید.</p>
+<p data-phone-status role="status" aria-live="polite"><?= e($phoneNotice ?? ($phoneVerification['verified'] ? 'شمارهٔ موبایل شما تأیید شده است.' : (!$phoneVerification['ready'] ? 'تأیید پیامکی به‌زودی در دسترس قرار می‌گیرد.' : 'کد فقط به شمارهٔ ذخیره‌شدهٔ شما ارسال می‌شود.'))) ?></p>
+<div data-phone-actions <?= $phoneVerification['verified'] ? 'hidden' : '' ?>>
+<form method="post" action="/profile/phone/send" data-phone-send><?= csrf_field() ?><button type="submit" class="btn btn--secondary" <?= !$phoneVerification['ready'] || $phoneVerification['retry_after']>0 ? 'disabled' : '' ?>>ارسال کد تأیید</button><span class="form-hint" data-phone-countdown></span></form>
+<form method="post" action="/profile/phone/verify" class="phone-code-form" data-phone-confirm <?= !$phoneVerification['pending'] ? 'hidden' : '' ?>><?= csrf_field() ?><label class="form-group"><span class="form-label">کد شش‌رقمی</span><input class="form-control ltr" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" minlength="6" required aria-label="کد شش‌رقمی تأیید موبایل"></label><button class="btn btn--primary" type="submit">تأیید شماره</button></form>
+</div></section>

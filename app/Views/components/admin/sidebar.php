@@ -23,6 +23,7 @@ $active = static fn (string $path): string => $adminPath === $path || ($path !==
         <?php if (Authorization::can($admin, 'content.view')): ?><a class="<?= $active('/admin/qr') ?>" href="/admin/qr"><span><?= icon('activity') ?></span>استودیوی QR</a><?php endif; ?>
         <?php if (Authorization::can($admin, 'audit.view')): ?><small class="admin-nav-label">نظارت</small><a class="<?= $active('/admin/audit') ?>" href="/admin/audit"><span><?= icon('activity') ?></span>گزارش فعالیت‌ها</a><?php endif; ?>
         <?php if (Authorization::can($admin, 'system.view')): ?><a class="<?= $active('/admin/system') ?>" href="/admin/system"><span><?= icon('shield') ?></span>امنیت و سلامت سیستم</a><?php endif; ?>
+        <?php if (Authorization::can($admin, 'system.view')): ?><a class="<?= $active('/admin/sms') ?>" href="/admin/sms"><span><?= icon('message') ?></span>پیامک و سقف مصرف</a><?php endif; ?>
     </nav>
     <div class="admin-sidebar__footer"><a href="/dashboard">پنل کاربری</a><form method="post" action="/logout"><?= csrf_field() ?><button type="submit">خروج امن</button></form></div>
 </aside>

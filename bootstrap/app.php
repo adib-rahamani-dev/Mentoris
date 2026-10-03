@@ -31,7 +31,7 @@ if (env('APP_ENV', 'production') === 'production') {
     ini_set('log_errors', '1');
 }
 
-$app = new Application(BASE_PATH, (bool) env('APP_DEBUG', false));
+$app = new Application(BASE_PATH, env('APP_ENV', 'production') !== 'production' && (bool) env('APP_DEBUG', false));
 $router = $app->router();
 
 foreach (['web', 'auth', 'payment', 'admin', 'api'] as $routeFile) {

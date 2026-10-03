@@ -34,6 +34,9 @@ FROM (
     UNION ALL SELECT 'telegram_event_requests'
     UNION ALL SELECT 'resource_downloads'
     UNION ALL SELECT 'feedback_windows'
+    UNION ALL SELECT 'phone_verifications'
+    UNION ALL SELECT 'sms_challenges'
+    UNION ALL SELECT 'sms_deliveries'
 ) AS expected
 LEFT JOIN information_schema.tables AS actual
     ON actual.table_schema = DATABASE()
@@ -41,8 +44,8 @@ LEFT JOIN information_schema.tables AS actual
 ORDER BY expected.table_name;
 
 SELECT COUNT(*) AS installed_mentoris_tables,
-       30 AS expected_mentoris_tables,
-       CASE WHEN COUNT(*) = 30 THEN 'SCHEMA_OK' ELSE 'SCHEMA_INCOMPLETE' END AS result
+       33 AS expected_mentoris_tables,
+       CASE WHEN COUNT(*) = 33 THEN 'SCHEMA_OK' ELSE 'SCHEMA_INCOMPLETE' END AS result
 FROM information_schema.tables
 WHERE table_schema = DATABASE()
   AND table_name IN (
@@ -75,5 +78,8 @@ WHERE table_schema = DATABASE()
       'telegram_questions',
       'telegram_event_requests',
       'resource_downloads',
-      'feedback_windows'
+      'feedback_windows',
+      'phone_verifications',
+      'sms_challenges',
+      'sms_deliveries'
   );

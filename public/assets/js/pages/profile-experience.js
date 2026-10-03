@@ -38,6 +38,7 @@ export function initProfileExperience() {
       buttons.forEach(button => { button.disabled = true; }); if (status) status.textContent = 'در حال ذخیره…';
       try {
         const result = await send(form, data); if (status) status.textContent = result.message;
+        if(form.matches('[data-async-save]') && result.phone_verification) document.dispatchEvent(new CustomEvent('profile:account-saved',{detail:result}));
         if(form.matches('[data-member-form]')) {
           const badge=form.closest('.member-profile')?.querySelector('header .badge');
           if(badge) { badge.textContent=result.complete ? 'تکمیل‌شده' : 'در حال تکمیل'; badge.classList.toggle('badge--success',!!result.complete); }

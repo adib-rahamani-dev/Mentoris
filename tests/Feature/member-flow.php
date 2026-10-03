@@ -201,11 +201,16 @@ $check($worker['failed']>0 && (int)$pdo->query("SELECT MAX(attempts) FROM telegr
 $app=new \App\Core\Application(BASE_PATH,true); $router=$app->router();
 foreach(['web','auth','admin'] as $routeFile) require BASE_PATH.'/routes/'.$routeFile.'.php';
 $check($app->handle(new Request(server:['REQUEST_METHOD'=>'GET','REQUEST_URI'=>'/profile']))->status()===200,'Real authenticated profile route renders successfully.');
+$check($app->handle(new Request(server:['REQUEST_METHOD'=>'GET','REQUEST_URI'=>'/profile']))->headers()['Cache-Control']==='private, no-store','Personal profile cannot be cached.');
 $check($app->handle(new Request(server:['REQUEST_METHOD'=>'POST','REQUEST_URI'=>'/profile/member','HTTP_ACCEPT'=>'application/json']))->status()===419,'Profile route rejects a missing CSRF token.');
+$check($app->handle(new Request(server:['REQUEST_METHOD'=>'POST','REQUEST_URI'=>'/profile/phone/send','HTTP_ACCEPT'=>'application/json']))->status()===419,'SMS send route requires CSRF before calling provider.');
+$check($app->handle(new Request(server:['REQUEST_METHOD'=>'POST','REQUEST_URI'=>'/profile/phone/verify','HTTP_ACCEPT'=>'application/json']))->status()===419,'OTP verification route requires CSRF.');
+$check($app->handle(new Request(server:['REQUEST_METHOD'=>'GET','REQUEST_URI'=>'/admin/sms','HTTP_ACCEPT'=>'application/json']))->status()===403,'Regular members cannot inspect SMS administration.');
 $check($app->handle(new Request(server:['REQUEST_METHOD'=>'GET','REQUEST_URI'=>'/admin/telegram','HTTP_ACCEPT'=>'application/json']))->status()===403,'Regular members cannot open bot administration.');
 $check($app->handle(new Request(server:['REQUEST_METHOD'=>'POST','REQUEST_URI'=>'/api/telegram/webhook','HTTP_ACCEPT'=>'application/json','HTTP_X_TELEGRAM_BOT_API_SECRET_TOKEN'=>$_ENV['TELEGRAM_WEBHOOK_SECRET']],rawBody:$raw))->status()===200,'Real webhook route accepts its secret without browser CSRF.');
 $pdo->exec("UPDATE users SET status='suspended' WHERE id='".$user['id']."'");
 $check($app->handle(new Request(server:['REQUEST_METHOD'=>'GET','REQUEST_URI'=>'/profile','HTTP_ACCEPT'=>'application/json']))->status()===401,'A suspended or stale account gets a clean 401 instead of a broken profile.');
+$check($app->handle(new Request(server:['REQUEST_METHOD'=>'POST','REQUEST_URI'=>'/profile/phone/send','HTTP_ACCEPT'=>'application/json']))->status()===401,'Suspended accounts cannot request SMS.');
 $pdo->exec("UPDATE users SET status='active' WHERE id='".$user['id']."'");
 (new AuthService())->refresh($users->findById($user['id']));
 $view=new View(VIEW_PATH); $user=$users->findById($user['id']); $admin=$user+[]; $admin['account_role']='super_admin';
@@ -249,8 +254,20 @@ $pages=[
  'admin-articles'=>$editor->workspace(new Request(),'articles')->content(),
  'admin-event'=>$editor->workspaceNew(new Request(),'events')->content(),
  'admin-seo'=>$editor->seo(new Request())->content(),
+ 'admin-sms'=>(new \App\Controllers\AdminSmsController())->index(new Request())->content(),
 ];
 $check(!str_contains($pages['profile'],'<script>alert(1)</script>'),'Profile output escapes user text.');
+$pdo->exec('CREATE TABLE phone_verifications (user_id TEXT PRIMARY KEY REFERENCES users(id),phone TEXT UNIQUE,verified_at TEXT)');
+$pdo->exec('CREATE TABLE sms_challenges (user_id TEXT PRIMARY KEY REFERENCES users(id))');
+$pdo->prepare('INSERT INTO phone_verifications VALUES (:id,:phone,:now)')->execute(['id'=>$user['id'],'phone'=>$user['phone'],'now'=>Database::now()]);
+$pdo->prepare('INSERT INTO sms_challenges VALUES (:id)')->execute(['id'=>$user['id']]);
+$users->updateProfile($user['id'],['name'=>'همان عضو']);
+$check((int)$pdo->query('SELECT COUNT(*) FROM phone_verifications')->fetchColumn()===1,'Saving unchanged phone must retain verification.');
+Database::transaction($pdo,static fn()=>$users->updateProfile($user['id'],['phone'=>'09129999999']));
+$check((int)$pdo->query('SELECT COUNT(*) FROM phone_verifications')->fetchColumn()===0 && (int)$pdo->query('SELECT COUNT(*) FROM sms_challenges')->fetchColumn()===0,'Phone change releases verified phone and challenge inside an existing transaction.');
+$pdo->prepare('INSERT INTO phone_verifications VALUES (:id,:phone,:now)')->execute(['id'=>$user['id'],'phone'=>'09129999999','now'=>Database::now()]);
+$users->updateManagedProfile($user['id'],['name'=>$user['name'],'email'=>$user['email'],'phone'=>'09128888888']);
+$check((int)$pdo->query('SELECT COUNT(*) FROM phone_verifications')->fetchColumn()===0,'Admin phone edit also invalidates verification and releases the number.');
 if(in_array('--preview',$argv,true)) {
  foreach($pages as $name=>$html) file_put_contents(BASE_PATH.'/storage/temp/preview-'.$name.'.html',$html);
 }

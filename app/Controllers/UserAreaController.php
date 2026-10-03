@@ -35,7 +35,7 @@ final class UserAreaController extends Controller
         if ($errors) { if($request->expectsJson()) return Response::json(['message'=>'اطلاعات حساب را بررسی کنید.','errors'=>$errors],422); $circle = new CircleRepository(); return $this->page('profile', 'پروفایل من', $user, ['errors' => $errors, 'old' => $data, 'therapist' => $circle->profile($user['id']), 'therapistEnabled' => $circle->therapistAvailable()]); }
         $updated = (new UserRepository())->updateProfile($user['id'], $data) ?? $user;
         (new AuthService())->refresh($updated);
-        if($request->expectsJson()) return Response::json(['message'=>'اطلاعات حساب ذخیره شد.']);
+        if($request->expectsJson()) return Response::json(['message'=>'اطلاعات حساب ذخیره شد.','phone_verification'=>(new \App\Services\PhoneVerificationService())->state($user['id'])]);
         $circle = new CircleRepository();
         return $this->page('profile', 'پروفایل من', UserRepository::publicUser($updated), ['success' => true, 'therapist' => $circle->profile($user['id']), 'therapistEnabled' => $circle->therapistAvailable()]);
     }
@@ -114,6 +114,7 @@ final class UserAreaController extends Controller
     private function page(string $view, string $title, array $user, array $extra = []): Response
     {
         if ($view === 'profile') {
+            $extra += ['phoneVerification'=>(new \App\Services\PhoneVerificationService())->state($user['id']), 'phoneNotice'=>(new \App\Core\Session())->pull('phone.notice')];
             $profiles = new \App\Repositories\MemberProfileRepository();
             $extra += ['member'=>$profiles->find($user['id']), 'memberEnabled'=>true, 'communityMembership'=>(new \App\Repositories\EngagementRepository())->communityForUser($user)];
         }

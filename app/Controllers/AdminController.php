@@ -228,7 +228,7 @@ final class AdminController extends Controller
     {
         $roleKeys = array_keys(Authorization::ROLES);
         $permissionMatrix = array_combine($roleKeys, array_map(static fn(string $role): array => Authorization::permissionsForRole($role), $roleKeys));
-        return $this->adminView('system', 'امنیت و سلامت سیستم', ['health' => (new AdminRepository())->systemHealth(), 'roles'=>Authorization::ROLES, 'permissionMatrix'=>$permissionMatrix, 'environment' => ['mail_queue'=>count(\App\Core\PrivateRecords::files('mail-outbox')), 'mail_worker'=>self::workerTime('mail'), 'telegram_worker'=>self::workerTime('telegram'), 'php' => PHP_VERSION, 'app_env' => env('APP_ENV', 'local'), 'debug' => (bool) env('APP_DEBUG', false), 'session_driver' => env('SESSION_DRIVER', 'files'), 'rate_driver' => env('RATE_LIMIT_DRIVER', 'session'), 'https' => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')]]);
+        return $this->adminView('system', 'امنیت و سلامت سیستم', ['health' => (new AdminRepository())->systemHealth(), 'roles'=>Authorization::ROLES, 'permissionMatrix'=>$permissionMatrix, 'environment' => ['mail_queue'=>count(\App\Core\PrivateRecords::files('mail-outbox')), 'mail_worker'=>self::workerTime('mail'), 'telegram_worker'=>self::workerTime('telegram'), 'php' => PHP_VERSION, 'app_env' => env('APP_ENV', 'local'), 'debug' => (env('APP_ENV', 'production') !== 'production' && (bool) env('APP_DEBUG', false)), 'session_driver' => env('SESSION_DRIVER', 'files'), 'rate_driver' => (env('RATE_LIMIT_DRIVER', 'files') === 'database' ? 'database' : 'files'), 'https' => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')]]);
     }
 
     public function seo(Request $request): Response

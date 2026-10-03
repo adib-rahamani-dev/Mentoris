@@ -69,6 +69,7 @@ final class Router
 
             $params = array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY);
             $request->setRouteParams($params);
+            $request->setRoutePattern($route['uri']);
             $destination = fn (Request $incoming): Response => $this->toResponse(
                 $this->invokeHandler($route['handler'], $incoming, $params)
             );

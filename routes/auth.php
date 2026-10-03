@@ -20,6 +20,8 @@ $router->post('/reset-password/{token:[a-f0-9]+}', [AuthController::class, 'rese
 $router->get('/dashboard', [UserAreaController::class, 'dashboard'], ['auth', 'rate:120,60']);
 $router->get('/profile', [UserAreaController::class, 'profile'], ['auth', 'rate:120,60']);
 $router->post('/profile', [UserAreaController::class, 'updateProfile'], ['auth', 'csrf', 'rate:10,60']);
+$router->post('/profile/phone/send', [\App\Controllers\PhoneVerificationController::class, 'send'], ['auth', 'csrf', 'rate:3,60']);
+$router->post('/profile/phone/verify', [\App\Controllers\PhoneVerificationController::class, 'verify'], ['auth', 'csrf', 'rate:10,60']);
 $router->post('/profile/member', [\App\Controllers\MemberProfileController::class, 'save'], ['auth', 'csrf', 'rate:10,60']);
 $router->post('/profile/community', [\App\Controllers\CommunityController::class, 'profileJoin'], ['auth', 'csrf', 'rate:20,60']);
 $router->post('/profile/therapist', [UserAreaController::class, 'updateTherapistProfile'], ['auth', 'csrf', 'rate:10,60']);

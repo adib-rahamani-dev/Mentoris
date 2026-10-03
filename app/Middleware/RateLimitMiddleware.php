@@ -6,6 +6,7 @@ namespace App\Middleware;
 
 use App\Core\Request;
 use App\Core\RateLimiter;
+use App\Core\FileRateLimiter;
 use App\Core\Response;
 use App\Core\Session;
 use Throwable;
@@ -21,39 +22,19 @@ final class RateLimitMiddleware implements MiddlewareInterface
 
     public function handle(Request $request, callable $next): Response
     {
-        $identity = $request->ip() . '|' . $request->method() . '|' . $request->uri();
-        if (env('RATE_LIMIT_DRIVER', 'session') === 'database') {
-            try {
-                $bucket = (new RateLimiter())->hit($identity, $this->maxAttempts, $this->decaySeconds);
-                if (!$bucket['allowed']) return $this->blocked($request, (int) $bucket['retry_after']);
-                return $next($request)
-                    ->withHeader('X-RateLimit-Limit', (string) $this->maxAttempts)
-                    ->withHeader('X-RateLimit-Remaining', (string) $bucket['remaining'])
-                    ->withHeader('X-RateLimit-Reset', (string) $bucket['reset']);
-            } catch (Throwable $exception) {
-                if (env('APP_ENV', 'production') === 'production') throw $exception;
-                error_log('Database rate limiter fallback: ' . $exception->getMessage());
-            }
+        // Route parameters and query strings must not create fresh buckets.
+        $path = $request->routePattern();
+        $identity = $request->ip() . '|' . $request->method() . '|' . $path;
+        try {
+                $limiter = env('RATE_LIMIT_DRIVER', 'files') === 'database' ? new RateLimiter() : new FileRateLimiter();
+                $bucket = $limiter->hit($identity, $this->maxAttempts, $this->decaySeconds);
+        } catch (Throwable) {
+            error_log('Request rate limiter unavailable; request refused.');
+            return ($request->expectsJson() ? Response::json(['message'=>'سرویس موقتاً در دسترس نیست. کمی بعد دوباره تلاش کنید.'],503) : Response::html('سرویس موقتاً در دسترس نیست. کمی بعد دوباره تلاش کنید.',503))->withHeader('Retry-After','60');
         }
-
-        $key = '_rate_limit.' . hash('sha256', $identity);
-        $now = time();
-        $bucket = $this->session->get($key, ['hits' => 0, 'reset' => $now + $this->decaySeconds]);
-
-        if (!is_array($bucket) || ($bucket['reset'] ?? 0) <= $now) {
-            $bucket = ['hits' => 0, 'reset' => $now + $this->decaySeconds];
-        }
-        $bucket['hits']++;
-        $this->session->put($key, $bucket);
-
-        $remaining = max(0, $this->maxAttempts - $bucket['hits']);
-        if ($bucket['hits'] > $this->maxAttempts) {
-            return $this->blocked($request, max(1, $bucket['reset'] - $now));
-        }
-
-        return $next($request)
-            ->withHeader('X-RateLimit-Limit', (string) $this->maxAttempts)
-            ->withHeader('X-RateLimit-Remaining', (string) $remaining);
+        if (!$bucket['allowed']) return $this->blocked($request, (int) $bucket['retry_after']);
+        return $next($request)->withHeader('X-RateLimit-Limit', (string) $this->maxAttempts)
+            ->withHeader('X-RateLimit-Remaining', (string) $bucket['remaining'])->withHeader('X-RateLimit-Reset', (string) $bucket['reset']);
     }
 
     private function blocked(Request $request, int $retryAfter): Response

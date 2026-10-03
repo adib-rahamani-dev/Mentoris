@@ -41,22 +41,22 @@ final class Application
     public function handle(Request $request): Response
     {
         try {
-            return $this->withSecurityHeaders($this->router->dispatch($request));
+            return $this->withSecurityHeaders($this->router->dispatch($request), $request);
         } catch (Throwable $exception) {
             error_log((string) $exception);
             if ($request->expectsJson()) {
                 return $this->withSecurityHeaders(Response::json([
                     'message' => 'Internal Server Error',
                     ...($this->debug ? ['exception' => $exception->getMessage()] : []),
-                ], 500));
+                ], 500), $request);
             }
 
             $message = $this->debug ? Security::escape($exception->getMessage()) : 'خطایی در اجرای برنامه رخ داد.';
-            return $this->withSecurityHeaders(Response::html("<h1>500 - Internal Server Error</h1><p>{$message}</p>", 500));
+            return $this->withSecurityHeaders(Response::html("<h1>500 - Internal Server Error</h1><p>{$message}</p>", 500), $request);
         }
     }
 
-    private function withSecurityHeaders(Response $response): Response
+    private function withSecurityHeaders(Response $response, Request $request): Response
     {
         $nonce = Security::cspNonce();
         $frameSources = rtrim((string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH), '/') === '/live'
@@ -74,6 +74,9 @@ final class Application
             ->withHeader('X-Permitted-Cross-Domain-Policies', 'none');
 
         if ($response->status() >= 400) $response = $response->withHeader('X-Robots-Tag', 'noindex, nofollow');
+        if ($request->method() !== 'GET' || preg_match('~^/(?:admin|dashboard|profile|my-courses|my-events|my-certificates|notifications|login|register|forgot-password|reset-password)(?:/|$)~',$request->uri())) {
+            $response=$response->withHeader('Cache-Control','private, no-store')->withHeader('Pragma','no-cache')->withHeader('X-Robots-Tag','noindex, nofollow');
+        }
 
         $forwardedProto = strtolower(trim(explode(',', (string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''))[0] ?? ''));
         if ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== '' && $_SERVER['HTTPS'] !== 'off') || $forwardedProto === 'https') {
