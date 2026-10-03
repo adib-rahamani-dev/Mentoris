@@ -9,6 +9,7 @@ use App\Core\Router;
 /** @var Router $router */
 $router->get('/register', [AuthController::class, 'registerForm'], ['guest', 'rate:60,60']);
 $router->post('/register', [AuthController::class, 'register'], ['guest', 'csrf', 'rate:3,60']);
+$router->post('/register/phone/send', [AuthController::class, 'sendRegistrationCode'], ['guest', 'csrf', 'rate:3,60']);
 $router->get('/login', [AuthController::class, 'loginForm'], ['guest', 'rate:60,60']);
 $router->post('/login', [AuthController::class, 'login'], ['guest', 'csrf', 'rate:5,60']);
 $router->post('/logout', [AuthController::class, 'logout'], ['auth', 'csrf', 'rate:5,60']);

@@ -1,5 +1,7 @@
 # Phone-first public registration
 
+Update: required SMS verification is now implemented. See `registration-sms.md` for SQL and hosting activation. The notes below describe the preceding phone-format release; its "no verification gate" and "no SQL" statements no longer describe the current release.
+
 - Mobile is the first required signup field and the normal login identifier. Name, email (password recovery), password, member type, and terms retain their existing requirements.
 - No SMS or email verification gate was introduced. Successful registration signs in immediately and opens `/profile?welcome=1`.
 - Signup and login use `PhoneNumber::normalize`: Persian/Arabic digits, spaces, hyphens, parentheses, `+98`, `98`, and `0098` normalize to local `09…`. Invalid country codes, letters, and wrong lengths are rejected server-side.

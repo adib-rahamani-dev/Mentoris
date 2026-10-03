@@ -22,6 +22,7 @@ use App\Controllers\MemberProfileController;
 use App\Controllers\FeedbackController;
 
 if (($argv[1] ?? '') === '--signup-worker') {
+ $_ENV['SMS_REGISTRATION_REQUIRED']='false';
  $db=Database::connect(['driver'=>'sqlite','database'=>$argv[2]]);
  try {
   (new UserRepository($db))->create(['name'=>'عضو هم‌زمان','email'=>'worker'.$argv[3].'@example.test','phone'=>$argv[3]%2 ? '+98 (912) 555-4444' : '۰۹۱۲۵۵۵۴۴۴۴','password'=>'Concurrent123']);
@@ -30,7 +31,7 @@ if (($argv[1] ?? '') === '--signup-worker') {
  exit;
 }
 
-$_ENV['APP_ENV']='local'; $_ENV['MAIL_MAILER']='log'; $_ENV['SESSION_DRIVER']='files'; $_ENV['APP_URL']='http://127.0.0.1:8098';
+$_ENV['APP_ENV']='local'; $_ENV['MAIL_MAILER']='log'; $_ENV['SESSION_DRIVER']='files'; $_ENV['APP_URL']='http://127.0.0.1:8098'; $_ENV['SMS_REGISTRATION_REQUIRED']='false';
 $_ENV['APP_KEY']=\App\Core\Crypto::generateKey();
 $initialMailFiles=\App\Core\PrivateRecords::files('mail-outbox');
 register_shutdown_function(static function() use ($initialMailFiles): void { foreach(array_diff(\App\Core\PrivateRecords::files('mail-outbox'),$initialMailFiles) as $path) if(is_file($path)) unlink($path); });
@@ -373,6 +374,54 @@ try {
  }
  $check($created===1 && (int)$parallel->query('SELECT COUNT(*) FROM users')->fetchColumn()===1,'Eight simultaneous public signups with alternate formats create exactly one account.');
 } finally { unset($parallel); if(is_file($parallelPath)) unlink($parallelPath); }
+// Required SMS registration, with isolated DB and fake transport; never sends a real message.
+$pdo->exec('CREATE TABLE registration_sms_challenges (session_hash TEXT PRIMARY KEY,phone_hash TEXT,challenge_id TEXT,code_hash TEXT,expires_at TEXT,attempts INTEGER,status TEXT,sent_at TEXT,updated_at TEXT)');
+$pdo->exec('CREATE TABLE sms_deliveries (id TEXT PRIMARY KEY,user_id TEXT REFERENCES users(id),phone_hash TEXT,kind TEXT,status TEXT,provider_message_id INTEGER,provider_code INTEGER,cost NUMERIC,created_at TEXT,updated_at TEXT)');
+$pdo->exec('DELETE FROM rate_limits');
+$_ENV['SMS_REGISTRATION_REQUIRED']='true'; $_ENV['SMS_ENABLED']='true'; $_ENV['SMS_IR_API_KEY']='fake-provider-key'; $_ENV['SMS_IR_OTP_TEMPLATE_ID']='123456';
+$otp=''; $sendCalls=0; $sendMode='sent';
+$client=new \App\Services\SmsIrClient(static function(array $payload) use(&$otp,&$sendCalls,&$sendMode): array {
+ $sendCalls++; $otp=$payload['parameters'][0]['value'];
+ return $sendMode==='sent' ? ['http'=>200,'body'=>'{"status":1,"data":{"messageId":321,"cost":1}}'] : ['http'=>400,'body'=>'{"status":5}'];
+});
+$service=new \App\Services\RegistrationPhoneService($pdo,$client);
+$otpSignup=array_replace($register,['email'=>'otp-member@example.test','phone'=>'+989124440001','password'=>'OtpPass123','password_confirmation'=>'OtpPass123']);
+$missing=$authController->register(new Request(body:$otpSignup));
+$check($users->findByEmail($otpSignup['email'])===null && str_contains($missing->content(),'ابتدا برای همین شماره'),'Signup cannot bypass required OTP via direct POST.');
+$context=\App\Services\RegistrationPhoneService::context();
+$check($service->send($context,$otpSignup['phone'],'192.0.2.41')['status']===200 && $sendCalls===1,'Guest signup sends exactly one fixed-template OTP.');
+$check($service->send($context,'۰۹۱۲۴۴۴۰۰۰۱','192.0.2.42')['status']===429 && $sendCalls===1,'Alternate format or IP cannot bypass signup phone cooldown.');
+$storedOtp=$pdo->query('SELECT * FROM registration_sms_challenges')->fetch();
+$check($storedOtp['code_hash']!==$otp && strlen($storedOtp['code_hash'])===64 && !str_contains(json_encode($service->send('different-session','09124440001','192.0.2.43')),$otp),'Only an HMAC is stored and responses do not expose the OTP.');
+$check($service->verify('another-browser',$otpSignup['phone'],$otp)['status']===422,'OTP is bound to the browser session.');
+$check($service->verify($context,'09124440002',$otp)['status']===422,'Changing the signup phone cannot reuse its OTP.');
+$wrong=$otp==='111111' ? '222222' : '111111';
+$check($service->verify($context,$otpSignup['phone'],$wrong)['status']===422,'Wrong signup OTP fails.');
+$otpRow=$pdo->query('SELECT attempts FROM registration_sms_challenges')->fetchColumn();
+$check((int)$otpRow===1,'Wrong-code attempts persist despite a failed signup.');
+$persianOtp=strtr($otp,array_combine(str_split('0123456789'),preg_split('//u','۰۱۲۳۴۵۶۷۸۹',-1,PREG_SPLIT_NO_EMPTY)));
+$result=$authController->register(new Request(body:$otpSignup+['phone_code'=>$persianOtp]));
+$otpUser=$users->findByEmail($otpSignup['email']);
+$check(($result->headers()['Location'] ?? '')==='/profile?welcome=1' && $otpUser!==null && $auth->user()['id']===$otpUser['id'],'Correct Persian OTP creates the account and opens profile.');
+$check($pdo->query('SELECT phone FROM phone_verifications WHERE user_id=\''.$otpUser['id'].'\'')->fetchColumn()==='09124440001','Signup marks the exact phone verified atomically with account creation.');
+$check($pdo->query('SELECT status FROM registration_sms_challenges')->fetchColumn()==='consumed' && $service->verify($context,$otpSignup['phone'],$otp)['status']===422,'Consumed signup code cannot be replayed.');
+$check((new Session())->get('registration.phone.context')===null,'Signup removes the pending session context.');
+$auth->logout();
+try { $users->create(array_replace($otpSignup,['email'=>'bypass@example.test','phone'=>'09124440009'])); $check(false,'Repository OTP bypass must fail.'); }
+catch(RuntimeException $e) { $check($users->findByEmail('bypass@example.test')===null,'Repository rolls back an account without verified proof.'); }
+$expireSms=static function() use($pdo): void { $pdo->exec("UPDATE rate_limits SET reset_at='2000-01-01 00:00:00'"); };
+$expireSms(); $context=\App\Services\RegistrationPhoneService::context(); $service->send($context,'09124440003','192.0.2.41');
+$pdo->exec("UPDATE registration_sms_challenges SET expires_at='2000-01-01 00:00:00'");
+$check($service->verify($context,'09124440003',$otp)['status']===422,'Expired signup code fails.');
+$expireSms(); $service->send($context,'09124440003','192.0.2.41'); $wrong=$otp==='111111' ? '222222' : '111111';
+for($i=0;$i<5;$i++) $service->verify($context,'09124440003',$wrong);
+$check($service->verify($context,'09124440003',$otp)['status']===422,'Five wrong guesses permanently exhaust that signup challenge.');
+$expireSms(); $sendMode='failed'; $check($service->send($context,'09124440004','192.0.2.41')['status']===503 && $service->verify($context,'09124440004',$otp)['status']===422,'Rejected SMS cannot verify a signup.');
+$before=$sendCalls; $check($service->send($context,'09124440004','192.0.2.44')['status']===429 && $sendCalls===$before,'Failed signup SMS still consumes its quota.');
+$_ENV['SMS_ENABLED']='false'; $check($service->send($context,'09124440005','192.0.2.41')['status']===503,'Disabled provider cannot send a signup code.');
+$check($app->handle(new Request(server:['REQUEST_METHOD'=>'POST','REQUEST_URI'=>'/register/phone/send','HTTP_ACCEPT'=>'application/json']))->status()===419,'Guest OTP sending requires CSRF.');
+$pages['register-otp']=$view->render('auth.register',['errors'=>[],'old'=>[],'title'=>'ثبت‌نام'],'layouts.main');
+$check(str_contains($pages['register-otp'],'autocomplete="one-time-code"') && str_contains($pages['register-otp'],'data-registration-send'),'Required registration view supports mobile OTP autofill and sending.');
 if(in_array('--preview',$argv,true)) {
  foreach($pages as $name=>$html) file_put_contents(BASE_PATH.'/storage/temp/preview-'.$name.'.html',$html);
 }

@@ -22,7 +22,46 @@ export function initProfileExperience() {
     const input = button.parentElement.querySelector('input'); const visible = input.type === 'password';
     input.type = visible ? 'text' : 'password'; button.setAttribute('aria-pressed', String(visible)); button.setAttribute('aria-label', visible ? 'پنهان‌کردن رمز' : 'نمایش رمز');
   }));
-  document.querySelector('[data-quick-register]')?.addEventListener('submit', event => {
+  const registerForm = document.querySelector('[data-quick-register]');
+  const sendCode = registerForm?.querySelector('[data-registration-send]');
+  if (sendCode) {
+    const phone = registerForm.elements.phone;
+    const status = registerForm.querySelector('[data-registration-status]');
+    const code = registerForm.elements.phone_code;
+    let busy = false, retryAt = 0, lastPhone = '';
+    const normalizePhone = value => value.replace(/[۰-۹٠-٩]/g, char => '۰۱۲۳۴۵۶۷۸۹'.includes(char) ? String('۰۱۲۳۴۵۶۷۸۹'.indexOf(char)) : String('٠١٢٣٤٥٦٧٨٩'.indexOf(char))).replace(/[\s().\-\u200e\u200f]+/g, '').replace(/^(?:\+98|0098|98)(?=9\d{9}$)/, '0');
+    const update = () => {
+      const remaining = Math.max(0, Math.ceil((retryAt - Date.now()) / 1000));
+      sendCode.disabled = busy || remaining > 0;
+      sendCode.textContent = busy ? 'در حال ارسال…' : remaining ? `ارسال مجدد در ${remaining} ثانیه` : 'دریافت کد پیامکی';
+    };
+    phone.addEventListener('input', () => {
+      if (lastPhone && normalizePhone(phone.value) !== lastPhone) { code.value = ''; status.textContent = 'شماره تغییر کرد؛ برای شمارهٔ جدید کد بگیرید.'; }
+    });
+    sendCode.addEventListener('click', async () => {
+      if (busy || Date.now() < retryAt) return;
+      if (!/^09\d{9}$/.test(normalizePhone(phone.value))) { status.textContent = 'شماره موبایل معتبر وارد کنید؛ با ۰۹ یا +۹۸.'; phone.focus(); return; }
+      busy = true; update(); status.textContent = 'در حال درخواست کد…';
+      const data = new FormData(); data.set('phone', phone.value); data.set('_token', registerForm.querySelector('[name="_token"]').value);
+      const destination = normalizePhone(phone.value);
+      try {
+        const response = await fetch('/register/phone/send', { method: 'POST', body: data, credentials: 'same-origin', headers: { Accept: 'application/json' } });
+        if (!response.headers.get('content-type')?.includes('application/json')) throw new Error('پاسخ سرور معتبر نیست؛ دوباره تلاش کنید.');
+        const result = await response.json();
+        retryAt = Date.now() + Math.max(0, Math.min(86400, Number(result.retry_after || response.headers.get('Retry-After')) || 0)) * 1000;
+        status.textContent = result.message || 'درخواست انجام نشد؛ دوباره تلاش کنید.';
+        if (response.ok) {
+          lastPhone = destination;
+          if (normalizePhone(phone.value) === destination) { code.focus(); }
+          else { code.value = ''; status.textContent = 'شماره هنگام ارسال تغییر کرد؛ کد برای شمارهٔ قبلی ارسال شد.'; }
+        }
+      } catch (error) { status.textContent = error.message || 'ارتباط برقرار نشد؛ دوباره تلاش کنید.'; }
+      finally { busy = false; update(); }
+    });
+    // The browser pauses/resumes this timer across its back/forward cache.
+    setInterval(update, 1000);
+  }
+  registerForm?.addEventListener('submit', event => {
     if (event.target.reportValidity()) { const button = event.target.querySelector('[type="submit"]'); button.disabled = true; button.textContent = 'در حال ساخت حساب…'; }
   });
   document.querySelectorAll('[data-member-form],[data-async-save],[data-survey-form]').forEach(form => {

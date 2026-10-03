@@ -124,10 +124,10 @@ final class PhoneVerificationService
 
     public function report(): array
     {
-        $ready=$this->schemaReady(); $report=['schema_ready'=>$ready,'configured'=>$this->client->configured(),'day_limit'=>self::dayLimit(),'hour_limit'=>self::hourLimit(),'stats'=>[],'deliveries'=>[],'verified'=>0,'budget'=>[]];
+        $ready=$this->schemaReady(); $report=['schema_ready'=>$ready,'registration_schema_ready'=>(new RegistrationPhoneService($this->pdo(),$this->client))->schemaReady(),'registration_required'=>RegistrationPhoneService::required(),'configured'=>$this->client->configured(),'day_limit'=>self::dayLimit(),'hour_limit'=>self::hourLimit(),'stats'=>[],'deliveries'=>[],'verified'=>0,'budget'=>[]];
         if(!$ready) return $report;
         $q=$this->pdo()->prepare('SELECT status,COUNT(*) AS total FROM sms_deliveries WHERE created_at>=:start GROUP BY status'); $q->execute(['start'=>gmdate('Y-m-d H:i:s',time()-86400)]); $report['stats']=$q->fetchAll();
-        $report['deliveries']=$this->pdo()->query('SELECT d.id,d.status,d.provider_message_id,d.provider_code,d.cost,d.created_at,u.name,u.phone FROM sms_deliveries d LEFT JOIN users u ON u.id=d.user_id ORDER BY d.created_at DESC LIMIT 50')->fetchAll();
+        $report['deliveries']=$this->pdo()->query('SELECT d.id,d.kind,d.status,d.provider_message_id,d.provider_code,d.cost,d.created_at,u.name,u.phone FROM sms_deliveries d LEFT JOIN users u ON u.id=d.user_id ORDER BY d.created_at DESC LIMIT 50')->fetchAll();
         $report['verified']=(int)$this->pdo()->query('SELECT COUNT(*) FROM phone_verifications p JOIN users u ON u.id=p.user_id WHERE u.phone=p.phone')->fetchColumn();
         foreach(['site-hour'=>self::hourLimit(),'site-day'=>self::dayLimit()] as $key=>$max) {
             $q=$this->pdo()->prepare('SELECT hits,reset_at FROM rate_limits WHERE key_hash=:hash'); $q->execute(['hash'=>Crypto::keyedHash('sms:'.$key)]); $row=$q->fetch();

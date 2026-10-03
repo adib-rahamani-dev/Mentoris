@@ -92,6 +92,7 @@ final class UserRepository
                     'account_role' => $user['account_role'], 'status' => 'active', 'auth_version' => 1,
                     'password_changed_at' => $now, 'created_at' => $now, 'updated_at' => $now,
                 ]);
+                if (\App\Services\RegistrationPhoneService::required()) \App\Services\RegistrationPhoneService::consume($pdo,(string)($attributes['_registration_context'] ?? ''),$attributes['phone'],$user['id']);
                 $profiles = new MemberProfileRepository($pdo);
                 $profiles->save($user['id'], ['member_type'=>$attributes['member_type'] ?? 'other','marketing_consent'=>($attributes['marketing_consent'] ?? '')==='1'], false, true);
                 $this->insertNotification($pdo, $user['id'], 'به Mentoris خوش آمدید', 'حساب شما آماده است. اطلاعات تکمیلی را از بخش «پروفایل من» هر زمان خواستید ذخیره کنید.', $now);

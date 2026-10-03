@@ -18,6 +18,14 @@ final class AuthController extends Controller
 {
     public function registerForm(Request $request): Response { return $this->authView('register'); }
 
+    public function sendRegistrationCode(Request $request): Response
+    {
+        $input=$request->input('phone','');
+        $result=(new \App\Services\RegistrationPhoneService())->send(\App\Services\RegistrationPhoneService::context(),is_string($input) && strlen($input)<=240 ? $input : '',$request->ip());
+        $response=Response::json(['message'=>$result['message'],'retry_after'=>$result['retry_after']],$result['status'])->withHeader('Cache-Control','no-store');
+        return $result['retry_after']>0 ? $response->withHeader('Retry-After',(string)$result['retry_after']) : $response;
+    }
+
     public function register(Request $request): Response
     {
         $data = $request->only(['name', 'phone', 'email', 'password', 'password_confirmation', 'accept', 'member_type', 'marketing_consent']);
@@ -33,8 +41,16 @@ final class AuthController extends Controller
         }
         if ($errors) return $this->authView('register', $errors, $this->safeOld($data));
 
+        if (\App\Services\RegistrationPhoneService::required()) {
+            $context=\App\Services\RegistrationPhoneService::context(); $code=$request->input('phone_code','');
+            $verified=(new \App\Services\RegistrationPhoneService())->verify($context,$data['phone'],is_string($code) && strlen($code)<=64 ? $code : '');
+            if($verified['status']!==200) return $this->authView('register',['phone_code'=>[$verified['message']]],$this->safeOld($data));
+            $data['_registration_context']=$context;
+        }
+
         try {
             (new AuthService())->register($data);
+            (new Session())->forget('registration.phone.context');
         } catch (RuntimeException $exception) {
             return $this->authView('register', [$exception->getCode() === 409 ? 'phone' : 'email' => [$exception->getMessage()]], $this->safeOld($data));
         }
