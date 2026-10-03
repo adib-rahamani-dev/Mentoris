@@ -41,23 +41,33 @@ final class AuthController extends Controller
         return $this->redirect('/profile?welcome=1');
     }
 
-    public function loginForm(Request $request): Response { return $this->authView('login'); }
+    public function loginForm(Request $request): Response { return $this->authView('login', extra:['loginWithEmail'=>$request->query('method')==='email']); }
 
     public function login(Request $request): Response
     {
-        $data = $request->only(['email', 'password']);
+        $raw=$request->input('identifier',$request->input('phone',$request->input('email','')));
+        $identifier=is_string($raw) && strlen($raw)<=240 ? AuthService::normalizeLoginIdentifier($raw) : '';
+        $data=['identifier'=>$identifier,'password'=>$request->input('password')];
+        $old=['identifier'=>$identifier];
+        $extra=['loginWithEmail'=>$request->input('login_method')==='email' || str_contains($identifier,'@')];
         $validator = new Validator();
-        $validator->validate($data, ['email' => 'required|email|max:120', 'password' => 'required|string|max:128']);
-        if ($validator->fails()) return $this->authView('login', $validator->errors(), ['email' => $data['email'] ?? '']);
+        $validator->validate($data, ['identifier' => 'required|string|max:120', 'password' => 'required|string|max:128']);
+        $errors=$validator->errors();
+        if (!preg_match('/^09[0-9]{9}$/',$identifier) && !filter_var($identifier,FILTER_VALIDATE_EMAIL)) $errors['identifier']=['شمارهٔ موبایل معتبر وارد کنید؛ برای استفاده از ایمیل، گزینهٔ ورود با ایمیل را انتخاب کنید.'];
+        if ($errors) return $this->authView('login', $errors, $old, extra:$extra);
         $limiter = new RateLimiter();
-        $limitKey = 'login-account|' . mb_strtolower(trim((string) $data['email']));
-        if (!$limiter->hit($limitKey, 10, 900)['allowed']) {
-            return $this->authView('login', ['credentials' => ['تلاش‌های ورود بیش از حد مجاز بود؛ ۱۵ دقیقه دیگر دوباره امتحان کنید.']], ['email' => $data['email']]);
+        $limitKeys=['login-account|'.$identifier]; $limited=false;
+        $allowed=(new AuthService())->attempt($identifier,(string)$data['password'],static function(?string $userId) use ($limiter,&$limitKeys,&$limited): bool {
+            if($userId!==null) $limitKeys[]='login-user|'.$userId;
+            $limits=array_map(static fn(string $key): array=>['key'=>$key,'max'=>10,'seconds'=>900],$limitKeys);
+            $reservation=$limiter->reserveMany($limits,static function(\PDO $pdo): void {});
+            $limited=!$reservation['allowed']; return !$limited;
+        });
+        if ($limited) return $this->authView('login', ['credentials' => ['تلاش‌های ورود بیش از حد مجاز بود؛ ۱۵ دقیقه دیگر دوباره امتحان کنید.']], $old, extra:$extra);
+        if (!$allowed) {
+            return $this->authView('login', ['credentials' => ['شماره، ایمیل یا رمز عبور صحیح نیست. در صورت نیاز، ورود با ایمیل را امتحان کنید.']], $old, extra:$extra);
         }
-        if (!(new AuthService())->attempt((string) $data['email'], (string) $data['password'])) {
-            return $this->authView('login', ['credentials' => ['ایمیل یا رمز عبور صحیح نیست.']], ['email' => $data['email']]);
-        }
-        $limiter->clear($limitKey);
+        foreach($limitKeys as $key) $limiter->clear($key);
         return $this->redirect($this->intended());
     }
 

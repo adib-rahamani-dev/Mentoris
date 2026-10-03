@@ -26,6 +26,25 @@ final class UserRepository
         return $this->findOne('email = :value', self::normalizeEmail($email));
     }
 
+    public function findByLoginIdentifier(string $identifier): ?array
+    {
+        if (filter_var($identifier, FILTER_VALIDATE_EMAIL)) return $this->findByEmail($identifier);
+        if (!preg_match('/^09[0-9]{9}$/', $identifier)) return null;
+        // A confirmed owner keeps access even if an unverified account reuses the number.
+        try {
+            $owner=$this->pdo()->prepare('SELECT u.id,u.phone FROM phone_verifications v JOIN users u ON u.id=v.user_id WHERE v.phone=:phone LIMIT 1');
+            $owner->execute(['phone'=>$identifier]); $verified=$owner->fetch();
+            if (is_array($verified) && CircleRepository::phone((string)$verified['phone'])===$identifier) return $this->findById($verified['id']);
+        } catch (PDOException $exception) {
+            if (!MemberProfileRepository::missingTable($exception)) throw $exception;
+        }
+        $lookup=$this->pdo()->prepare('SELECT id FROM users WHERE phone IN (:local,:international,:country) LIMIT 2');
+        $lookup->execute(['local'=>$identifier,'international'=>'+98'.substr($identifier,1),'country'=>'98'.substr($identifier,1)]);
+        $ids=$lookup->fetchAll(PDO::FETCH_COLUMN);
+        // Existing duplicate numbers must never pick an arbitrary account.
+        return count($ids)===1 ? $this->findById((string)$ids[0]) : null;
+    }
+
     public function all(): array
     {
         $statement = $this->pdo()->query($this->userSelect() . ' ORDER BY created_at DESC');

@@ -32,6 +32,7 @@ set_error_handler(static function(int $severity,string $message,string $file,int
 });
 $pdo=Database::connect(['driver'=>'sqlite','database'=>':memory:']); Database::use($pdo);
 $schemas=[
+ 'rate_limits'=>'key_hash TEXT PRIMARY KEY,hits INTEGER,reset_at TEXT,updated_at TEXT',
  'content_entities'=>'id TEXT PRIMARY KEY,entity_type TEXT,slug TEXT,status TEXT,sort_order INTEGER,author_id TEXT,published_at TEXT,created_at TEXT,updated_at TEXT',
  'content_translations'=>'id TEXT PRIMARY KEY,entity_id TEXT,locale TEXT,title TEXT,subtitle TEXT,excerpt TEXT,body TEXT,metadata TEXT,created_at TEXT,updated_at TEXT,UNIQUE(entity_id,locale)',
  'feedback_windows'=>'event_slug TEXT PRIMARY KEY,starts_at TEXT,ends_at TEXT,enabled INTEGER,updated_by TEXT,updated_at TEXT',
@@ -256,6 +257,8 @@ $pdo->prepare("UPDATE content_translations SET metadata=:meta WHERE entity_id='f
 $member=$profiles->find($user['id']);
 $pages=[
  'register'=>$view->render('auth.register',['errors'=>[],'old'=>[],'title'=>'ثبت‌نام'],'layouts.main'),
+ 'login-phone'=>(new AuthController())->loginForm(new Request())->content(),
+ 'login-email'=>(new AuthController())->loginForm(new Request(query:['method'=>'email']))->content(),
  'profile'=>$view->render('user.profile',['user'=>$user,'member'=>$member,'memberEnabled'=>true,'old'=>[],'errors'=>[],'success'=>false,'therapist'=>[],'therapistEnabled'=>false,'title'=>'پروفایل'],'layouts.main'),
  'admin-users'=>$view->render('admin.users',['admin'=>$admin,'users'=>$result['rows'],'result'=>$result,'filters'=>[],'roles'=>Authorization::ROLES,'title'=>'اعضا'],'layouts.admin'),
  'admin-feedback'=>$view->render('admin.feedback',['admin'=>$admin,'report'=>$report,'filters'=>[],'events'=>PublicContentService::events(),'title'=>'بازخورد'],'layouts.admin'),
@@ -272,6 +275,8 @@ $pages=[
  'admin-sms'=>(new \App\Controllers\AdminSmsController())->index(new Request())->content(),
 ];
 $check(!str_contains($pages['profile'],'<script>alert(1)</script>'),'Profile output escapes user text.');
+$check((new AuthService())->attempt($second['phone'],'StrongPassword123'),'Unique phone login works before the optional SMS migration.');
+(new AuthService())->refresh($users->findById($user['id']));
 $pdo->exec('CREATE TABLE phone_verifications (user_id TEXT PRIMARY KEY REFERENCES users(id),phone TEXT UNIQUE,verified_at TEXT)');
 $pdo->exec('CREATE TABLE sms_challenges (user_id TEXT PRIMARY KEY REFERENCES users(id))');
 $pdo->prepare('INSERT INTO phone_verifications VALUES (:id,:phone,:now)')->execute(['id'=>$user['id'],'phone'=>$user['phone'],'now'=>Database::now()]);
@@ -283,6 +288,42 @@ $check((int)$pdo->query('SELECT COUNT(*) FROM phone_verifications')->fetchColumn
 $pdo->prepare('INSERT INTO phone_verifications VALUES (:id,:phone,:now)')->execute(['id'=>$user['id'],'phone'=>'09129999999','now'=>Database::now()]);
 $users->updateManagedProfile($user['id'],['name'=>$user['name'],'email'=>$user['email'],'phone'=>'09128888888']);
 $check((int)$pdo->query('SELECT COUNT(*) FROM phone_verifications')->fetchColumn()===0,'Admin phone edit also invalidates verification and releases the number.');
+$check(str_contains($pages['login-phone'],'type="tel" name="identifier"') && str_contains($pages['login-phone'],'autocomplete="username"'),'Phone is the default login field and supports password managers.');
+$check(str_contains($pages['login-email'],'type="email" name="identifier"'),'Email fallback has the right mobile keyboard.');
+$loginMember=$users->create(['name'=>'آزمایش ورود','email'=>'login@example.test','phone'=>'09121112222','password'=>'LoginPass123']);
+$auth=new AuthService(); $auth->logout();
+$check($auth->attempt('۰۹۱۲۱۱۱۲۲۲۲','LoginPass123') && $auth->user()['id']===$loginMember['id'],'Persian phone and existing password sign into the correct account without OTP.');
+$auth->logout();
+$check($auth->attempt('+98 (912) 111-2222','LoginPass123'),'International formatted phone is normalized.');
+$auth->logout();
+$check(!$auth->attempt('09121112222','WrongPassword123') && $auth->user()===null,'Wrong phone password cannot authenticate.');
+$check(!$auth->attempt('09121119999','LoginPass123'),'Unknown phone cannot authenticate.');
+$pdo->prepare("UPDATE users SET status='suspended' WHERE id=:id")->execute(['id'=>$loginMember['id']]);
+$check(!$auth->attempt('09121112222','LoginPass123'),'Suspended accounts cannot log in by phone.');
+$pdo->prepare("UPDATE users SET status='active' WHERE id=:id")->execute(['id'=>$loginMember['id']]);
+$duplicateMember=$users->create(['name'=>'شماره تکراری','email'=>'duplicate@example.test','phone'=>'09121112222','password'=>'OtherPass123']);
+$check(!$auth->attempt('09121112222','LoginPass123'),'Ambiguous unverified phones cannot select an arbitrary account.');
+$check($auth->attempt('LOGIN@EXAMPLE.TEST','LoginPass123') && $auth->user()['id']===$loginMember['id'],'Email remains available for old and duplicate-phone accounts.');
+$auth->logout();
+$pdo->prepare('INSERT INTO phone_verifications VALUES (:id,:phone,:now)')->execute(['id'=>$loginMember['id'],'phone'=>'09121112222','now'=>Database::now()]);
+$check($auth->attempt('09121112222','LoginPass123') && $auth->user()['id']===$loginMember['id'],'Verified phone owner takes precedence over unverified duplicate.');
+$auth->logout();
+$check(!$auth->attempt('09121112222','OtherPass123'),'Duplicate account password cannot access verified phone owner.');
+$authController=new AuthController();
+$check(str_contains($authController->login(new Request(body:['identifier'=>['bad'],'password'=>'LoginPass123']))->content(),'اطلاعات ورود را بررسی کنید'),'Array identifier fails cleanly.');
+$check($app->handle(new Request(server:['REQUEST_METHOD'=>'POST','REQUEST_URI'=>'/login','HTTP_ACCEPT'=>'application/json']))->status()===419,'Phone login requires CSRF.');
+$pdo->exec('DELETE FROM rate_limits');
+for($i=0;$i<10;$i++) $authController->login(new Request(body:['identifier'=>$i%2 ? 'login@example.test' : '۰۹۱۲۱۱۱۲۲۲۲','password'=>'WrongPassword123']));
+$response=$authController->login(new Request(body:['identifier'=>'+989121112222','password'=>'LoginPass123']));
+$check(str_contains($response->content(),'تلاش‌های ورود بیش از حد مجاز') && $auth->user()===null,'Switching phone/email or digit format cannot bypass the shared account limit.');
+$pdo->exec("UPDATE rate_limits SET reset_at='2000-01-01 00:00:00'");
+(new Session())->put('auth.intended','//evil.example'); $beforeCsrf=csrf_token();
+$response=$authController->login(new Request(body:['identifier'=>'09121112222','password'=>'LoginPass123']));
+$check(($response->headers()['Location'] ?? '')==='/dashboard' && $auth->user()['id']===$loginMember['id'],'Valid phone login works after cooldown and rejects external return paths.');
+$check(csrf_token()!==$beforeCsrf,'Successful phone login rotates CSRF token.');
+$auth->logout();
+$legacyResponse=$authController->login(new Request(body:['email'=>'login@example.test','password'=>'LoginPass123']));
+$check(($legacyResponse->headers()['Location'] ?? '')==='/dashboard' && $auth->user()['id']===$loginMember['id'],'Cached legacy email form submissions still sign into the correct account.');
 if(in_array('--preview',$argv,true)) {
  foreach($pages as $name=>$html) file_put_contents(BASE_PATH.'/storage/temp/preview-'.$name.'.html',$html);
 }

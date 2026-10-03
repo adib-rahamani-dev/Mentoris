@@ -23,9 +23,17 @@ final class AuthService
         return UserRepository::publicUser($user);
     }
 
-    public function attempt(string $email, string $password): bool
+    public static function normalizeLoginIdentifier(string $identifier): string
     {
-        $user = $this->users->findByEmail($email);
+        $identifier=trim($identifier);
+        if (str_contains($identifier,'@')) return mb_strtolower($identifier);
+        return \App\Repositories\CircleRepository::phone(preg_replace('/[\s().-]+/u','',$identifier) ?? '');
+    }
+
+    public function attempt(string $identifier, string $password, ?callable $beforePassword = null): bool
+    {
+        $user = $this->users->findByLoginIdentifier(self::normalizeLoginIdentifier($identifier));
+        if ($beforePassword !== null && !$beforePassword($user['id'] ?? null)) return false;
         $hash = $user !== null ? (string) $user['password_hash'] : (self::$dummyHash ??= Security::hashPassword('not-a-real-password-' . Security::randomToken(8)));
         $valid = Security::verifyPassword($password, $hash);
         if ($user === null || ($user['status'] ?? 'active') !== 'active' || !$valid) return false;
