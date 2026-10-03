@@ -24,7 +24,8 @@ $structuredData = SeoService::structuredData($seo, $structuredData ?? []);
     <meta name="description" content="<?= e($seo['description']) ?>">
     <meta name="robots" content="<?= e($seo['robots']) ?>">
     <meta name="author" content="Mentoris Academy">
-    <?php if(trim((string)env('GOOGLE_SITE_VERIFICATION',''))!==''): ?><meta name="google-site-verification" content="<?= e((string)env('GOOGLE_SITE_VERIFICATION')) ?>"><?php endif; ?>
+    <meta name="google-site-verification" content="fKPwbpS_cF3QJizNBpOA0xGlRSiKV8F_LSF4qYveHaI">
+    <?php if(trim((string)env('GOOGLE_SITE_VERIFICATION',''))!=='' && trim((string)env('GOOGLE_SITE_VERIFICATION'))!=='fKPwbpS_cF3QJizNBpOA0xGlRSiKV8F_LSF4qYveHaI'): ?><meta name="google-site-verification" content="<?= e((string)env('GOOGLE_SITE_VERIFICATION')) ?>"><?php endif; ?>
     <link rel="canonical" href="<?= e($seo['canonical']) ?>">
     <?php foreach ($seo['alternates'] as $alternate): ?>
         <link rel="alternate" hreflang="<?= e($alternate['language']) ?>" href="<?= e($alternate['url']) ?>">
