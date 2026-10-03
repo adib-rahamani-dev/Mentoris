@@ -24,6 +24,7 @@ $router->post('/admin/engagements/{type:[a-z]+}/{id:[a-f0-9]+}', [AdminControlle
 $router->get('/admin/content', [AdminController::class, 'content'], ['auth', 'can:content.view', 'rate:120,60']);
 $router->get('/admin/qr', [AdminQrController::class, 'index'], ['auth', 'can:content.view', 'rate:120,60']);
 $router->get('/admin/feedback', [\App\Controllers\AdminFeedbackController::class, 'index'], ['auth', 'can:engagements.view', 'rate:120,60']);
+$router->post('/admin/feedback/{slug:[a-z-]+}/schedule', [\App\Controllers\AdminFeedbackController::class, 'schedule'], ['auth', 'can:engagements.manage', 'csrf', 'rate:20,60']);
 $router->get('/admin/telegram', [\App\Controllers\AdminTelegramController::class, 'index'], ['auth', 'can:engagements.view', 'rate:120,60']);
 $router->post('/admin/telegram/questions/{id:[a-f0-9]+}/answer', [\App\Controllers\AdminTelegramController::class, 'answer'], ['auth', 'can:engagements.manage', 'csrf', 'rate:30,60']);
 $router->post('/admin/telegram/requests/{id:[a-f0-9]+}', [\App\Controllers\AdminTelegramController::class, 'updateRequest'], ['auth', 'can:engagements.manage', 'csrf', 'rate:30,60']);
@@ -36,3 +37,10 @@ $router->post('/admin/content/{id:[a-f0-9]+}/status', [AdminController::class, '
 $router->get('/admin/analytics', [AdminController::class, 'analytics'], ['auth', 'can:analytics.view', 'rate:120,60']);
 $router->get('/admin/audit', [AdminController::class, 'audit'], ['auth', 'can:audit.view', 'rate:120,60']);
 $router->get('/admin/system', [AdminController::class, 'system'], ['auth', 'can:system.view', 'rate:120,60']);
+$router->get('/admin/seo', [AdminController::class, 'seo'], ['auth', 'can:content.view', 'rate:120,60']);
+// Separate URLs, fixed entity types and dedicated field sets for each workspace.
+$router->get('/admin/{module:articles|events|courses|programs|mentors|academy-lines|specializations}', [AdminController::class, 'workspace'], ['auth', 'can:content.view', 'rate:120,60']);
+$router->get('/admin/{module:articles|events|courses|programs|mentors|academy-lines|specializations}/new', [AdminController::class, 'workspaceNew'], ['auth', 'can:content.manage', 'rate:120,60']);
+$router->post('/admin/{module:articles|events|courses|programs|mentors|academy-lines|specializations}', [AdminController::class, 'workspaceStore'], ['auth', 'can:content.manage', 'csrf', 'rate:30,60']);
+$router->get('/admin/{module:articles|events|courses|programs|mentors|academy-lines|specializations}/{id:[a-f0-9]+}/edit', [AdminController::class, 'workspaceEdit'], ['auth', 'can:content.manage', 'rate:120,60']);
+$router->post('/admin/{module:articles|events|courses|programs|mentors|academy-lines|specializations}/{id:[a-f0-9]+}', [AdminController::class, 'workspaceUpdate'], ['auth', 'can:content.manage', 'csrf', 'rate:30,60']);

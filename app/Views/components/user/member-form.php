@@ -9,7 +9,7 @@ $input=function(string $key,string $label,string $type='text',?int $max=null) us
 <label class="form-group"><span class="form-label"><?= e($label) ?></span><input class="form-control" type="<?= e($type) ?>" name="<?= e($key) ?>" value="<?= e($member[$key] ?? '') ?>" <?= $max ? 'maxlength="'.$max.'"' : '' ?> <?= $key==='client_count' ? 'min="0" max="10000"' : '' ?>><?php if(isset($memberErrors[$key])):?><small class="form-error"><?= e($memberErrors[$key][0]) ?></small><?php endif;?></label>
 <?php };
 $select=function(string $key,string $label) use ($member,$memberErrors,$options): void { ?>
-<label class="form-group"><span class="form-label"><?= e($label) ?></span><select class="form-select" name="<?= e($key) ?>"><option value="">انتخاب کنید</option><?php foreach($options[$key] as $v=>$text):?><option value="<?= e($v) ?>" <?= ($member[$key] ?? '')===$v ? 'selected' : '' ?>><?= e($text) ?></option><?php endforeach;?></select><?php if(isset($memberErrors[$key])):?><small class="form-error"><?= e($memberErrors[$key][0]) ?></small><?php endif;?></label>
+<label class="form-group"><span class="form-label"><?= e($label) ?></span><select class="form-select" name="<?= e($key) ?>" <?= $key==='member_type' ? 'required' : '' ?>><option value="">انتخاب کنید</option><?php foreach($options[$key] as $v=>$text):?><option value="<?= e($v) ?>" <?= ($member[$key] ?? '')===$v ? 'selected' : '' ?>><?= e($text) ?></option><?php endforeach;?></select><?php if(isset($memberErrors[$key])):?><small class="form-error"><?= e($memberErrors[$key][0]) ?></small><?php endif;?></label>
 <?php };
 $textarea=function(string $key,string $label,int $max) use ($member,$memberErrors): void { ?>
 <label class="form-group"><span class="form-label"><?= e($label) ?></span><textarea class="form-textarea" name="<?= e($key) ?>" maxlength="<?= $max ?>" rows="3"><?= e($member[$key] ?? '') ?></textarea><?php if(isset($memberErrors[$key])):?><small class="form-error"><?= e($memberErrors[$key][0]) ?></small><?php endif;?></label>
@@ -19,7 +19,7 @@ $textarea=function(string $key,string $label,int $max) use ($member,$memberError
 <?php if(empty($memberEnabled)):?><div class="alert alert--danger">فرم تکمیلی پس از اجرای مایگریشن ۰۰۴ فعال می‌شود.</div><?php else:?>
 <?php if($memberErrors):?><div class="alert alert--danger" role="alert"><ul><?php foreach($memberErrors as $messages):?><li><?= e($messages[0]) ?></li><?php endforeach;?></ul></div><?php endif;?>
 <?php if(isset($_GET['saved']) || isset($_GET['member_saved'])):?><div class="alert alert--success" role="status">اطلاعات تکمیلی ذخیره شد.</div><?php endif;?>
-<form class="stack member-form" method="post" enctype="multipart/form-data" action="<?= e($memberAction) ?>" data-member-form data-state-key="<?= e($user['id']) ?>" novalidate><?= csrf_field() ?>
+<form class="stack member-form" method="post" enctype="multipart/form-data" action="<?= e($memberAction) ?>" data-member-form <?= !$memberAdmin && !$memberReadonly ? 'data-profile-wizard' : '' ?> data-state-key="<?= e($user['id']) ?>" novalidate><?= csrf_field() ?>
 <fieldset class="member-fieldset" <?= $memberReadonly ? 'disabled' : '' ?>><legend class="sr-only">اطلاعات تکمیلی</legend>
 <?php $select('member_type','نوع عضویت *'); ?>
 <details class="member-section" open data-member-section="academic"><summary><span>۰۱</span> اطلاعات تحصیلی <small>رشته و دانشگاه برای تکمیل پروفایل</small></summary><div class="member-section__body grid grid--2">

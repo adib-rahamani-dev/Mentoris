@@ -16,8 +16,11 @@ $active = static fn (string $path): string => $adminPath === $path || ($path !==
         <?php if (Authorization::can($admin, 'engagements.view')): ?><a class="<?= $active('/admin/feedback') ?>" href="/admin/feedback"><span><?= icon('chart') ?></span>نظرسنجی نشست‌ها</a><?php endif; ?>
         <?php if (Authorization::can($admin, 'engagements.view')): ?><a class="<?= $active('/admin/telegram') ?>" href="/admin/telegram"><span><?= icon('message') ?></span>پرسش‌ها و ربات تلگرام</a><?php endif; ?>
         <?php if (Authorization::can($admin, 'content.view')): ?><a class="<?= $active('/admin/content') ?>" href="/admin/content"><span><?= icon('file') ?></span>محتوای سایت</a><?php endif; ?>
+        <?php if (Authorization::can($admin, 'content.view')): ?>
+        <?php foreach(\App\Services\ContentWorkspaceService::MODULES as $slug=>$module): ?><a class="<?= $active('/admin/'.$slug) ?>" href="/admin/<?= e($slug) ?>"><span><?= icon($module['icon']) ?></span><?= e($module['label']) ?></a><?php endforeach; ?>
+        <a class="<?= $active('/admin/seo') ?>" href="/admin/seo"><span><?= icon('search') ?></span>سئو و حضور در گوگل</a>
+        <?php endif; ?>
         <?php if (Authorization::can($admin, 'content.view')): ?><a class="<?= $active('/admin/qr') ?>" href="/admin/qr"><span><?= icon('activity') ?></span>استودیوی QR</a><?php endif; ?>
-        <?php if (Authorization::can($admin, 'content.manage')): ?><a href="/admin/content/new?type=mentor"><span><?= icon('user') ?></span>افزودن مدرس</a><a href="/admin/content/new?type=article"><span><?= icon('book') ?></span>نوشتن مقاله</a><a href="/admin/content/new?type=course"><span><?= icon('certificate') ?></span>ساخت دوره</a><a href="/admin/content/new?type=event"><span><?= icon('calendar') ?></span>ساخت رویداد</a><a href="/admin/content/new?type=specialization"><span><?= icon('brain') ?></span>ساخت تخصص</a><?php endif; ?>
         <?php if (Authorization::can($admin, 'audit.view')): ?><small class="admin-nav-label">نظارت</small><a class="<?= $active('/admin/audit') ?>" href="/admin/audit"><span><?= icon('activity') ?></span>گزارش فعالیت‌ها</a><?php endif; ?>
         <?php if (Authorization::can($admin, 'system.view')): ?><a class="<?= $active('/admin/system') ?>" href="/admin/system"><span><?= icon('shield') ?></span>امنیت و سلامت سیستم</a><?php endif; ?>
     </nav>

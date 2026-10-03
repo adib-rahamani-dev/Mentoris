@@ -31,6 +31,7 @@ final class AdminController extends Controller
             'recentUsers' => Authorization::can($admin, 'users.view') ? array_slice((new UserRepository())->all(), 0, 6) : [],
             'recentOrders' => Authorization::can($admin, 'orders.view') ? (new CommerceRepository())->recentOrders(6) : [],
             'recentAudit' => Authorization::can($admin, 'audit.view') ? $repository->recentAudit(7) : [],
+            'surveyWindows'=>Authorization::can($admin,'engagements.view') ? array_map(static fn(string $slug): array => ['slug'=>$slug,...(new \App\Services\SurveyWindowService())->status($slug)],\App\Services\SurveyWindowService::EVENTS) : [],
         ]);
     }
 
@@ -182,13 +183,13 @@ final class AdminController extends Controller
     {
         $preset = (string) $request->query('type', 'article');
         if (!array_key_exists($preset, $this->contentTypes())) $preset = 'article';
-        return $this->adminView('content-editor', 'محتوای جدید', ['entry' => null, 'types' => $this->contentTypes(), 'errors' => [], 'old' => ['entity_type'=>$preset,'status'=>'draft']]);
+        return Response::redirect(\App\Services\ContentWorkspaceService::path($preset).'/new');
     }
 
     public function editContent(Request $request, string $id): Response
     {
         $entry = (new AdminRepository())->contentEntry($id);
-        return $entry ? $this->adminView('content-editor', 'ویرایش محتوا', ['entry' => $entry, 'types' => $this->contentTypes(), 'errors' => [], 'old' => []]) : Response::html('<h1>404 - محتوا پیدا نشد</h1>', 404);
+        return $entry ? Response::redirect(\App\Services\ContentWorkspaceService::path($entry['entity_type']).'/'.$id.'/edit'.(isset($_GET['status_updated'])?'?status_updated=1':'')) : Response::html('<h1>404 - محتوا پیدا نشد</h1>', 404);
     }
 
     public function storeContent(Request $request): Response
@@ -230,6 +231,21 @@ final class AdminController extends Controller
         return $this->adminView('system', 'امنیت و سلامت سیستم', ['health' => (new AdminRepository())->systemHealth(), 'roles'=>Authorization::ROLES, 'permissionMatrix'=>$permissionMatrix, 'environment' => ['mail_queue'=>count(\App\Core\PrivateRecords::files('mail-outbox')), 'mail_worker'=>self::workerTime('mail'), 'telegram_worker'=>self::workerTime('telegram'), 'php' => PHP_VERSION, 'app_env' => env('APP_ENV', 'local'), 'debug' => (bool) env('APP_DEBUG', false), 'session_driver' => env('SESSION_DRIVER', 'files'), 'rate_driver' => env('RATE_LIMIT_DRIVER', 'session'), 'https' => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')]]);
     }
 
+    public function seo(Request $request): Response
+    {
+        $result=(new AdminRepository())->contentEntries(['type'=>'article','status'=>'published'],1,100);
+        $reviews=[];
+        foreach($result['items'] as $item) {
+            $entry=(new AdminRepository())->contentEntry($item['id']); $fa=$entry['translations']['fa'] ?? [];
+            $issues=[];
+            if(mb_strlen(trim($fa['excerpt'] ?? ''))<40) $issues[]='خلاصهٔ معرفی کوتاه یا خالی است.';
+            if(trim($fa['body'] ?? '')==='') $issues[]='متن مقاله خالی است.';
+            if(empty($fa['metadata']['image'])) $issues[]='تصویر اختصاصی ندارد.';
+            $reviews[]=['entry'=>$entry,'issues'=>$issues];
+        }
+        return $this->adminView('seo','سئو و حضور در گوگل',['reviews'=>$reviews,'articleTotal'=>$result['pagination']['total'],'baseUrl'=>rtrim((string)env('APP_URL','https://mentorisacademy.com'),'/')]);
+    }
+
     private static function workerTime(string $name): string
     {
         $path=BASE_PATH.'/storage/data/'.$name.'-worker-status.json';
@@ -239,18 +255,57 @@ final class AdminController extends Controller
     private function currentUser(): array { return (new AuthService())->user() ?? []; }
     private function adminView(string $view, string $title, array $data = []): Response { return $this->view('admin.' . $view, ['title' => $title . ' | Mentoris Admin', 'admin' => $this->currentUser(), ...$data], 'layouts.admin'); }
 
-    private function persistContent(Request $request, ?string $id): Response
+    public function workspace(Request $request, string $module): Response
     {
+        $config=\App\Services\ContentWorkspaceService::MODULES[$module] ?? null;
+        if(!$config) return Response::html('<h1>404</h1>',404);
+        $filters=['type'=>$config['type'],'query'=>trim((string)$request->query('q','')),'status'=>(string)$request->query('status','all')];
+        $repository=new AdminRepository();
+        return $this->adminView('content-workspace',$config['label'],['workspace'=>$config,'workspacePath'=>'/admin/'.$module,'filters'=>$filters,'counts'=>$repository->contentCounts($config['type']),...$repository->contentEntries($filters,(int)$request->query('page',1))]);
+    }
+    public function workspaceNew(Request $request, string $module): Response
+    {
+        $config=\App\Services\ContentWorkspaceService::MODULES[$module] ?? null;
+        return $config ? $this->editorView(null,[],['entity_type'=>$config['type'],'status'=>'draft']) : Response::html('<h1>404</h1>',404);
+    }
+    public function workspaceEdit(Request $request, string $module, string $id): Response
+    {
+        $entry=(new AdminRepository())->contentEntry($id);
+        return $entry && $entry['entity_type']===(\App\Services\ContentWorkspaceService::MODULES[$module]['type'] ?? null) ? $this->editorView($entry,[],[]) : Response::html('<h1>404</h1>',404);
+    }
+    public function workspaceStore(Request $request, string $module): Response
+    {
+        $type=\App\Services\ContentWorkspaceService::MODULES[$module]['type'] ?? null;
+        return $type ? $this->persistContent($request,null,$type) : Response::html('<h1>404</h1>',404);
+    }
+    public function workspaceUpdate(Request $request, string $module, string $id): Response
+    {
+        $type=\App\Services\ContentWorkspaceService::MODULES[$module]['type'] ?? null;
+        return $type ? $this->persistContent($request,$id,$type) : Response::html('<h1>404</h1>',404);
+    }
+    private function editorView(?array $entry,array $errors,array $old): Response
+    {
+        $type=$entry['entity_type'] ?? $old['entity_type'] ?? 'article';
+        if(!array_key_exists($type,$this->contentTypes())) $type='article';
+        $path=\App\Services\ContentWorkspaceService::path($type);
+        $config=\App\Services\ContentWorkspaceService::MODULES[basename($path)];
+        return $this->adminView('content-editor',($entry?'ویرایش ':'ساخت ').$config['singular'],['entry'=>$entry,'errors'=>$errors,'old'=>$old,'workspace'=>$config,'workspacePath'=>$path]);
+    }
+    private function persistContent(Request $request, ?string $id, ?string $fixedType=null): Response
+    {
+        $existing=$id ? (new AdminRepository())->contentEntry($id) : null;
+        if($id && (!$existing || ($fixedType && $existing['entity_type']!==$fixedType))) return Response::html('<h1>404</h1>',404);
         $data = [
-            'entity_type' => trim((string) $request->input('entity_type')),
+            'entity_type' => $fixedType ?? ($existing['entity_type'] ?? trim((string)$request->input('entity_type'))),
             'slug' => strtolower(trim((string) $request->input('slug'))),
             'status' => trim((string) $request->input('status', 'draft')),
             'sort_order' => (int) $request->input('sort_order', 0),
             'translations' => [],
         ];
+        if($data['slug']==='') $data['slug']=$existing['slug'] ?? ($data['entity_type'].'-'.Security::randomToken(6));
         foreach (['fa','ar','ku','en'] as $locale) {
             $metadataRaw = trim((string) $request->input("{$locale}_metadata", ''));
-            $metadata = $metadataRaw === '' ? [] : json_decode($metadataRaw, true);
+            $metadata = array_key_exists("{$locale}_metadata",$request->input()) ? ($metadataRaw === '' ? [] : json_decode($metadataRaw,true)) : ($existing['translations'][$locale]['metadata'] ?? []);
             $common = [
                 'image'=>trim((string)$request->input('image','')),'category'=>trim((string)$request->input('category','')),
                 'duration'=>trim((string)$request->input('duration','')),'schedule'=>trim((string)$request->input('schedule','')),
@@ -276,11 +331,13 @@ final class AdminController extends Controller
                 'related_mentors'=>$this->slugList((string)$request->input('related_mentors','')),
                 'featured'=>$request->input('featured') === '1',
             ];
-            if ($data['entity_type'] === 'course' && $common['content_status'] !== '') $common['course_status'] = $common['content_status'];
-            if ($data['entity_type'] === 'event' && $common['content_status'] !== '') $common['event_status'] = $common['content_status'];
+            $common=array_intersect_key($common,$request->input());
+            if (isset($common['content_status']) && $data['entity_type'] === 'course') $common['course_status'] = $common['content_status'];
+            if (isset($common['content_status']) && $data['entity_type'] === 'event') $common['event_status'] = $common['content_status'];
             unset($common['content_status']);
-            $common = array_filter($common, static fn ($value): bool => $value !== '' && $value !== false && $value !== 0 && $value !== []);
-            $data['translations'][$locale] = ['title'=>(string)$request->input("{$locale}_title",''),'subtitle'=>(string)$request->input("{$locale}_subtitle",''),'excerpt'=>(string)$request->input("{$locale}_excerpt",''),'body'=>(string)$request->input("{$locale}_body",''),'metadata'=>is_array($metadata)?array_replace($metadata,$common):null];
+            if(array_key_exists('featured_present',$request->input())) $common['featured']=$request->input('featured')==='1';
+            $previous=$existing['translations'][$locale] ?? [];
+            $data['translations'][$locale] = ['title'=>(string)$request->input("{$locale}_title",$previous['title'] ?? ''),'subtitle'=>(string)$request->input("{$locale}_subtitle",$previous['subtitle'] ?? ''),'excerpt'=>(string)$request->input("{$locale}_excerpt",$previous['excerpt'] ?? ''),'body'=>(string)$request->input("{$locale}_body",$previous['body'] ?? ''),'metadata'=>is_array($metadata)?array_replace($metadata,$common):null];
         }
         $errors = [];
         if (!array_key_exists($data['entity_type'], $this->contentTypes())) $errors['entity_type'][] = 'نوع محتوا معتبر نیست.';
@@ -318,21 +375,21 @@ final class AdminController extends Controller
         if (!in_array(trim((string)$request->input('tone','')), ['','sage','teal','blue','violet','amber','rose','indigo'], true)) $errors['tone'][] = 'رنگ انتخاب‌شده معتبر نیست.';
         if (!in_array(trim((string)$request->input('icon','')), ['','brain','book','users','search','heart','activity','shield','trending','certificate'], true)) $errors['icon'][] = 'آیکون انتخاب‌شده معتبر نیست.';
         foreach ($data['translations'] as $locale => $translation) if ($translation['metadata'] === null) $errors[$locale . '_metadata'][] = 'JSON متادیتا معتبر نیست.';
-        if ($errors) return $this->adminView('content-editor', $id ? 'ویرایش محتوا' : 'محتوای جدید', ['entry'=>$id ? (new AdminRepository())->contentEntry($id) : null,'types'=>$this->contentTypes(),'errors'=>$errors,'old'=>$data]);
+        if ($errors) return $this->editorView($existing,$errors,$data);
         $uploadedPath = null;
         if (is_array($upload) && (int)($upload['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK) {
             try { $uploadedPath = $this->storeImageUpload($upload); }
-            catch (RuntimeException $exception) { return $this->adminView('content-editor', $id ? 'ویرایش محتوا' : 'محتوای جدید', ['entry'=>$id ? (new AdminRepository())->contentEntry($id) : null,'types'=>$this->contentTypes(),'errors'=>['image_upload'=>[$exception->getMessage()]],'old'=>$data]); }
+            catch (RuntimeException $exception) { return $this->editorView($existing,['image_upload'=>[$exception->getMessage()]],$data); }
             foreach ($data['translations'] as &$translation) $translation['metadata']['image'] = $uploadedPath;
             unset($translation);
         }
         try { $saved = (new AdminRepository())->saveContent($id, $data, (string) ($this->currentUser()['id'] ?? '')); }
         catch (\Throwable $exception) {
             if ($uploadedPath !== null) { $uploadedAbsolute = base_path('public/assets/' . $uploadedPath); if (is_file($uploadedAbsolute)) unlink($uploadedAbsolute); }
-            return $this->adminView('content-editor', $id ? 'ویرایش محتوا' : 'محتوای جدید', ['entry'=>$id ? (new AdminRepository())->contentEntry($id) : null,'types'=>$this->contentTypes(),'errors'=>['form'=>['ذخیره انجام نشد؛ نامک تکراری یا اتصال دیتابیس را بررسی کنید.']],'old'=>$data]);
+            return $this->editorView($existing,['form'=>['ذخیره انجام نشد؛ نامک تکراری یا اتصال دیتابیس را بررسی کنید.']],$data);
         }
         Audit::record($id ? 'content.updated' : 'content.created', 'content', $saved['id'], $this->currentUser()['id'] ?? null, $saved['before'] ?? [], $saved['after'] ?? [], $request->ip());
-        return Response::redirect('/admin/content/' . $saved['id'] . '/edit?saved=1');
+        return Response::redirect(\App\Services\ContentWorkspaceService::path($data['entity_type']).'/' . $saved['id'] . '/edit?saved=1');
     }
 
     private function contentTypes(): array

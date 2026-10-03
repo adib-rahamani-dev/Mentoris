@@ -14,7 +14,7 @@ final class HomeController extends Controller
     public function index(Request $request): Response
     {
         return $this->view('pages.public-home', [
-            'title' => 'Mentoris Academy | ' . t('home.title.accent'),
+            'title' => (\App\Core\Translator::locale()==='fa' ? 'آکادمی منتوریس' : 'Mentoris Academy') . ' | ' . t('home.title.accent'),
             'description' => t('home.lead'),
             'lines' => PublicContentService::academyLines(),
             'events' => array_values(array_filter(PublicContentService::events(), static fn (array $event): bool => in_array($event['status'], ['registration-open','upcoming'], true))),

@@ -24,6 +24,7 @@ $structuredData = SeoService::structuredData($seo, $structuredData ?? []);
     <meta name="description" content="<?= e($seo['description']) ?>">
     <meta name="robots" content="<?= e($seo['robots']) ?>">
     <meta name="author" content="Mentoris Academy">
+    <?php if(trim((string)env('GOOGLE_SITE_VERIFICATION',''))!==''): ?><meta name="google-site-verification" content="<?= e((string)env('GOOGLE_SITE_VERIFICATION')) ?>"><?php endif; ?>
     <link rel="canonical" href="<?= e($seo['canonical']) ?>">
     <?php foreach ($seo['alternates'] as $alternate): ?>
         <link rel="alternate" hreflang="<?= e($alternate['language']) ?>" href="<?= e($alternate['url']) ?>">
@@ -48,8 +49,8 @@ $structuredData = SeoService::structuredData($seo, $structuredData ?? []);
     <link rel="manifest" href="/manifest.json">
     <title><?= e($seo['title']) ?></title>
     <script nonce="<?= e(\App\Core\Security::cspNonce()) ?>">try{document.documentElement.dataset.theme=localStorage.getItem('mentoris-theme')||'light'}catch(e){document.documentElement.dataset.theme='light'}</script>
-    <link rel="stylesheet" href="<?= asset('css/app.css') ?>?v=13.0.0">
-    <script type="module" src="<?= asset('js/app.js') ?>?v=13.0.0" defer></script>
+    <link rel="stylesheet" href="<?= asset('css/app.css') ?>?v=14.0.0">
+    <script type="module" src="<?= asset('js/app.js') ?>?v=14.0.0" defer></script>
     <script nonce="<?= e(\App\Core\Security::cspNonce()) ?>" type="application/ld+json"><?= json_encode($structuredData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
 </head>
 <body>

@@ -446,10 +446,22 @@ SELECT u.id,
     JSON_ARRAY(),0,NULL,NULL,UTC_TIMESTAMP()
 FROM users u LEFT JOIN therapist_profiles p ON p.user_id=u.id;
 
+CREATE TABLE IF NOT EXISTS feedback_windows (
+    event_slug VARCHAR(190) CHARACTER SET ascii COLLATE ascii_bin NOT NULL PRIMARY KEY,
+    starts_at DATETIME NOT NULL,
+    ends_at DATETIME NOT NULL,
+    enabled TINYINT(1) NOT NULL DEFAULT 1,
+    updated_by CHAR(24) CHARACTER SET ascii COLLATE ascii_bin NULL,
+    updated_at DATETIME NOT NULL,
+    CONSTRAINT fk_feedback_window_editor FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
 -- Mark completed migrations without duplicating existing markers.
 INSERT IGNORE INTO migrations (migration,executed_at) VALUES
 ('001_core.mysql.sql',UTC_TIMESTAMP()),
 ('002_content_studio.mysql.sql',UTC_TIMESTAMP()),
 ('003_therapist_circle.mysql.sql',UTC_TIMESTAMP()),
 ('004_member_profiles.mysql.sql',UTC_TIMESTAMP()),
-('005_telegram_assistant.mysql.sql',UTC_TIMESTAMP());
+('005_telegram_assistant.mysql.sql',UTC_TIMESTAMP()),
+('006_feedback_windows.mysql.sql',UTC_TIMESTAMP());

@@ -111,6 +111,15 @@ final class AdminRepository
         return $this->paginate($select, $count, $params, $page, $perPage);
     }
 
+    public function contentCounts(string $type): array
+    {
+        $statement=$this->pdo()->prepare('SELECT status,COUNT(*) total FROM content_entities WHERE entity_type=:type GROUP BY status');
+        $statement->execute(['type'=>$type]);
+        $counts=['draft'=>0,'published'=>0,'archived'=>0];
+        foreach($statement->fetchAll() as $row) $counts[$row['status']]=(int)$row['total'];
+        return $counts;
+    }
+
     public function contentEntry(string $id): ?array
     {
         $statement = $this->pdo()->prepare('SELECT ce.*,u.name author_name FROM content_entities ce LEFT JOIN users u ON u.id=ce.author_id WHERE ce.id=:id LIMIT 1');
@@ -149,7 +158,8 @@ final class AdminRepository
                     continue;
                 }
                 $translationId = Security::randomToken(16);
-                $statement = $pdo->prepare('INSERT INTO content_translations (id,entity_id,locale,title,subtitle,excerpt,body,metadata,created_at,updated_at) VALUES (:id,:entity,:locale,:title,:subtitle,:excerpt,:body,:metadata,:created,:updated) ON DUPLICATE KEY UPDATE title=VALUES(title),subtitle=VALUES(subtitle),excerpt=VALUES(excerpt),body=VALUES(body),metadata=VALUES(metadata),updated_at=VALUES(updated_at)');
+                $suffix=Database::driver($pdo)==='mysql' ? 'ON DUPLICATE KEY UPDATE title=VALUES(title),subtitle=VALUES(subtitle),excerpt=VALUES(excerpt),body=VALUES(body),metadata=VALUES(metadata),updated_at=VALUES(updated_at)' : 'ON CONFLICT(entity_id,locale) DO UPDATE SET title=excluded.title,subtitle=excluded.subtitle,excerpt=excluded.excerpt,body=excluded.body,metadata=excluded.metadata,updated_at=excluded.updated_at';
+                $statement = $pdo->prepare('INSERT INTO content_translations (id,entity_id,locale,title,subtitle,excerpt,body,metadata,created_at,updated_at) VALUES (:id,:entity,:locale,:title,:subtitle,:excerpt,:body,:metadata,:created,:updated) '.$suffix);
                 $statement->execute(['id'=>$translationId,'entity'=>$id,'locale'=>$locale,'title'=>trim((string)$translation['title']),'subtitle'=>trim((string)$translation['subtitle']),'excerpt'=>trim((string)$translation['excerpt']),'body'=>trim((string)$translation['body']),'metadata'=>json_encode($translation['metadata'], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR),'created'=>$now,'updated'=>$now]);
             }
         });

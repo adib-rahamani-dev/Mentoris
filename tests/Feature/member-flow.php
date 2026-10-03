@@ -33,7 +33,9 @@ set_error_handler(static function(int $severity,string $message,string $file,int
 $pdo=Database::connect(['driver'=>'sqlite','database'=>':memory:']); Database::use($pdo);
 $schemas=[
  'content_entities'=>'id TEXT PRIMARY KEY,entity_type TEXT,slug TEXT,status TEXT,sort_order INTEGER,author_id TEXT,published_at TEXT,created_at TEXT,updated_at TEXT',
- 'content_translations'=>'id TEXT PRIMARY KEY,entity_id TEXT,locale TEXT,title TEXT,subtitle TEXT,excerpt TEXT,body TEXT,metadata TEXT',
+ 'content_translations'=>'id TEXT PRIMARY KEY,entity_id TEXT,locale TEXT,title TEXT,subtitle TEXT,excerpt TEXT,body TEXT,metadata TEXT,created_at TEXT,updated_at TEXT,UNIQUE(entity_id,locale)',
+ 'feedback_windows'=>'event_slug TEXT PRIMARY KEY,starts_at TEXT,ends_at TEXT,enabled INTEGER,updated_by TEXT,updated_at TEXT',
+ 'audit_logs'=>'id TEXT PRIMARY KEY,actor_id TEXT,action TEXT,subject_type TEXT,subject_id TEXT,old_values TEXT,new_values TEXT,ip_hash TEXT,created_at TEXT',
  'users'=>"id TEXT PRIMARY KEY,name TEXT,email TEXT UNIQUE,password_hash TEXT,phone TEXT,professional_role TEXT,bio TEXT,account_role TEXT,status TEXT,auth_version INTEGER,email_verified_at TEXT,last_login_at TEXT,password_changed_at TEXT,created_at TEXT,updated_at TEXT",
  'enrollments'=>"id TEXT,user_id TEXT,course_slug TEXT,status TEXT,enrolled_at TEXT",
  'event_registrations'=>"user_id TEXT,event_slug TEXT,status TEXT,created_at TEXT",
@@ -83,6 +85,24 @@ $users->setManagedPassword($user['id'],'ChangedPassword123');
 (new AuthService())->refresh(UserRepository::publicUser($users->findById($user['id'])));
 $check((new AuthService())->user()!==null,'Refresh preserves increased authentication version.');
 $feedback=new FeedbackController();
+$windows=new \App\Services\SurveyWindowService();
+$check(!$windows->status('therapists-circle-tabriz')['open'],'An unconfigured survey is closed.');
+$date=new DateTimeImmutable('now',new DateTimeZone('Asia/Tehran'));
+$schedule=['starts_at'=>$date->modify('-1 day')->format('Y-m-d\TH:i'),'ends_at'=>$date->modify('+1 day')->format('Y-m-d\TH:i'),'enabled'=>'1'];
+$check(isset($windows->save('therapists-circle-tabriz',['starts_at'=>'2026-02-30T10:00','ends_at'=>'2026-02-30T12:00'],$user['id'])['starts_at']),'Impossible calendar dates are rejected.');
+$check(isset($windows->save('therapists-circle-tabriz',['starts_at'=>'2026-10-10T12:00','ends_at'=>'2026-10-10T11:00'],$user['id'])['ends_at']),'An inverted survey window is rejected.');
+foreach(\App\Services\SurveyWindowService::EVENTS as $slug) $check(!$windows->save($slug,$schedule,$user['id']),'Survey windows save per event.');
+$window=$windows->status('therapists-circle-tabriz');
+$check($window['starts_local']===$schedule['starts_at'] && $window['row']['starts_at']===$date->modify('-1 day')->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:00'),'Tehran input round-trips through UTC storage.');
+$check($windows->status('therapists-circle-tabriz',$window['start']-1)['state']==='upcoming' && $windows->status('therapists-circle-tabriz',$window['start'])['open'],'Start is inclusive.');
+$check($windows->status('therapists-circle-tabriz',$window['end'])['state']==='closed','End is exclusive.');
+$windows->save('therapists-circle-tabriz',array_replace($schedule,['enabled'=>'0']),$user['id']);
+$check($feedback->feedback(new Request(body:['event'=>'therapists-circle-tabriz','content_rating'=>'5','hosting_rating'=>'5'],server:['HTTP_ACCEPT'=>'application/json']))->status()===403,'Direct POST cannot bypass a disabled survey.');
+$check($feedback->access(new Request(body:['event'=>'therapists-circle-tabriz','member_access'=>'1'],server:['HTTP_ACCEPT'=>'application/json']))->status()===403,'Entry into a disabled survey is rejected on the server.');
+$windows->save('therapists-circle-tabriz',$schedule,$user['id']);
+$windows->save('therapists-circle-second',['starts_at'=>$date->modify('-2 days')->format('Y-m-d\TH:i'),'ends_at'=>$date->modify('-1 day')->format('Y-m-d\TH:i'),'enabled'=>'1'],$user['id']);
+$check($feedback->feedback(new Request(body:['event'=>'therapists-circle-second','content_rating'=>'5','hosting_rating'=>'5'],server:['HTTP_ACCEPT'=>'application/json']))->status()===403,'An expired deadline rejects POST even if a form was loaded earlier.');
+$windows->save('therapists-circle-second',$schedule,$user['id']);
 foreach(['therapists-circle-tabriz','therapists-circle-second'] as $slug) {
  $response=$feedback->access(new Request(body:['event'=>$slug,'member_access'=>'1','participated'=>'1']));
  $check(($response->headers()['Location'] ?? '')==='/feedback','Feedback access works for each archived event.');
@@ -148,7 +168,7 @@ foreach(['therapists-circle-tabriz','therapists-circle-second'] as $slug) {
  $check($telegram->user('12345',$message['from'])['state']==='','Archived events cannot start Telegram registration.');
 }
 $pdo->exec("INSERT INTO content_entities VALUES ('future-event','event','future-meeting','published',0,NULL,'2026-10-04','2026-10-04','2026-10-04')");
-$pdo->prepare('INSERT INTO content_translations VALUES (:id,:entity,:locale,:title,:subtitle,:excerpt,:body,:meta)')->execute(['id'=>'future-fa','entity'=>'future-event','locale'=>'fa','title'=>'نشست آینده','subtitle'=>'','excerpt'=>'نشست آزمایشی','body'=>'نشست آزمایشی','meta'=>json_encode(['event_status'=>'registration-open','starts_at'=>'2026-12-01 18:00:00','location'=>'تبریز'])]);
+$pdo->prepare('INSERT INTO content_translations (id,entity_id,locale,title,subtitle,excerpt,body,metadata) VALUES (:id,:entity,:locale,:title,:subtitle,:excerpt,:body,:meta)')->execute(['id'=>'future-fa','entity'=>'future-event','locale'=>'fa','title'=>'نشست آینده','subtitle'=>'','excerpt'=>'نشست آزمایشی','body'=>'نشست آزمایشی','meta'=>json_encode(['event_status'=>'registration-open','starts_at'=>'2026-12-01 18:00:00','location'=>'تبریز'])]);
 $callback['data']='j:'.\App\Services\TelegramBotService::eventKey('future-meeting');
 $bot->handle(['update_id'=>7,'callback_query'=>$callback]);
 $check($telegram->user('12345',$message['from'])['state']==='event_name','Published open event starts bot registration.');
@@ -189,6 +209,30 @@ $check($app->handle(new Request(server:['REQUEST_METHOD'=>'GET','REQUEST_URI'=>'
 $pdo->exec("UPDATE users SET status='active' WHERE id='".$user['id']."'");
 (new AuthService())->refresh($users->findById($user['id']));
 $view=new View(VIEW_PATH); $user=$users->findById($user['id']); $admin=$user+[]; $admin['account_role']='super_admin';
+$pdo->prepare("UPDATE users SET account_role='super_admin' WHERE id=:id")->execute(['id'=>$user['id']]);
+(new AuthService())->refresh($users->findById($user['id']));
+$editor=new \App\Controllers\AdminController();
+$articleInput=['entity_type'=>'event','slug'=>'editor-test','status'=>'draft','fa_title'=>'مقالهٔ آزمایشی','fa_body'=>'متن مقاله','fa_excerpt'=>'خلاصهٔ آزمایشی','fa_metadata'=>json_encode(['references'=>[['منبع','https://example.test']],'image'=>'images/example.jpg']),'en_title'=>'English article','en_body'=>'Preserve this translation.'];
+$created=$editor->workspaceStore(new Request(body:$articleInput),'articles');
+$articleId=$pdo->query("SELECT id FROM content_entities WHERE slug='editor-test'")->fetchColumn();
+$check(is_string($articleId) && $created->headers()['Location']==='/admin/articles/'.$articleId.'/edit?saved=1','Article workspace creates an article regardless of a forged entity type.');
+$check($pdo->query("SELECT entity_type FROM content_entities WHERE slug='editor-test'")->fetchColumn()==='article','Workspace entity type is fixed on the server.');
+$updated=$editor->workspaceUpdate(new Request(body:['entity_type'=>'course','slug'=>'editor-test','status'=>'published','fa_title'=>'مقالهٔ ویرایش‌شده','fa_body'=>'متن جدید','image'=>'','featured_present'=>'1']),'articles',$articleId);
+$entry=(new \App\Repositories\AdminRepository())->contentEntry($articleId);
+$check(($updated->headers()['Location'] ?? '')==='/admin/articles/'.$articleId.'/edit?saved=1' && $entry['entity_type']==='article','Updating cannot switch content type.');
+$check($entry['translations']['en']['body']==='Preserve this translation.' && !empty($entry['translations']['fa']['metadata']['references']),'Editing preserves omitted translations and unknown metadata.');
+$check($entry['translations']['fa']['metadata']['image']==='' && $entry['translations']['fa']['metadata']['featured']===false,'Optional metadata can actually be cleared.');
+$check($editor->workspaceEdit(new Request(),'events',$articleId)->status()===404 && $editor->workspaceUpdate(new Request(body:$articleInput),'events',$articleId)->status()===404,'A different workspace cannot read or overwrite this entry.');
+$check($editor->workspaceUpdate(new Request(body:['slug'=>'bad slug','fa_title'=>'a']),'articles',$articleId)->status()===200,'Editor validation renders errors without warnings.');
+$check($entry['translations']['fa']['title']==='مقالهٔ ویرایش‌شده','Validation errors leave the stored article intact.');
+$auto=$editor->workspaceStore(new Request(body:['fa_title'=>'مقاله با آدرس خودکار','entity_type'=>'article']),'articles');
+$check(str_starts_with($auto->headers()['Location'] ?? '', '/admin/articles/') && (int)$pdo->query("SELECT COUNT(*) FROM content_entities WHERE slug LIKE 'article-%'")->fetchColumn()===1,'The editor creates a usable URL when the optional slug is empty.');
+$articlePage=$app->handle(new Request(server:['REQUEST_METHOD'=>'GET','REQUEST_URI'=>'/admin/articles/'.$articleId.'/edit']));
+$check($articlePage->status()===200 && !str_contains($articlePage->content(),'name="capacity"') && str_contains($articlePage->content(),'name="author"'),'Real article route renders only article fields.');
+$check($app->handle(new Request(server:['REQUEST_METHOD'=>'POST','REQUEST_URI'=>'/admin/articles','HTTP_ACCEPT'=>'application/json']))->status()===419,'Dedicated content mutations require CSRF.');
+$seoSchema=\App\Services\SeoService::structuredData(\App\Services\SeoService::metadata('منتوریس','معرفی آکادمی'));
+$websites=array_values(array_filter($seoSchema['@graph'],fn($item)=>$item['@type']==='WebSite'));
+$check(count($websites)===1 && $websites[0]['name']==='منتوریس' && in_array('Mentoris Academy',$websites[0]['alternateName'],true),'There is one consistent branded WebSite schema.');
 $member=$profiles->find($user['id']);
 $pages=[
  'register'=>$view->render('auth.register',['errors'=>[],'old'=>[],'title'=>'ثبت‌نام'],'layouts.main'),
@@ -201,6 +245,10 @@ $pages=[
  'resources'=>$view->render('pages.resources',['title'=>'ابزارهای رایگان','resources'=>\App\Services\ResourceService::all(),'tool'=>null,'member'=>$user],'layouts.main'),
  'resource-sheet'=>$view->render('pages.resources',['title'=>'ابزار','resources'=>\App\Services\ResourceService::all(),'tool'=>\App\Services\ResourceService::all()['session-reflection'],'slug'=>'session-reflection','member'=>$user],'layouts.main'),
  'admin-telegram'=>$view->render('admin.telegram',['title'=>'تلگرام','admin'=>$admin,'filters'=>[],'notice'=>null,'configured'=>false,'report'=>$telegram->dashboard()],'layouts.admin'),
+ 'admin-article'=>$articlePage->content(),
+ 'admin-articles'=>$editor->workspace(new Request(),'articles')->content(),
+ 'admin-event'=>$editor->workspaceNew(new Request(),'events')->content(),
+ 'admin-seo'=>$editor->seo(new Request())->content(),
 ];
 $check(!str_contains($pages['profile'],'<script>alert(1)</script>'),'Profile output escapes user text.');
 if(in_array('--preview',$argv,true)) {

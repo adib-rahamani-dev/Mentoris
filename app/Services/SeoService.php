@@ -92,8 +92,8 @@ final class SeoService
             [
                 '@type' => 'Organization',
                 '@id' => $baseUrl . '/#organization',
-                'name' => 'Mentoris Academy',
-                'alternateName' => 'آکادمی منتوریس',
+                'name' => 'آکادمی منتوریس',
+                'alternateName' => ['منتوریس','Mentoris Academy'],
                 'url' => $baseUrl . '/',
                 'logo' => [
                     '@type' => 'ImageObject',
@@ -117,7 +117,8 @@ final class SeoService
                 '@type' => 'WebSite',
                 '@id' => $baseUrl . '/#website',
                 'url' => $baseUrl . '/',
-                'name' => 'Mentoris Academy',
+                'name' => 'منتوریس',
+                'alternateName' => ['آکادمی منتوریس','Mentoris Academy','Mentoris'],
                 'publisher' => ['@id' => $baseUrl . '/#organization'],
                 'inLanguage' => ['fa-IR', 'ar', 'ckb', 'en'],
             ],

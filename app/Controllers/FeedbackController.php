@@ -39,6 +39,8 @@ final class FeedbackController extends Controller
     {
         $event=$request->input('event',self::EVENT);
         if (!is_string($event) || !in_array($event,self::EVENTS,true)) return $this->render(['access'=>'نشست معتبر انتخاب کنید.']);
+        $window=(new \App\Services\SurveyWindowService())->status($event);
+        if(!$window['open']) return $request->expectsJson() ? Response::json(['message'=>$window['message']],403) : $this->render(['access'=>$window['message']]);
         (new Session())->put('feedback.event',$event);
         (new Session())->put('feedback.signup','');
         $identity=(new AuthService())->user();
@@ -78,6 +80,8 @@ final class FeedbackController extends Controller
     {
         $event=$request->input('event');
         if(is_string($event) && in_array($event,self::EVENTS,true) && $event!==$this->eventSlug()) { (new Session())->put('feedback.event',$event); (new Session())->put('feedback.signup',''); }
+        $window=(new \App\Services\SurveyWindowService())->status($this->eventSlug());
+        if(!$window['open']) return $request->expectsJson() ? Response::json(['message'=>$window['message']],403) : $this->render(['feedback'=>$window['message']]);
         $signup = $this->activeSignup();
         $data = $request->only(['content_rating','hosting_rating','challenge','comment']);
         $errors = [];
@@ -158,6 +162,7 @@ final class FeedbackController extends Controller
             'feedback' => $feedback,
             'profileComplete' => $profileComplete,
             'feedbackReady' => $ready,
+            'window'=>(new \App\Services\SurveyWindowService())->status($this->eventSlug()),
             'errors' => $errors,
             'old' => $old,
             'done' => isset($_GET['done']),

@@ -8,12 +8,14 @@
 </section>
 
 <section class="admin-quick-actions" aria-label="دسترسی سریع"><div><span class="eyebrow">اقدام سریع</span><h2>امروز چه کاری پیش می‌بریم؟</h2></div><nav>
-    <?php if($canManageContent): ?><a href="/admin/content/new?type=article"><?= icon('file') ?> نوشتن مقاله</a><a href="/admin/content/new?type=event"><?= icon('calendar') ?> ساخت رویداد</a><?php endif; ?>
+    <?php if($canManageContent): ?><a href="/admin/articles/new"><?= icon('file') ?> نوشتن مقاله</a><a href="/admin/events/new"><?= icon('calendar') ?> ساخت رویداد</a><?php endif; ?>
     <?php if($canEngagements): ?><a href="/admin/engagements?type=circle&status=requested"><?= icon('message') ?> بررسی درخواست‌ها</a><?php endif; ?>
     <?php if($canEngagements): ?><a href="/admin/telegram"><?= icon('message') ?> پرسش‌های تلگرام</a><a href="/admin/feedback"><?= icon('chart') ?> آمار نظرسنجی</a><?php endif; ?>
     <?php if($canContent): ?><a href="/admin/qr"><?= icon('activity') ?> ساخت و چاپ QR</a><?php endif; ?>
     <?php if($canUsers): ?><a href="/admin/users"><?= icon('users') ?> مدیریت کاربران</a><?php endif; ?>
 </nav></section>
+
+<?php if($canEngagements && !empty($surveyWindows)): ?><section class="admin-panel"><header><div><h2>وضعیت نظرسنجی‌های نشست‌ها</h2><p>ثبت‌نام هر دو نشست پایان یافته؛ زمان نظرسنجی را مستقل تنظیم کنید.</p></div><a href="/admin/feedback">تنظیم تاریخ و بررسی پاسخ‌ها</a></header><div class="survey-window-grid"><?php foreach($surveyWindows as $index=>$window): ?><article class="survey-window-card"><h3>نشست <?= $index===0?'اول':'دوم' ?> حلقه درمانگران</h3><p><?= e($window['message']) ?></p><?php if($window['row']): ?><small>پایان: <time data-local-date="<?= e(gmdate('c',$window['end'])) ?>"><?= e($window['ends_local']) ?></time></small><?php endif; ?></article><?php endforeach; ?></div></section><?php endif; ?>
 
 <?php if($canContent && $contentBrief): ?><section class="admin-panel admin-publishing"><header><div><span class="eyebrow">Publishing desk</span><h2>میز انتشار</h2></div><a href="/admin/content">مدیریت محتوا</a></header>
     <?php if(!$contentBrief['available']): ?><p class="admin-empty-row">برای فعال‌شدن استودیوی محتوا، مایگریشن پایگاه داده را اجرا کنید.</p><?php else: ?>

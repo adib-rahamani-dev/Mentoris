@@ -54,10 +54,11 @@ export function initProfileExperience() {
           Object.entries(error.errors).forEach(([name, messages]) => {
             const input = form.elements.namedItem(name); if (input?.setAttribute) { input.setAttribute('aria-invalid', 'true'); input.closest('details') && (input.closest('details').open = true); first ||= input; }
           });
+          form.dispatchEvent(new CustomEvent('profile:invalid', { detail: { input: first } }));
           first?.focus({ preventScroll: true });
           if (status) status.textContent = Object.values(error.errors).flat().join(' ');
         }
-      } finally { busy = false; buttons.forEach(button => { button.disabled = false; }); }
+      } finally { busy = false; buttons.forEach(button => { button.disabled = form.dataset.surveyClosed==='true'; }); }
     });
   });
   const community = document.querySelector('[data-community-toggle]');
