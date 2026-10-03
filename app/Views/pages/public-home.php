@@ -5,6 +5,14 @@ $homeCopy = [
     'ku' => ['about'=>'دەربارەی مێنتۆریس','about_link'=>'چیرۆکی مێنتۆریس','lines'=>'ڕێگاکانی ئەکادیمی','lines_text'=>'حەوت بوار کە نەخشەی کاری زانستی و پیشەیی مێنتۆریس پێکدەهێنن.','events'=>'بۆنەی داهاتوو','events_text'=>'دەرفەتێک بۆ گفتوگۆ، پەیوەندی و گەشە لەگەڵ کۆمەڵگەی پیشەیی.','courses'=>'کۆرس و بەرنامەکان','founder'=>'دامەزرێنەری مێنتۆریس','founder_link'=>'ژیاننامەی تەواو','experts'=>'مامۆستا و هاوکارانی زانستی','content'=>'توێژینەوە و ناوەڕۆکی پسپۆڕی','community'=>'کۆمەڵگەی پیشەیی مێنتۆریس','community_text'=>'تۆڕێک بۆ فێربوون، گۆڕینەوەی ئەزموون و پەیوەندی لەنێوان چارەسەرکاران و توێژەران.','join'=>'لەگەڵ مێنتۆریس بن','contact'=>'پەیوەندیمان پێوە بکەن'],
     'en' => ['about'=>'About Mentoris','about_link'=>'Our story','lines'=>'Academy pathways','lines_text'=>'Seven fields that shape Mentoris Academy’s scientific and professional roadmap.','events'=>'Upcoming event','events_text'=>'An opportunity to connect, exchange experience, and grow with a professional community.','courses'=>'Courses and learning programs','founder'=>'Founder of Mentoris','founder_link'=>'Read the full biography','experts'=>'Experts and academic collaborators','content'=>'Research and specialist content','community'=>'Mentoris professional community','community_text'=>'A network for learning, exchanging experience, and connecting therapists, researchers, and mental-health professionals.','join'=>'Join Mentoris','contact'=>'Contact us'],
 ][locale()] ?? [];
+if (!empty($eventsArchived)) {
+    [$homeCopy['events'], $homeCopy['events_text']] = [
+        'fa' => ['نشست‌های برگزارشده', 'مروری بر گردهمایی‌های جامعهٔ حرفه‌ای منتوریس؛ این نشست‌ها برگزار شده‌اند و ثبت‌نامشان پایان یافته است.'],
+        'ar' => ['لقاءات أُقيمت', 'تعرّف إلى لقاءات مجتمع منتوريس المهني السابقة؛ انتهى التسجيل فيها.'],
+        'ku' => ['کۆبوونەوە بەڕێوەچووەکان', 'چاوێک بە کۆبوونەوەکانی کۆمەڵگەی پیشەیی مێنتۆریسدا؛ تۆمارکردنیان کۆتایی هاتووە.'],
+        'en' => ['Past gatherings', 'Explore previous Mentoris community gatherings. Registration for these events has closed.'],
+    ][locale()];
+}
 ?>
 <section class="public-hero public-hero--sage" id="home">
     <div class="public-hero__backdrop" aria-hidden="true"></div>
@@ -37,7 +45,7 @@ $homeCopy = [
 
 <section class="section section--muted" id="events"><div class="container">
     <header class="section__head" data-reveal><div><span class="eyebrow">Events</span><h2><?= e($homeCopy['events']) ?></h2><p><?= e($homeCopy['events_text']) ?></p></div><a class="btn btn--secondary" href="/events"><?= e(t('nav.events')) ?></a></header>
-    <?php if ($events): ?><div class="grid grid--3 home-events <?= count($events) === 1 ? 'home-events--single' : '' ?>"><?php foreach ($events as $event): $event = \App\Services\PublicContentService::event($event['slug']) ?? $event; require view_path('components/cards/event-card.php'); endforeach; ?></div><?php else: ?><?php $emptyIcon='calendar'; require view_path('components/content-empty.php'); ?><?php endif; ?>
+    <?php if ($events): ?><div class="grid grid--<?= count($events) === 2 ? '2' : '3' ?> home-events <?= count($events) === 1 ? 'home-events--single' : '' ?>"><?php foreach ($events as $event): $event = \App\Services\PublicContentService::event($event['slug']) ?? $event; require view_path('components/cards/event-card.php'); endforeach; ?></div><?php else: ?><?php $emptyIcon='calendar'; require view_path('components/content-empty.php'); ?><?php endif; ?>
 </div></section>
 
 <?php if (!empty($courses)): ?>

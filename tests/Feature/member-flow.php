@@ -238,6 +238,21 @@ $check($app->handle(new Request(server:['REQUEST_METHOD'=>'POST','REQUEST_URI'=>
 $seoSchema=\App\Services\SeoService::structuredData(\App\Services\SeoService::metadata('منتوریس','معرفی آکادمی'));
 $websites=array_values(array_filter($seoSchema['@graph'],fn($item)=>$item['@type']==='WebSite'));
 $check(count($websites)===1 && $websites[0]['name']==='منتوریس' && in_array('Mentoris Academy',$websites[0]['alternateName'],true),'There is one consistent branded WebSite schema.');
+$homeController=new \App\Controllers\HomeController();
+$futureHome=$homeController->index(new Request())->content();
+$check(str_contains($futureHome,'رویداد پیش‌رو') && str_contains($futureHome,'/events/future-meeting'),'A published future event is featured on the homepage.');
+$futureMeta=$pdo->query("SELECT metadata FROM content_translations WHERE entity_id='future-event'")->fetchColumn();
+$fullMeta=json_decode($futureMeta,true); $fullMeta['event_status']='full';
+$pdo->prepare("UPDATE content_translations SET metadata=:meta WHERE entity_id='future-event'")->execute(['meta'=>json_encode($fullMeta)]);
+$check(str_contains($homeController->index(new Request())->content(),'event-card--full'),'A full upcoming event remains visible with its real status.');
+$pdo->exec("UPDATE content_entities SET status='draft' WHERE id='future-event'");
+$archivedHome=$homeController->index(new Request())->content();
+preg_match('~<section[^>]*id="events".*?</section>~s',$archivedHome,$homeEventSection);
+$check(str_contains($homeEventSection[0],'نشست‌های برگزارشده') && str_contains($homeEventSection[0],'/events/therapists-circle-tabriz') && str_contains($homeEventSection[0],'/events/therapists-circle-second'),'Both completed gatherings remain visible when no future event exists.');
+$check(substr_count($homeEventSection[0],'event-card--completed')===2 && !str_contains($homeEventSection[0],'content-empty') && !str_contains($homeEventSection[0],'event-capacity'),'Past events replace the empty placeholder without reopening registration.');
+if(in_array('--preview',$argv,true)) file_put_contents(BASE_PATH.'/storage/temp/preview-home-events.html',$archivedHome);
+$pdo->exec("UPDATE content_entities SET status='published' WHERE id='future-event'");
+$pdo->prepare("UPDATE content_translations SET metadata=:meta WHERE entity_id='future-event'")->execute(['meta'=>$futureMeta]);
 $member=$profiles->find($user['id']);
 $pages=[
  'register'=>$view->render('auth.register',['errors'=>[],'old'=>[],'title'=>'ثبت‌نام'],'layouts.main'),

@@ -4,7 +4,6 @@ $modeLabels = \App\Services\PublicContentService::eventModeLabels();
 $status = $event['status'] ?? 'upcoming';
 $statusLabel = $event['status_label'] ?? ($statusLabels[$status] ?? $status);
 $circleReady = $event['slug'] !== 'therapists-circle-second' || (new \App\Repositories\CircleRepository())->available();
-if (!$circleReady) $statusLabel = $statusLabels['upcoming'] ?? $statusLabel;
 $mode = $event['mode'] ?? 'offline';
 $modeLabel = $event['mode_label'] ?? ($modeLabels[$mode] ?? $mode);
 $capacity = (int) ($event['capacity'] ?? 0);

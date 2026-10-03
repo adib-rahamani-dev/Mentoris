@@ -13,11 +13,15 @@ final class HomeController extends Controller
 {
     public function index(Request $request): Response
     {
+        $allEvents = PublicContentService::events();
+        $upcomingEvents = array_values(array_filter($allEvents, static fn (array $event): bool => in_array($event['status'], ['registration-open', 'upcoming', 'full'], true)));
+        $pastEvents = array_values(array_filter($allEvents, static fn (array $event): bool => $event['status'] === 'completed'));
         return $this->view('pages.public-home', [
             'title' => (\App\Core\Translator::locale()==='fa' ? 'آکادمی منتوریس' : 'Mentoris Academy') . ' | ' . t('home.title.accent'),
             'description' => t('home.lead'),
             'lines' => PublicContentService::academyLines(),
-            'events' => array_values(array_filter(PublicContentService::events(), static fn (array $event): bool => in_array($event['status'], ['registration-open','upcoming'], true))),
+            'events' => array_slice($upcomingEvents ?: $pastEvents, 0, 3),
+            'eventsArchived' => $upcomingEvents === [] && $pastEvents !== [],
             'courses' => array_values(array_filter(PublicContentService::courses(), static fn (array $course): bool => $course['status'] === 'active')),
             'mentors' => PublicContentService::mentors(),
             'articles' => PublicContentService::articles(),
