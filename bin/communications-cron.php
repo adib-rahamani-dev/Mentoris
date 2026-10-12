@@ -29,6 +29,8 @@ try {
         $api->call('setWebhook',['url'=>$base.'/api/telegram/webhook','secret_token'=>$secret,'allowed_updates'=>['message','callback_query'],'max_connections'=>5]);
         file_put_contents($marker,(string)($bot['username']??''),LOCK_EX);
     }
+    $hook=$api->call('getWebhookInfo');
+    $state['webhook']=['host'=>parse_url((string)($hook['url']??''),PHP_URL_HOST),'path'=>parse_url((string)($hook['url']??''),PHP_URL_PATH),'pending'=>(int)($hook['pending_update_count']??0),'last_error'=>mb_substr((string)($hook['last_error_message']??''),0,300),'last_error_at'=>$hook['last_error_date']??null];
     $state['reminders']=(new \App\Services\CommunicationNoticeService($hub))->reminders();
     $state['worker']=(new \App\Services\CommunicationWorker())->run();
     $state['ok']=true;
