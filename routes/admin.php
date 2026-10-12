@@ -27,6 +27,7 @@ $router->get('/admin/feedback', [\App\Controllers\AdminFeedbackController::class
 $router->post('/admin/feedback/{slug:[a-z-]+}/schedule', [\App\Controllers\AdminFeedbackController::class, 'schedule'], ['auth', 'can:engagements.manage', 'csrf', 'rate:20,60']);
 $router->get('/admin/telegram', [\App\Controllers\AdminTelegramController::class, 'index'], ['auth', 'can:engagements.view', 'rate:120,60']);
 $router->get('/admin/communications', [\App\Controllers\CommunicationController::class, 'admin'], ['auth','can:engagements.view','rate:120,60']);
+$router->get('/admin/circle-applications/{id}/resume', [\App\Controllers\EventsController::class, 'resume'], ['auth','can:engagements.view','rate:30,60']);
 $router->post('/admin/communications/retry', [\App\Controllers\CommunicationController::class, 'retry'], ['auth','can:engagements.manage','csrf','rate:3,60']);
 $router->get('/admin/support', [\App\Controllers\SupportController::class, 'adminIndex'], ['auth','can:engagements.view','rate:120,60']);
 $router->get('/admin/support/{id:[a-f0-9]+}', [\App\Controllers\SupportController::class, 'adminShow'], ['auth','can:engagements.view','rate:90,60']);

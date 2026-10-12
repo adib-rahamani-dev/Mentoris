@@ -16,6 +16,7 @@ $schemas=[
  'content_entities'=>'id TEXT PRIMARY KEY,entity_type TEXT,slug TEXT,status TEXT,sort_order INTEGER,author_id TEXT REFERENCES users(id),published_at TEXT,created_at TEXT,updated_at TEXT,UNIQUE(entity_type,slug)',
  'content_translations'=>'id TEXT PRIMARY KEY,entity_id TEXT REFERENCES content_entities(id),locale TEXT,title TEXT,subtitle TEXT,excerpt TEXT,body TEXT,metadata TEXT,created_at TEXT,updated_at TEXT,UNIQUE(entity_id,locale)',
  'event_signups'=>'id TEXT PRIMARY KEY,user_id TEXT REFERENCES users(id),event_slug TEXT,name TEXT,phone TEXT,city TEXT,status TEXT,attended_at TEXT,created_at TEXT,updated_at TEXT,UNIQUE(event_slug,phone)',
+ 'circle_applications'=>'signup_id TEXT PRIMARY KEY REFERENCES event_signups(id),details TEXT,resume TEXT,created_at TEXT',
  'course_requests'=>'id TEXT PRIMARY KEY,user_id TEXT REFERENCES users(id),course_slug TEXT,name TEXT,phone TEXT,payment_plan TEXT,status TEXT,created_at TEXT,updated_at TEXT,UNIQUE(course_slug,phone)',
  'enrollments'=>'id TEXT,user_id TEXT,course_slug TEXT,status TEXT,enrolled_at TEXT',
  'event_registrations'=>'id TEXT,user_id TEXT,event_slug TEXT,status TEXT,created_at TEXT',
@@ -54,8 +55,18 @@ $check(str_contains($pages['journal'],'article-takeaways') && str_contains($page
 $eventController=new EventsController();
 $posted=['name'=>'عضو رویداد','phone'=>'+۹۸ (۹۱۲) ۷۷۷-۶۶۶۶','city'=>'تبریز'];
 $response=$eventController->register(new Request(body:$posted),'therapists-circle-third');
+$check($response->status()===200 && (new CircleRepository())->findSignup('therapists-circle-third','09127776666')===null,'Incomplete applications cannot register without professional details and a resume.');
+$posted+=['education'=>'ارشد','university'=>'دانشگاه تبریز','specialization'=>'بالینی','experience'=>'۳ سال','approach'=>'ACT','practice_areas'=>'بزرگسال','professional_number'=>'','motivation'=>''];
+$response=$eventController->register(new Request(body:$posted),'therapists-circle-third');
+$check(str_contains($response->content(),'رزومه را') && (int)$pdo->query('SELECT COUNT(*) FROM event_signups')->fetchColumn()===0,'A complete text form still requires a real uploaded resume.');
+$file=(new \App\Services\SupportFileService())->store("%PDF-1.4\n% Test resume\n",'resume.pdf');
+$posted['application']=array_intersect_key($posted,array_flip(['education','university','specialization','experience','approach','practice_areas','professional_number','motivation']));$posted['resume']=$file;
+(new CircleRepository())->signup('therapists-circle-third',$posted,null);
 $signup=(new CircleRepository())->findSignup('therapists-circle-third','09127776666');
-$check($signup['status']==='requested' && $response->status()===303 && str_contains($eventController->show(new Request(),'therapists-circle-third')->content(),'منتظر تأیید'),'A real circle request remains pending, with a refresh-safe confirmation redirect.');
+$application=(new CircleRepository())->application($signup['id']);
+$check($signup['status']==='requested' && $application['details']['university']==='دانشگاه تبریز' && $application['resume']['filename']==='resume.pdf','Professional details and private resume metadata persist with the pending circle request.');
+$check((new EventsController())->resume(new Request())->status()===403,'Anonymous visitors cannot download resumes.');
+unlink(BASE_PATH.'/storage/uploads/support/'.$file['local_name']);
 $eventController->register(new Request(body:$posted),'therapists-circle-third');
 $check((int)$pdo->query('SELECT COUNT(*) FROM event_signups')->fetchColumn()===1,'Duplicate circle request is prevented.');
 $eventController->register(new Request(body:$posted),'therapists-circle-second');

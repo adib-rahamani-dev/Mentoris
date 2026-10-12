@@ -20,14 +20,21 @@ final class CircleRepository
         $phone = \App\Core\PhoneNumber::normalize((string) $data['phone']);
         $now = Database::now();
         try {
+            Database::transaction($this->pdo(), function () use ($slug,$data,$userId,$phone,$now): void {
+            $id=Security::randomToken(16);
             $statement = $this->pdo()->prepare('INSERT INTO event_signups (id,user_id,event_slug,name,phone,city,status,created_at,updated_at) VALUES (:id,:user_id,:slug,:name,:phone,:city,:status,:created_at,:updated_at)');
-            $statement->execute(['id' => Security::randomToken(16), 'user_id' => $userId, 'slug' => $slug, 'name' => trim((string) $data['name']), 'phone' => $phone, 'city' => trim((string) $data['city']), 'status' => 'requested', 'created_at' => $now, 'updated_at' => $now]);
+            $statement->execute(['id' => $id, 'user_id' => $userId, 'slug' => $slug, 'name' => trim((string) $data['name']), 'phone' => $phone, 'city' => trim((string) $data['city']), 'status' => 'requested', 'created_at' => $now, 'updated_at' => $now]);
+            if(isset($data['application'],$data['resume'])) {
+                $this->pdo()->prepare('INSERT INTO circle_applications (signup_id,details,resume,created_at) VALUES (:id,:details,:resume,:at)')->execute(['id'=>$id,'details'=>json_encode($data['application'],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),'resume'=>json_encode($data['resume'],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),'at'=>$now]);
+            }
+            });
         } catch (PDOException $exception) {
             if (in_array((string) $exception->getCode(), ['23000', '19'], true)) throw new RuntimeException('این شماره برای این رویداد قبلاً ثبت شده است.');
             throw $exception;
         }
         $row=$this->findSignup($slug,$phone) ?? throw new RuntimeException('درخواست ثبت نشد.');
-        (new \App\Services\CommunicationNoticeService(new CommunicationRepository($this->pdo())))->engagement('circle',$row['id'],'requested');
+        try {(new \App\Services\CommunicationNoticeService(new CommunicationRepository($this->pdo())))->engagement('circle',$row['id'],'requested');}
+        catch (\Throwable) { error_log('Circle request saved; communication notice could not be queued.'); }
         return $row;
     }
 
@@ -153,6 +160,16 @@ final class CircleRepository
     }
 
     private function pdo(): PDO { return $this->database ?? Database::connection(); }
+
+    public function applicationsAvailable(): bool { return $this->available() && $this->tableExists('circle_applications'); }
+
+    public function application(string $id): ?array
+    {
+        if(!$this->tableExists('circle_applications'))return null;
+        $s=$this->pdo()->prepare('SELECT details,resume FROM circle_applications WHERE signup_id=:id');$s->execute(['id'=>$id]);$row=$s->fetch();
+        if(!$row)return null;
+        return ['details'=>json_decode($row['details'],true) ?: [],'resume'=>json_decode($row['resume'],true) ?: []];
+    }
 
     public function available(): bool { return $this->tableExists('event_signups'); }
 

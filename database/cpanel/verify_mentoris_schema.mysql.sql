@@ -1,4 +1,4 @@
--- Read-only verification of the latest Mentoris schema (2026-10-12).
+-- Read-only verification of the latest Mentoris schema (2026-10-13).
 SET NAMES utf8mb4;
 
 SELECT expected.table_name,
@@ -40,6 +40,7 @@ FROM (
     UNION ALL SELECT 'registration_sms_challenges'
     UNION ALL SELECT 'course_requests'
     UNION ALL SELECT 'support_attachments'
+    UNION ALL SELECT 'circle_applications'
     UNION ALL SELECT 'support_messages'
     UNION ALL SELECT 'support_tickets'
     UNION ALL SELECT 'comm_actions'
@@ -54,8 +55,8 @@ LEFT JOIN information_schema.tables AS actual
 ORDER BY expected.table_name;
 
 SELECT COUNT(*) AS installed_mentoris_tables,
-       43 AS expected_mentoris_tables,
-       CASE WHEN COUNT(*) = 43 THEN 'SCHEMA_OK' ELSE 'SCHEMA_INCOMPLETE' END AS result
+       44 AS expected_mentoris_tables,
+       CASE WHEN COUNT(*) = 44 THEN 'SCHEMA_OK' ELSE 'SCHEMA_INCOMPLETE' END AS result
 FROM information_schema.tables
 WHERE table_schema = DATABASE()
   AND table_name IN (
@@ -95,6 +96,7 @@ WHERE table_schema = DATABASE()
       'registration_sms_challenges',
       'course_requests',
       'support_attachments',
+      'circle_applications',
       'support_messages',
       'support_tickets',
       'comm_actions',
