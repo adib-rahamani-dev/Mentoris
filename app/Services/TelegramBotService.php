@@ -19,7 +19,7 @@ final class TelegramBotService
             $action=(string)($callback['data'] ?? '');
             if($action==='menu') { $this->menu($id); return; }
             if($action==='ask') { $this->repository->state($id,'question'); $this->repository->message($id,'سؤال خود درباره رویدادها، دوره‌ها یا خدمات منتوریس را در یک پیام بنویسید (حداکثر ۲۰۰۰ کاراکتر). پاسخ تیم در همین گفت‌وگو ارسال می‌شود. اطلاعات خصوصی مراجعان را ارسال نکنید. برای برگشت /cancel را بزنید.'); return; }
-            if($action==='tools') { $this->repository->message($id,"جعبه‌ابزار رایگان منتوریس\nبرگه مرور جلسه، برنامه تمرین عامدانه و راهنمای آماده‌شدن برای سوپرویژن؛ قابل چاپ و ذخیره.",$this->links([['دریافت ابزارها','/resources']])); return; }
+            if($action==='tools') { $this->repository->message($id,"ابزارهای خودارزیابی منتوریس\nانعطاف‌پذیری روان‌شناختی MPFI، فرسودگی شغلی ماسلاچ و بهزیستی ریف؛ پاسخ مرحله‌ای و گزارش قابل چاپ. نتیجه‌ها آموزشی‌اند و تشخیص بالینی نیستند.",$this->links([['شروع خودارزیابی','/resources?lang=fa']])); return; }
             if($action==='faq') { $this->repository->message($id,"عضویت سایت رایگان است و فعلاً تأیید پیامکی ندارد.\nاطلاعات تکمیلی را می‌توانید بعداً ذخیره کنید.\nدرخواست جامعه حرفه‌ای با یک تیک در پروفایل ثبت می‌شود.\nدو نشست قبلی پایان یافته‌اند و ثبت‌نامشان بسته است.\nبرای ارسال سؤال از گزینه «پرسیدن سؤال» استفاده کنید.",$this->links([['پروفایل و عضویت','/profile'],['بازخورد نشست‌ها','/feedback']])); return; }
             if($action==='events') {
                 $rows=[]; foreach(PublicContentService::events() as $event) $rows[]=[['text'=>mb_substr($event['title'],0,55),'callback_data'=>'e:'.self::eventKey($event['slug'])]];

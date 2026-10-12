@@ -40,7 +40,7 @@ $router->get('/live', [LiveController::class, 'index'], ['rate:60,60']);
 $router->post('/api/telegram/webhook', [\App\Controllers\TelegramController::class, 'webhook']);
 $router->get('/resources', [\App\Controllers\ResourcesController::class, 'index'], ['rate:60,60']);
 $router->get('/resources/{slug:[a-z-]+}', [\App\Controllers\ResourcesController::class, 'show'], ['rate:60,60']);
-$router->get('/resources/{slug:[a-z-]+}/download', [\App\Controllers\ResourcesController::class, 'download'], ['auth', 'rate:20,60']);
+$router->get('/resources/{slug:[a-z-]+}/download', [\App\Controllers\ResourcesController::class, 'download'], ['rate:20,60']);
 $router->get('/feedback', [FeedbackController::class, 'index'], ['rate:60,60']);
 $router->post('/feedback/access', [FeedbackController::class, 'access'], ['csrf', 'rate:5,60']);
 $router->post('/feedback/submit', [FeedbackController::class, 'feedback'], ['csrf', 'rate:5,60']);

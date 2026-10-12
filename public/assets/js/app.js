@@ -20,6 +20,11 @@ import { initProfileWizard } from './pages/profile-wizard.js?v=1.0.0';
 import { initSurveyClocks } from './pages/survey-clock.js?v=1.0.0';
 
 ready(() => {
+  if (document.querySelector('[data-assessment]')) {
+    import('./pages/assessments.js?v=1.0.0').then(module => module.initAssessments()).catch(() => {
+      document.querySelector('[data-assessment-error]').textContent = 'بخش محاسبه بارگذاری نشد. صفحه را تازه کنید؛ متن سؤال‌ها و راهنمای نمره‌گذاری در دسترس است.';
+    });
+  }
   initMemberProfile();
   initProfileExperience();
   initPhoneVerification();

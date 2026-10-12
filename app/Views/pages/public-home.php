@@ -61,5 +61,6 @@ if (!empty($eventsArchived)) {
 </div></section>
 
 <?php if ($articles): ?><section class="section"><div class="container"><header class="section__head"><div><span class="eyebrow">Mentoris Journal</span><h2><?= e($homeCopy['content']) ?></h2></div><a class="btn btn--ghost" href="/articles"><?= e(t('nav.articles')) ?></a></header><div class="grid grid--3"><?php foreach (array_slice($articles, 0, 3) as $article) { require view_path('components/cards/article-card.php'); } ?></div></div></section><?php endif; ?>
+<?php if(locale()==='fa'): require view_path('components/sections/resources.php'); endif; ?>
 
 <section class="section section--muted"><div class="container"><div class="community-launch" data-reveal><div><span class="eyebrow">Community</span><h2><?= e($homeCopy['community']) ?></h2><p><?= e($homeCopy['community_text']) ?></p></div><div class="cluster"><a class="btn btn--primary btn--lg" href="/community"><?= e($homeCopy['join']) ?></a><a class="btn btn--ghost btn--lg" href="/contact"><?= e($homeCopy['contact']) ?></a></div></div></div></section>

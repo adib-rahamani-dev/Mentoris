@@ -190,7 +190,7 @@ $check($telegram->user('12345',$message['from'])['state']==='event_confirm','Bot
 $callback['data']='confirm'; $bot->handle(['update_id'=>11,'callback_query'=>$callback]);
 $bot->handle(['update_id'=>12,'callback_query'=>$callback]);
 $check((int)$pdo->query('SELECT COUNT(*) FROM telegram_event_requests')->fetchColumn()===1 && $pdo->query('SELECT phone FROM telegram_event_requests')->fetchColumn()==='09122222222','Confirmed bot request persists once and never issues a paid ticket.');
-$check((new \App\Controllers\ResourcesController())->download((function(){ $r=new Request(); $r->setRouteParams(['slug'=>'session-reflection']); return $r; })())->status()===200,'Resources download stays available before metrics migration.');
+$check((new \App\Controllers\ResourcesController())->download((function(){ $r=new Request(); $r->setRouteParams(['slug'=>'psychological-flexibility']); return $r; })())->status()===200,'Resources download stays available before metrics migration.');
 $pdo->exec('CREATE TABLE resource_downloads (user_id TEXT,resource_slug TEXT,downloads INTEGER,last_download_at TEXT,PRIMARY KEY(user_id,resource_slug))');
 $resourceRepo=new \App\Repositories\ResourceRepository(); $resourceRepo->downloaded($fallbackUser['id'],'session-reflection'); $resourceRepo->downloaded($fallbackUser['id'],'session-reflection');
 $resourceStats=$resourceRepo->stats()['rows'][0]; $check((int)$resourceStats['members']===1 && (int)$resourceStats['downloads']===2,'Lead-magnet report counts unique members separately from repeat downloads.');
@@ -276,7 +276,7 @@ $pages=[
  'feedback'=>$feedback->index(new Request())->content(),
  'notifications'=>$view->render('user.notifications',['user'=>$user,'title'=>'اعلان‌ها'],'layouts.main'),
  'resources'=>$view->render('pages.resources',['title'=>'ابزارهای رایگان','resources'=>\App\Services\ResourceService::all(),'tool'=>null,'member'=>$user],'layouts.main'),
- 'resource-sheet'=>$view->render('pages.resources',['title'=>'ابزار','resources'=>\App\Services\ResourceService::all(),'tool'=>\App\Services\ResourceService::all()['session-reflection'],'slug'=>'session-reflection','member'=>$user],'layouts.main'),
+ 'resource-sheet'=>$view->render('pages.resources',['title'=>'ابزار','resources'=>\App\Services\ResourceService::all(),'tool'=>\App\Services\ResourceService::all()['psychological-flexibility'],'slug'=>'psychological-flexibility','member'=>$user],'layouts.main'),
  'admin-telegram'=>$view->render('admin.telegram',['title'=>'تلگرام','admin'=>$admin,'filters'=>[],'notice'=>null,'configured'=>false,'report'=>$telegram->dashboard()],'layouts.admin'),
  'admin-article'=>$articlePage->content(),
  'admin-articles'=>$editor->workspace(new Request(),'articles')->content(),

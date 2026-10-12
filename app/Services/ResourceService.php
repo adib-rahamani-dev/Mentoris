@@ -2,21 +2,37 @@
 declare(strict_types=1);
 namespace App\Services;
 
+/** Versioned definitions; personal answers never enter this service. */
 final class ResourceService
 {
+    public const RETIRED = ['session-reflection','deliberate-practice','supervision-prep'];
     public static function all(): array
     {
-        return [
-            'session-reflection'=>['title'=>'مرور کوتاه پس از جلسه','icon'=>'message','time'=>'۳ دقیقه','intro'=>'برای دیدن آنچه در جلسه گذشت و انتخاب یک قدم کوچک برای جلسهٔ بعد.','questions'=>['چه چیزی در این جلسه به ارتباط کمک کرد؟','در کدام لحظه نیاز به مکث یا مشورت داشتم؟','یک نشانهٔ قابل مشاهده از تجربهٔ مراجع چه بود؟','برای جلسهٔ بعد کدام سؤال را می‌خواهم روشن کنم؟','بعد از جلسه برای بازیابی تمرکز چه کاری انجام می‌دهم؟']],
-            'deliberate-practice'=>['title'=>'برنامهٔ یک تمرین کوچک','icon'=>'target','time'=>'۵ دقیقه','intro'=>'یک مهارت مشخص را انتخاب کنید و برای تمرین، بازخورد و بازبینی آن برنامه بنویسید.','questions'=>['مهارتی که این هفته تمرین می‌کنم چیست؟','در چه موقعیت مشخصی به این مهارت نیاز دارم؟','یک تمرین کوتاه یا نقش‌آفرینی برای آن چیست؟','از چه کسی و دربارهٔ کدام رفتار بازخورد می‌گیرم؟','چه زمانی تمرین را تکرار و نتیجه را مرور می‌کنم؟']],
-            'supervision-prep'=>['title'=>'آماده برای سوپرویژن','icon'=>'users','time'=>'۵ دقیقه','intro'=>'پیش از جلسهٔ سوپرویژن، موضوع و سؤال اصلی خود را روشن کنید.','questions'=>['سؤال اصلی من برای سوپرویژن چیست؟','چه مشاهده‌هایی برای فهم این سؤال لازم است؟','چه فرض‌هایی دارم و چه چیزهایی هنوز نامعلوم‌اند؟','واکنش‌های خودم در این موقعیت چه بوده‌اند؟','می‌خواهم پس از سوپرویژن چه اقدام مشخصی انجام دهم؟']],
-        ];
+        static $tools;
+        return $tools ??= json_decode(file_get_contents(dirname(__DIR__).'/Content/AssessmentTools.json'),true,512,JSON_THROW_ON_ERROR);
     }
     public static function text(string $slug): ?string
     {
-        $tool=self::all()[$slug] ?? null; if(!$tool) return null;
-        $text="منتوریس | ".$tool['title']."\n\n".$tool['intro']."\n\n";
-        foreach($tool['questions'] as $i=>$question) $text.=($i+1).'. '.$question."\nپاسخ: ........................................................\n\n";
-        return $text."این برگه برای تأمل حرفه‌ای و آموزشی است. نام، شماره تماس یا اطلاعات شناسایی مراجعان را در آن ثبت نکنید.\nhttps://mentorisacademy.com/resources\n";
+        $tool=self::all()[$slug] ?? null;
+        if (!$tool) return null;
+        $text='منتوریس | '.$tool['title']."\n\n".$tool['instruction']."\n\nگزینه‌ها: ".implode(' | ',$tool['labels'])."\n\n";
+        foreach($tool['questions'] as $i=>$question) $text.=($i+1).'. '.$question."\nپاسخ: ....................\n\n";
+        return $text."روش محاسبه\n".$tool['scoring']."\n\n".$tool['notice']."\n\nاین ابزار خودارزیابی آموزشی است و جایگزین ارزیابی بالینی نیست.\nhttps://mentorisacademy.com/resources/".$slug."\n";
+    }
+    public static function schemas(?string $slug=null): array
+    {
+        $base=rtrim((string)env('APP_URL','https://mentorisacademy.com'),'/');
+        if(!preg_match('#^https?://#i',$base)) $base='https://'.$base;
+        $crumbs=[['name'=>'منتوریس','item'=>$base.'/?lang=fa'],['name'=>'ابزارهای خودارزیابی','item'=>$base.'/resources?lang=fa']];
+        $nodes=[];
+        if($slug && ($tool=self::all()[$slug] ?? null)) {
+            $url=$base.'/resources/'.$slug.'?lang=fa'; $crumbs[]=['name'=>$tool['short'],'item'=>$url];
+            $nodes[]=['@type'=>'WebApplication','@id'=>$url.'#tool','name'=>$tool['title'],'description'=>$tool['intro'],'url'=>$url,'inLanguage'=>'fa-IR','applicationCategory'=>'HealthApplication','operatingSystem'=>'Any','browserRequirements'=>'Requires JavaScript','isAccessibleForFree'=>true,'offers'=>['@type'=>'Offer','price'=>'0','priceCurrency'=>'IRR'],'publisher'=>['@id'=>$base.'/#organization'],'dateModified'=>$tool['updated'],'citation'=>array_column($tool['sources'],'url')];
+        } else {
+            $items=[]; foreach(self::all() as $key=>$tool) $items[]=['@type'=>'ListItem','position'=>count($items)+1,'name'=>$tool['title'],'url'=>$base.'/resources/'.$key.'?lang=fa'];
+            $nodes[]=['@type'=>'CollectionPage','@id'=>$base.'/resources?lang=fa#collection','name'=>'پرسشنامه‌های خودارزیابی منتوریس','inLanguage'=>'fa-IR','mainEntity'=>['@type'=>'ItemList','itemListElement'=>$items]];
+        }
+        $nodes[]=['@type'=>'BreadcrumbList','itemListElement'=>array_map(static fn($crumb,$index)=>['@type'=>'ListItem','position'=>$index+1,...$crumb],$crumbs,array_keys($crumbs))];
+        return $nodes;
     }
 }

@@ -29,6 +29,7 @@ $accountPaths = ['/dashboard', '/profile', '/my-courses', '/my-events', '/my-cer
                     <a class="dropdown__item" href="/programs"><?= e(t('nav.programs')) ?></a>
                     <a class="dropdown__item" href="/academy"><?= e(t('nav.lines')) ?></a>
                     <a class="dropdown__item" href="/specializations"><?= e(t('nav.specializations')) ?></a>
+                    <a class="dropdown__item" href="/resources?lang=fa" lang="fa">ابزارهای خودارزیابی</a>
                 </div>
             </div>
             <a class="navbar__link <?= str_starts_with($currentPath, '/events') ? 'is-active' : '' ?>" href="/events"><?= e(t('nav.events')) ?></a>

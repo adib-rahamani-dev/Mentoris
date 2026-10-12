@@ -34,8 +34,14 @@ final class SitemapController
         foreach (PublicContentService::mentors() as $item) {
             $paths[$item['slug'] === 'maryam-haghani' ? '/founder' : '/mentors/' . $item['slug']] = ['monthly', '0.7'];
         }
+        // Article discovery must not depend on the visitor's selected language.
         $articleRows = \App\Content\InboundArticles::all();
-        try { $articleRows = [...$articleRows, ...(new ContentRepository())->publishedSlugs('article')]; } catch (\Throwable) {}
+        try {
+            $contentRepository=new ContentRepository();
+            $hidden=$contentRepository->unpublishedSlugs('article');
+            $articleRows=array_values(array_filter($articleRows,static fn($row)=>!in_array($row['slug'],$hidden,true)));
+            $articleRows=[...$articleRows,...$contentRepository->publishedSlugs('article')];
+        } catch (\Throwable) {}
         foreach ($articleRows as $item) $paths['/articles/' . $item['slug']] = ['weekly', '0.8'];
 
         $locales = ['fa' => 'fa', 'ar' => 'ar', 'ku' => 'ckb', 'en' => 'en'];
@@ -54,6 +60,11 @@ final class SitemapController
             foreach ($pathLocales as $locale => $hreflang) {
                 $url = $baseUrl . $path . ($path === '/' ? '?' : '?') . 'lang=' . $locale;
                 $xml .= '  <url><loc>' . $escape($url) . '</loc>';
+                if(str_starts_with($path,'/resources/')) {
+                    $resourceSlug=substr($path,strlen('/resources/'));
+                    $updated=\App\Services\ResourceService::all()[$resourceSlug]['updated'] ?? '';
+                    if(preg_match('/^\d{4}-\d{2}-\d{2}$/',$updated)) $xml.='<lastmod>'.$updated.'</lastmod>';
+                }
                 if (!empty($articleModified[$path]) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $articleModified[$path])) {
                     $xml .= '<lastmod>' . $articleModified[$path] . '</lastmod>';
                 }
