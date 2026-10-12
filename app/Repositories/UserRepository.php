@@ -362,8 +362,10 @@ final class UserRepository
 
     private function insertNotification(PDO $pdo, string $userId, string $title, string $message, string $now): void
     {
+        $notificationId=Security::randomToken(8);
         $statement = $pdo->prepare('INSERT INTO notifications (id, user_id, title, message, created_at) VALUES (:id, :user_id, :title, :message, :created_at)');
-        $statement->execute(['id' => Security::randomToken(8), 'user_id' => $userId, 'title' => $title, 'message' => $message, 'created_at' => $now]);
+        $statement->execute(['id'=>$notificationId,'user_id'=>$userId,'title'=>$title,'message'=>$message,'created_at'=>$now]);
+        $hub=new CommunicationRepository($pdo);if($hub->available())$hub->notifyUser($userId,$title,$message,'notification:'.$notificationId);
     }
 
     private function userSelect(string $alias = ''): string

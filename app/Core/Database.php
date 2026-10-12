@@ -83,6 +83,11 @@ final class Database
 
     public static function transaction(PDO $connection, callable $callback, int $attempts = 3): mixed
     {
+        if($connection->inTransaction()) {
+            $savepoint='mtr_'.bin2hex(random_bytes(6));$connection->exec('SAVEPOINT '.$savepoint);
+            try {$result=$callback($connection);$connection->exec('RELEASE SAVEPOINT '.$savepoint);return $result;}
+            catch(Throwable $exception){$connection->exec('ROLLBACK TO SAVEPOINT '.$savepoint);$connection->exec('RELEASE SAVEPOINT '.$savepoint);throw $exception;}
+        }
         $attempt = 0;
         retry:
         $attempt++;

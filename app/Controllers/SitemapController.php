@@ -20,6 +20,7 @@ final class SitemapController
             '/academy' => ['monthly', '0.8'],
             '/events' => ['weekly', '0.9'], '/community' => ['monthly', '0.7'], '/mentors' => ['monthly', '0.7'],
             '/contact' => ['yearly', '0.6'],
+            '/help' => ['monthly','0.6'],
         ];
         if (PublicContentService::programs()) $paths['/programs'] = ['weekly', '0.8'];
         if (PublicContentService::courses()) $paths['/courses'] = ['weekly', '0.8'];
@@ -56,7 +57,7 @@ final class SitemapController
         $xml .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">' . "\n";
         foreach ($paths as $path => $_) {
             $pathLocales = isset($articleLocales[$path]) ? array_intersect_key($locales, array_flip($articleLocales[$path])) : ($path === '/articles' ? array_intersect_key($locales, array_flip(PublicContentService::articleIndexLocales())) : $locales);
-            if(str_starts_with($path,'/resources')) $pathLocales=['fa'=>'fa'];
+            if(str_starts_with($path,'/resources') || $path==='/help') $pathLocales=['fa'=>'fa'];
             foreach ($pathLocales as $locale => $hreflang) {
                 $url = $baseUrl . $path . ($path === '/' ? '?' : '?') . 'lang=' . $locale;
                 $xml .= '  <url><loc>' . $escape($url) . '</loc>';

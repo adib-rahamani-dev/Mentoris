@@ -1,4 +1,4 @@
--- Read-only verification of the latest Mentoris schema (2026-10-04).
+-- Read-only verification of the latest Mentoris schema (2026-10-12).
 SET NAMES utf8mb4;
 
 SELECT expected.table_name,
@@ -39,6 +39,14 @@ FROM (
     UNION ALL SELECT 'sms_deliveries'
     UNION ALL SELECT 'registration_sms_challenges'
     UNION ALL SELECT 'course_requests'
+    UNION ALL SELECT 'support_attachments'
+    UNION ALL SELECT 'support_messages'
+    UNION ALL SELECT 'support_tickets'
+    UNION ALL SELECT 'comm_actions'
+    UNION ALL SELECT 'comm_outbox'
+    UNION ALL SELECT 'comm_updates'
+    UNION ALL SELECT 'comm_links'
+    UNION ALL SELECT 'comm_accounts'
 ) AS expected
 LEFT JOIN information_schema.tables AS actual
     ON actual.table_schema = DATABASE()
@@ -46,8 +54,8 @@ LEFT JOIN information_schema.tables AS actual
 ORDER BY expected.table_name;
 
 SELECT COUNT(*) AS installed_mentoris_tables,
-       35 AS expected_mentoris_tables,
-       CASE WHEN COUNT(*) = 35 THEN 'SCHEMA_OK' ELSE 'SCHEMA_INCOMPLETE' END AS result
+       43 AS expected_mentoris_tables,
+       CASE WHEN COUNT(*) = 43 THEN 'SCHEMA_OK' ELSE 'SCHEMA_INCOMPLETE' END AS result
 FROM information_schema.tables
 WHERE table_schema = DATABASE()
   AND table_name IN (
@@ -85,5 +93,13 @@ WHERE table_schema = DATABASE()
       'sms_challenges',
       'sms_deliveries',
       'registration_sms_challenges',
-      'course_requests'
+      'course_requests',
+      'support_attachments',
+      'support_messages',
+      'support_tickets',
+      'comm_actions',
+      'comm_outbox',
+      'comm_updates',
+      'comm_links',
+      'comm_accounts'
   );

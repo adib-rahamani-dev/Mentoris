@@ -38,6 +38,16 @@ $router->get('/events/{slug:[a-z0-9-]+}', [EventsController::class, 'show'], ['r
 $router->post('/events/{slug:[a-z0-9-]+}/register', [EventsController::class, 'register'], ['csrf', 'rate:5,60']);
 $router->get('/live', [LiveController::class, 'index'], ['rate:60,60']);
 $router->post('/api/telegram/webhook', [\App\Controllers\TelegramController::class, 'webhook']);
+$router->post('/api/bale/webhook/{secret:[a-f0-9]+}', [\App\Controllers\CommunicationController::class, 'webhookBale']);
+$router->get('/help', [\App\Controllers\CommunicationController::class, 'help'], ['rate:90,60']);
+$router->get('/messengers', [\App\Controllers\CommunicationController::class, 'connections'], ['auth','rate:90,60']);
+$router->post('/messengers/link', [\App\Controllers\CommunicationController::class, 'issue'], ['auth','csrf','rate:3,60']);
+$router->post('/messengers/disconnect', [\App\Controllers\CommunicationController::class, 'disconnect'], ['auth','csrf','rate:5,60']);
+$router->get('/support', [\App\Controllers\SupportController::class, 'index'], ['auth','rate:90,60']);
+$router->post('/support', [\App\Controllers\SupportController::class, 'create'], ['auth','csrf','rate:5,60']);
+$router->get('/support/attachments/{id:[a-f0-9]+}', [\App\Controllers\SupportController::class, 'attachment'], ['auth','rate:30,60']);
+$router->get('/support/{id:[a-f0-9]+}', [\App\Controllers\SupportController::class, 'show'], ['auth','rate:90,60']);
+$router->post('/support/{id:[a-f0-9]+}/reply', [\App\Controllers\SupportController::class, 'reply'], ['auth','csrf','rate:10,60']);
 $router->get('/resources', [\App\Controllers\ResourcesController::class, 'index'], ['rate:60,60']);
 $router->get('/resources/{slug:[a-z-]+}', [\App\Controllers\ResourcesController::class, 'show'], ['rate:60,60']);
 $router->get('/resources/{slug:[a-z-]+}/download', [\App\Controllers\ResourcesController::class, 'download'], ['rate:20,60']);

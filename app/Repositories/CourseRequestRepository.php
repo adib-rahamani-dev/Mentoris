@@ -22,6 +22,11 @@ final class CourseRequestRepository
             if(in_array((string)$e->getCode(),['23000','19'],true)) throw new RuntimeException('درخواست شما برای این دوره قبلاً ثبت شده است؛ برای پیگیری با تیم منتوریس تماس بگیرید.');
             throw $e;
         }
+        $hub=new CommunicationRepository($this->pdo());
+        if($hub->available()) {
+            $row=$hub->one('SELECT id FROM course_requests WHERE course_slug=:slug AND phone=:phone',['slug'=>$slug,'phone'=>PhoneNumber::normalize($data['phone'])]);
+            (new \App\Services\CommunicationNoticeService($hub))->engagement('courses',$row['id'],'requested');
+        }
     }
     public function userRequests(string $userId): array
     {

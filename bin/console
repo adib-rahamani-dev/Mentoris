@@ -23,6 +23,7 @@ if (is_file($envFile)) {
 
 $command = $argv[1] ?? 'help';
 try {
+    if(str_starts_with($command,'communications:')) {require __DIR__.'/communications.php';exit(0);}
     if ($command === 'content:sync') { echo json_encode((new \App\Services\ContentReleaseService())->sync(Database::connection()),JSON_THROW_ON_ERROR).PHP_EOL; exit(0); }
     if ($command === 'content:sql') { echo \App\Services\ContentReleaseService::sql(); exit(0); }
     if (str_starts_with($command,'telegram:')) {

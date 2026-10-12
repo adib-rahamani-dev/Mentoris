@@ -8,6 +8,8 @@ final class TelegramBotService
     public function __construct(private readonly TelegramRepository $repository = new TelegramRepository()) {}
     public function handle(array $update): void
     {
+        $hub=new \App\Repositories\CommunicationRepository($this->repository->pdo());
+        if($hub->available()) {(new CommunicationBotService($hub,'telegram'))->handle($update);return;}
         $callback=$update['callback_query'] ?? null;
         $message=$callback['message'] ?? $update['message'] ?? [];
         $from=$callback['from'] ?? $message['from'] ?? [];

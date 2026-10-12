@@ -5,6 +5,8 @@ $unread = count(array_filter($user['notifications'] ?? [], fn ($item) => empty($
 <aside class="user-sidebar">
     <div class="user-sidebar__identity"><span><?= e(mb_substr($user['name'] ?? 'M', 0, 1)) ?></span><div><strong><?= e($user['name'] ?? '') ?></strong><small><?= e($user['email'] ?? '') ?></small></div></div>
     <nav aria-label="منوی ناحیه کاربری">
+        <a href="/support"><span><?= icon('message') ?></span>گفتگو با پشتیبانی</a>
+        <a href="/messengers"><span><?= icon('bell') ?></span>اتصال پیام‌رسان‌ها</a>
         <a class="<?= $userPath === '/dashboard' ? 'is-active' : '' ?>" href="/dashboard"><span><?= icon('home') ?></span>نمای کلی</a>
         <a class="<?= $userPath === '/my-courses' ? 'is-active' : '' ?>" href="/my-courses"><span><?= icon('book') ?></span>دوره‌های من</a>
         <a class="<?= $userPath === '/my-events' ? 'is-active' : '' ?>" href="/my-events"><span><?= icon('calendar') ?></span>رویدادهای من</a>

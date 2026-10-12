@@ -26,7 +26,9 @@ final class CircleRepository
             if (in_array((string) $exception->getCode(), ['23000', '19'], true)) throw new RuntimeException('این شماره برای این رویداد قبلاً ثبت شده است.');
             throw $exception;
         }
-        return $this->findSignup($slug, $phone) ?? throw new RuntimeException('درخواست ثبت نشد.');
+        $row=$this->findSignup($slug,$phone) ?? throw new RuntimeException('درخواست ثبت نشد.');
+        (new \App\Services\CommunicationNoticeService(new CommunicationRepository($this->pdo())))->engagement('circle',$row['id'],'requested');
+        return $row;
     }
 
     public function findSignup(string $slug, string $phone): ?array

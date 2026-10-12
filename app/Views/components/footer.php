@@ -12,6 +12,8 @@
                 <li><a href="/events"><?= e(t('nav.events')) ?></a></li>
                 <li><a href="/articles"><?= e(t('nav.articles')) ?></a></li>
                 <li><a href="/resources">ابزارهای رایگان</a></li>
+                <li><a href="/support">پشتیبانی آنلاین</a></li>
+                <li><a href="/help">پرسش‌های متداول</a></li>
                 <li><a href="/community"><?= e(t('nav.community')) ?></a></li>
             </ul>
         </div>

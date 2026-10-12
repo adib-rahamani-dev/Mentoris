@@ -213,10 +213,13 @@ final class AdminRepository
     {
         $config = $this->engagementConfig($type);
         if (!in_array($status, $config['statuses'], true)) throw new RuntimeException('وضعیت انتخاب‌شده معتبر نیست.');
-        $attended = $type === 'circle' ? ',attended_at=' . ($status === 'attended' ? 'COALESCE(attended_at,UTC_TIMESTAMP())' : 'NULL') : '';
+        $attended = $type === 'circle' ? ',attended_at=' . ($status === 'attended' ? 'COALESCE(attended_at,:attended)' : 'NULL') : '';
         $statement = $this->pdo()->prepare("UPDATE {$config['table']} SET status=:status,updated_at=:updated_at{$attended} WHERE id=:id");
-        $statement->execute(['status' => $status, 'updated_at' => Database::now(), 'id' => $id]);
-        return $statement->rowCount() === 1;
+        $parameters=['status'=>$status,'updated_at'=>Database::now(),'id'=>$id];if($type==='circle' && $status==='attended')$parameters['attended']=Database::now();
+        $statement->execute($parameters);
+        $changed=$statement->rowCount()===1;
+        if($changed)(new \App\Services\CommunicationNoticeService(new CommunicationRepository($this->pdo())))->engagement($type,$id,$status);
+        return $changed;
     }
 
     public function auditLogs(array $filters, int $page = 1, int $perPage = 30): array

@@ -15,6 +15,12 @@ final class TelegramController extends Controller
         if(strlen($request->raw())>65536) return $this->json(['ok'=>false],413);
         $update=json_decode($request->raw(),true);
         if(!is_array($update) || !is_int($update['update_id'] ?? null) || $update['update_id']<0) return $this->json(['ok'=>false],422);
+        $hub=new \App\Repositories\CommunicationRepository();
+        if($hub->available()) {
+            $hub->enqueue('telegram',$update);
+            \App\Controllers\CommunicationController::afterWebhook();
+            return $this->json(['ok'=>true]);
+        }
         $repository=new TelegramRepository();
         if(!$repository->available()) return $this->json(['ok'=>false],503);
         $repository->enqueueUpdate($update);

@@ -36,6 +36,11 @@ final class TelegramWorker
             }
         } finally { flock($lock,LOCK_UN); fclose($lock); }
         file_put_contents(BASE_PATH.'/storage/data/telegram-worker-status.json',json_encode(['at'=>gmdate('Y-m-d H:i:s'),'result'=>$stats],JSON_THROW_ON_ERROR),LOCK_EX);
+        $hub=new \App\Repositories\CommunicationRepository();
+        if($hub->available()) {
+            (new CommunicationNoticeService($hub))->reminders();$shared=(new CommunicationWorker())->run($limit);
+            foreach(['updates','sent','failed'] as $key)$stats[$key]+=$shared[$key];
+        }
         return $stats;
     }
 }

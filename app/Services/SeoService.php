@@ -42,6 +42,8 @@ final class SeoService
         '/profile',
         '/register',
         '/reset-password',
+        '/support',
+        '/messengers',
     ];
 
     public static function metadata(string $title, string $description, array $options = []): array

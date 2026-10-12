@@ -10,6 +10,7 @@ $active = static fn (string $path): string => $adminPath === $path || ($path !==
         <a class="<?= $active('/admin') ?>" href="/admin"><span><?= icon('home') ?></span>داشبورد</a>
         <?php if (Authorization::can($admin, 'analytics.view')): ?><a class="<?= $active('/admin/analytics') ?>" href="/admin/analytics"><span><?= icon('chart') ?></span>تحلیل و گزارش‌ها</a><?php endif; ?>
         <small class="admin-nav-label">عملیات</small>
+        <?php if(Authorization::can($admin,'engagements.view')): ?><a class="<?= $active('/admin/support') ?>" href="/admin/support"><span><?= icon('message') ?></span>صندوق پشتیبانی</a><a class="<?= $active('/admin/communications') ?>" href="/admin/communications"><span><?= icon('bell') ?></span>تلگرام، بله و اعلان‌ها</a><?php endif; ?>
         <?php if (Authorization::can($admin, 'users.view')): ?><a class="<?= $active('/admin/users') ?>" href="/admin/users"><span><?= icon('users') ?></span>کاربران و نقش‌ها</a><?php endif; ?>
         <?php if (Authorization::can($admin, 'orders.view')): ?><a class="<?= $active('/admin/orders') ?>" href="/admin/orders"><span><?= icon('card') ?></span>سفارش‌ها و پرداخت</a><?php endif; ?>
         <?php if (Authorization::can($admin, 'engagements.view')): ?><a class="<?= $active('/admin/engagements') ?>" href="/admin/engagements"><span><?= icon('message') ?></span>مرکز ارتباطات</a><?php endif; ?>
