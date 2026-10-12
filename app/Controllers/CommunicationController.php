@@ -35,8 +35,20 @@ final class CommunicationController extends Controller
     }
     public static function afterWebhook(): void
     {
-        // PHP-FPM can acknowledge before doing bounded delivery. Cron remains the durable fallback.
-        if(function_exists('fastcgi_finish_request'))register_shutdown_function(static function(){fastcgi_finish_request();try{(new CommunicationWorker())->run(8,12);}catch(\Throwable) {}});
+        // Shared hosts often use LiteSpeed rather than PHP-FPM. Process interactive
+        // replies after acknowledging the webhook; Cron still recovers queued work.
+        if(PHP_SAPI==='cli')return;
+        register_shutdown_function(static function(): void {
+            ignore_user_abort(true);
+            if(session_status()===PHP_SESSION_ACTIVE)session_write_close();
+            if(function_exists('fastcgi_finish_request'))fastcgi_finish_request();
+            elseif(function_exists('litespeed_finish_request'))litespeed_finish_request();
+            else {
+                while(ob_get_level()>0){if(!@ob_end_flush())break;}
+                flush();
+            }
+            try{(new CommunicationWorker())->run(8,8);}catch(\Throwable) {error_log('Webhook reply processing deferred to Cron.');}
+        });
     }
     public function help(Request $request): Response { if(\App\Core\Translator::locale()!=='fa')return $this->redirect('/help?lang=fa',301);return $this->view('pages.communication-help',['title'=>'پرسش‌های متداول و پشتیبانی منتوریس','description'=>'راهنمای ثبت‌نام، گواهی، منتورینگ، ضبط جلسات و ارتباط با پشتیبانی انسانی منتوریس.','seoLanguages'=>['fa'],'topics'=>CommunicationFaq::topics()]); }
     public function admin(Request $request): Response
