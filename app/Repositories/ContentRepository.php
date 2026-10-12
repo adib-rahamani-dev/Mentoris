@@ -18,6 +18,12 @@ final class ContentRepository
         return array_map([$this, 'hydrate'], $statement->fetchAll() ?: []);
     }
 
+    public function unpublishedSlugs(string $type): array
+    {
+        $q=$this->pdo()->prepare("SELECT slug FROM content_entities WHERE entity_type=:type AND status<>'published'"); $q->execute(['type'=>$type]);
+        return $q->fetchAll(PDO::FETCH_COLUMN) ?: [];
+    }
+
     public function findPublished(string $type, string $slug, string $locale): ?array
     {
         $statement = $this->pdo()->prepare($this->selectSql() . ' WHERE ce.entity_type=:type AND ce.slug=:slug AND ce.status=:status LIMIT 1');

@@ -149,9 +149,11 @@ final class AdminController extends Controller
     public function engagements(Request $request): Response
     {
         $type = (string) $request->query('type', 'messages');
-        if (!in_array($type, ['messages','events','circle','community'], true)) $type = 'messages';
+        if (!in_array($type, ['messages','events','circle','courses','community'], true)) $type = 'messages';
         $filters = ['query' => trim((string) $request->query('q', '')), 'status' => (string) $request->query('status', 'all')];
         if ($type === 'circle' && !(new \App\Repositories\CircleRepository())->available()) return $this->adminView('engagements', 'مرکز ارتباطات', ['items' => [], 'pagination' => ['page'=>1,'per_page'=>20,'total'=>0,'pages'=>1], 'type'=>'circle', 'statuses'=>['requested','approved','rejected','attended'], 'filters'=>$filters]);
+        if ($type === 'courses' && !(new \App\Repositories\CourseRequestRepository())->available()) return $this->adminView('engagements','درخواست‌های دوره',['items'=>[],'pagination'=>['page'=>1,'per_page'=>20,'total'=>0,'pages'=>1],'type'=>'courses','statuses'=>['requested','approved','rejected','canceled'],'filters'=>$filters,'notice'=>'برای فعال‌شدن درخواست‌های دوره SQL شمارهٔ ۰۰۹ نصب شود.']);
+        $context=$request->query('context',''); $filters['context']=is_string($context) && preg_match('/^[a-z0-9-]{1,190}$/',$context) ? $context : '';
         $result = (new AdminRepository())->engagements($type, $filters, (int) $request->query('page', 1));
         return $this->adminView('engagements', 'مرکز ارتباطات', [...$result, 'filters' => $filters]);
     }
@@ -295,6 +297,7 @@ final class AdminController extends Controller
     {
         $existing=$id ? (new AdminRepository())->contentEntry($id) : null;
         if($id && (!$existing || ($fixedType && $existing['entity_type']!==$fixedType))) return Response::html('<h1>404</h1>',404);
+        foreach($request->input() as $key=>$value) if(is_array($value) && !in_array($key,['curriculum','faq','payment_options','related_mentors'],true)) return $this->editorView($existing,['form'=>['ساختار یکی از فیلدها معتبر نیست.']],['entity_type'=>$fixedType ?? $existing['entity_type'] ?? 'article']);
         $data = [
             'entity_type' => $fixedType ?? ($existing['entity_type'] ?? trim((string)$request->input('entity_type'))),
             'slug' => strtolower(trim((string) $request->input('slug'))),
@@ -319,6 +322,11 @@ final class AdminController extends Controller
                 'level'=>trim((string)$request->input('level','')),
                 'read_time'=>trim((string)$request->input('read_time','')),
                 'author'=>trim((string)$request->input('author','')),
+                'author_slug'=>trim((string)$request->input('author_slug','')),
+                'credit'=>trim((string)$request->input('credit','')),
+                'display_date'=>trim((string)$request->input('display_date','')),'time'=>trim((string)$request->input('time','')),
+                'registration_note'=>trim((string)$request->input('registration_note','')),
+                'registration_mode'=>trim((string)$request->input('registration_mode','')),'payment_note'=>trim((string)$request->input('payment_note','')),
                 'tone'=>trim((string)$request->input('tone','')),
                 'icon'=>trim((string)$request->input('icon','')),
                 'promise'=>trim((string)$request->input('promise','')),
@@ -326,12 +334,19 @@ final class AdminController extends Controller
                 'objectives'=>$this->textList((string)$request->input('objectives','')),
                 'audience'=>$this->textList((string)$request->input('audience','')),
                 'highlights'=>$this->textList((string)$request->input('highlights','')),
+                'key_points'=>$this->textList((string)$request->input('key_points','')),
                 'related_courses'=>$this->slugList((string)$request->input('related_courses','')),
                 'related_events'=>$this->slugList((string)$request->input('related_events','')),
-                'related_mentors'=>$this->slugList((string)$request->input('related_mentors','')),
+                'related_mentors'=>is_array($request->input('related_mentors')) ? array_values(array_filter($request->input('related_mentors'),'is_string')) : $this->slugList((string)$request->input('related_mentors','')),
                 'featured'=>$request->input('featured') === '1',
             ];
             $common=array_intersect_key($common,$request->input());
+            if(array_key_exists('location_pending_present',$request->input())) $common['location_pending']=$request->input('location_pending')==='1';
+            if(array_key_exists('payment_options_present',$request->input())) $common['payment_options']=is_array($request->input('payment_options',[])) ? array_values(array_intersect(['cash','installments'],array_filter($request->input('payment_options',[]),'is_string'))) : [];
+            foreach(['price_amount','capacity'] as $number) if(array_key_exists($number,$common)) $common[$number]=\App\Services\ContentFormService::integer((string)$request->input($number));
+            foreach(['starts_at','ends_at'] as $date) if(array_key_exists($date,$common)) $common[$date]=\App\Services\ContentFormService::localDate(trim((string)$request->input($date)));
+            foreach(['curriculum'=>['title','description'],'faq'=>['question','answer']] as $collection=>$fields) if(array_key_exists($collection.'_present',$request->input())) $common[$collection]=\App\Services\ContentFormService::collection($request->input($collection,[]),...$fields);
+            if($data['entity_type']==='event' && isset($common['format'])) $common['mode']=$common['format'];
             if (isset($common['content_status']) && $data['entity_type'] === 'course') $common['course_status'] = $common['content_status'];
             if (isset($common['content_status']) && $data['entity_type'] === 'event') $common['event_status'] = $common['content_status'];
             unset($common['content_status']);
@@ -340,6 +355,11 @@ final class AdminController extends Controller
             $data['translations'][$locale] = ['title'=>(string)$request->input("{$locale}_title",$previous['title'] ?? ''),'subtitle'=>(string)$request->input("{$locale}_subtitle",$previous['subtitle'] ?? ''),'excerpt'=>(string)$request->input("{$locale}_excerpt",$previous['excerpt'] ?? ''),'body'=>(string)$request->input("{$locale}_body",$previous['body'] ?? ''),'metadata'=>is_array($metadata)?array_replace($metadata,$common):null];
         }
         $errors = [];
+        foreach(['price_amount','capacity','starts_at','ends_at','curriculum','faq'] as $field) if(array_key_exists($field,$data['translations']['fa']['metadata'] ?? []) && $data['translations']['fa']['metadata'][$field]===null) $errors[$field]=['مقدار این فیلد معتبر نیست؛ عدد، تاریخ یا ردیف‌های واردشده را بررسی کنید.'];
+        $faMeta=$data['translations']['fa']['metadata'] ?? [];
+        if(!empty($faMeta['starts_at']) && !empty($faMeta['ends_at']) && strtotime($faMeta['ends_at'])<=strtotime($faMeta['starts_at'])) $errors['ends_at']=['زمان پایان باید پس از شروع باشد.'];
+        if(isset($faMeta['registration_mode']) && !in_array($faMeta['registration_mode'],['request','checkout'],true)) $errors['registration_mode']=['شیوه ثبت‌نام معتبر نیست.'];
+        if(($faMeta['registration_mode'] ?? '')==='request' && empty($faMeta['payment_options'])) $errors['payment_options']=['حداقل یک شیوه پرداخت انتخاب کنید.'];
         if (!array_key_exists($data['entity_type'], $this->contentTypes())) $errors['entity_type'][] = 'نوع محتوا معتبر نیست.';
         if (!preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $data['slug']) || strlen($data['slug']) > 190) $errors['slug'][] = 'نامک باید انگلیسی، کوتاه و با خط تیره باشد.';
         if (!in_array($data['status'], ['draft','published','archived'], true)) $errors['status'][] = 'وضعیت محتوا معتبر نیست.';
@@ -358,15 +378,16 @@ final class AdminController extends Controller
             $uploadError = $this->validateImageUpload($upload);
             if ($uploadError !== null) $errors['image_upload'][] = $uploadError;
         }
-        foreach (['line_slug','instructor_slug'] as $slugField) {
+        foreach (['line_slug','instructor_slug','author_slug'] as $slugField) {
             $value = trim((string)$request->input($slugField,''));
             if ($value !== '' && !preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $value)) $errors[$slugField][] = 'این نامک فقط می‌تواند شامل حروف انگلیسی کوچک، عدد و خط تیره باشد.';
         }
         foreach (['related_courses','related_events','related_mentors'] as $listField) {
-            foreach ($this->slugList((string)$request->input($listField,'')) as $relatedSlug) {
+            foreach ((array)($faMeta[$listField] ?? []) as $relatedSlug) {
                 if (!preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $relatedSlug)) { $errors[$listField][] = 'فهرست ارتباط‌ها شامل نامک نامعتبر است.'; break; }
             }
         }
+        if(($faMeta['capacity'] ?? 0)>100000) $errors['capacity']=['ظرفیت بیش از حد مجاز است.'];
         $registrationUrl = trim((string)$request->input('registration_url',''));
         if ($registrationUrl !== '' && !preg_match('#^(?:https://[^\s]+|/[A-Za-z0-9/_?&=%.-]*)$#i', $registrationUrl)) $errors['registration_url'][] = 'لینک ثبت‌نام باید HTTPS یا یک مسیر داخلی معتبر باشد.';
         $contentStatus = trim((string)$request->input('content_status',''));
@@ -375,7 +396,18 @@ final class AdminController extends Controller
         if (!in_array(trim((string)$request->input('tone','')), ['','sage','teal','blue','violet','amber','rose','indigo'], true)) $errors['tone'][] = 'رنگ انتخاب‌شده معتبر نیست.';
         if (!in_array(trim((string)$request->input('icon','')), ['','brain','book','users','search','heart','activity','shield','trending','certificate'], true)) $errors['icon'][] = 'آیکون انتخاب‌شده معتبر نیست.';
         foreach ($data['translations'] as $locale => $translation) if ($translation['metadata'] === null) $errors[$locale . '_metadata'][] = 'JSON متادیتا معتبر نیست.';
-        if ($errors) return $this->editorView($existing,$errors,$data);
+        if ($errors) {
+            // Preserve legitimate editor input on validation failure, including partially filled rows.
+            foreach(['price_amount','capacity'] as $field) if(isset($errors[$field])) $data['translations']['fa']['metadata'][$field]=(string)$request->input($field,'');
+            foreach(['curriculum'=>['title','description','duration'],'faq'=>['question','answer']] as $collection=>$fields) if(isset($errors[$collection])) {
+                $rows=[];
+                foreach(array_slice((array)$request->input($collection,[]),0,40) as $row) if(is_array($row)) {
+                    $safe=[]; foreach($fields as $field) $safe[$field]=is_string($row[$field] ?? '') ? mb_substr($row[$field] ?? '',0,5000) : ''; $rows[]=$safe;
+                }
+                $data['translations']['fa']['metadata'][$collection]=$rows;
+            }
+            return $this->editorView($existing,$errors,$data);
+        }
         $uploadedPath = null;
         if (is_array($upload) && (int)($upload['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK) {
             try { $uploadedPath = $this->storeImageUpload($upload); }

@@ -156,15 +156,15 @@ final class SeoService
         $startDate = (string) ($event['starts_at'] ?? '2026-09-18T18:00:00+03:30');
         $endDate = (string) ($event['ends_at'] ?? '2026-09-18T20:00:00+03:30');
 
-        return [
+        $schema = [
             '@type' => 'Event',
             '@id' => self::localizedUrl('/events/' . $event['slug'], Translator::locale()) . '#event',
             'name' => $event['title'],
             'description' => $event['short_description'],
             'startDate' => $startDate,
             'endDate' => $endDate,
-            'eventStatus' => 'https://schema.org/EventScheduled',
-            'eventAttendanceMode' => 'https://schema.org/OfflineEventAttendanceMode',
+            'eventStatus' => ($event['status'] ?? '')==='canceled' ? 'https://schema.org/EventCancelled' : 'https://schema.org/EventScheduled',
+            'eventAttendanceMode' => 'https://schema.org/'.(['online'=>'OnlineEventAttendanceMode','hybrid'=>'MixedEventAttendanceMode'][$event['mode'] ?? ''] ?? 'OfflineEventAttendanceMode'),
             'location' => [
                 '@type' => 'Place',
                 'name' => $event['location'],
@@ -179,6 +179,24 @@ final class SeoService
             'performer' => ['@id' => $baseUrl . '/founder/#person'],
             'url' => self::localizedUrl('/events/' . $event['slug'], Translator::locale()),
         ];
+        if(!empty($event['location_pending'])) unset($schema['location']);
+        elseif(!str_contains((string)$event['location'],'تبریز') && !str_contains((string)$event['location'],'Tabriz')) unset($schema['location']['address']);
+        if(!empty($event['instructor'])) $schema['performer']=['@type'=>'Person','name'=>$event['instructor']['name'],'url'=>self::absoluteUrl('/mentors/'.$event['instructor']['slug'])];
+        if(!empty($event['price_amount'])) $schema['offers']=['@type'=>'Offer','price'=>(int)$event['price_amount']*10,'priceCurrency'=>'IRR','url'=>$schema['url'].'#register'];
+        return $schema;
+    }
+
+    public static function courseSchema(array $course): array
+    {
+        return ['@type'=>'Course','@id'=>self::absoluteUrl('/courses/'.$course['slug']).'#course','name'=>$course['title'],'description'=>$course['short_description'],'url'=>self::absoluteUrl('/courses/'.$course['slug']),
+            'provider'=>['@id'=>self::baseUrl().'/#organization'],'image'=>self::absoluteUrl('/assets/'.$course['image']),
+            'offers'=>['@type'=>'Offer','price'=>(int)$course['price_amount']*10,'priceCurrency'=>'IRR','url'=>self::absoluteUrl('/courses/'.$course['slug']).'#request'],
+            'educationalLevel'=>$course['level'],'inLanguage'=>self::LOCALE_MAP[Translator::locale()] ?? 'fa_IR'];
+    }
+
+    public static function mentorSchema(array $mentor): array
+    {
+        return ['@type'=>'Person','@id'=>self::absoluteUrl('/mentors/'.$mentor['slug']).'#person','name'=>$mentor['name'],'jobTitle'=>$mentor['role'],'description'=>$mentor['specialty'],'image'=>self::absoluteUrl('/assets/'.$mentor['image']),'url'=>self::absoluteUrl('/mentors/'.$mentor['slug']),'affiliation'=>['@id'=>self::baseUrl().'/#organization']];
     }
 
     public static function articleSchema(array $article): array
@@ -190,7 +208,7 @@ final class SeoService
             'description' => $article['excerpt'],
             'datePublished' => self::isoDate((string) $article['published_at']),
             'dateModified' => self::isoDate((string) ($article['updated_at'] ?? $article['published_at'])),
-            'author' => ['@type' => 'Person', 'name' => $article['author']],
+            'author' => array_filter(['@type' => 'Person', 'name' => $article['author'],'url'=>!empty($article['author_slug']) ? self::absoluteUrl('/mentors/'.$article['author_slug']) : null]),
             'publisher' => ['@id' => self::baseUrl() . '/#organization'],
             'mainEntityOfPage' => self::localizedUrl('/articles/' . $article['slug'], Translator::locale()),
             'image' => [self::absoluteUrl('/assets/' . ltrim((string) ($article['image'] ?: 'images/mentoris-hero-sage-v2.png'), '/'))],

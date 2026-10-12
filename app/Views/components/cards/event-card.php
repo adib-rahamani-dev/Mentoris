@@ -3,7 +3,7 @@ $statusLabels = \App\Services\PublicContentService::eventStatusLabels();
 $modeLabels = \App\Services\PublicContentService::eventModeLabels();
 $status = $event['status'] ?? 'upcoming';
 $statusLabel = $event['status_label'] ?? ($statusLabels[$status] ?? $status);
-$circleReady = $event['slug'] !== 'therapists-circle-second' || (new \App\Repositories\CircleRepository())->available();
+$circleReady = (new \App\Repositories\CircleRepository())->available();
 $mode = $event['mode'] ?? 'offline';
 $modeLabel = $event['mode_label'] ?? ($modeLabels[$mode] ?? $mode);
 $capacity = (int) ($event['capacity'] ?? 0);
@@ -25,9 +25,11 @@ $cardCopy = [
     </div>
     <div class="card__body">
         <div class="event-card__tags"><span class="badge badge--neutral"><?= e($event['type']) ?></span><span class="event-mode"><?= e($modeLabel) ?></span></div>
+        <?php if(!empty($event['signup_status'])): ?><p class="event-signup-status"><?= e(['requested'=>'درخواست شما منتظر بررسی است','approved'=>'درخواست حضور شما تأیید شده است','rejected'=>'درخواست شما تأیید نشده است','attended'=>'حضور شما ثبت شده است'][$event['signup_status']] ?? $event['signup_status']) ?></p><?php endif; ?>
         <h3 class="card__title mt-4"><a href="/events/<?= e($event['slug']) ?>"><?= e($event['title']) ?></a></h3>
         <p class="card__text"><?= e($event['short_description'] ?? '') ?></p>
         <div class="event-card__meta"><span><?= icon('calendar') ?> <?= e($event['date']) ?></span><span><?= icon('pin') ?> <?= e($event['location'] ?? 'Mentoris') ?></span></div>
+        <?php if(!empty($event['price_amount'])): ?><div class="event-card__fee"><span><?= e($event['price']) ?></span><small>ثبت درخواست و تأیید تیم</small></div><?php endif; ?>
         <?php if (!in_array($status, ['completed','canceled'], true)): ?><div class="event-capacity" aria-label="<?= e($capacity > 0 ? ((string)$available . ' ' . $cardCopy['seats']) : $cardCopy['limited']) ?>"><div><span><?= e($cardCopy['capacity']) ?></span><strong><?= e($capacity > 0 ? ((string)$available . ' ' . $cardCopy['seats']) : $cardCopy['limited']) ?></strong></div><?php if ($capacity > 0): ?><div class="event-capacity__track"><span style="width:<?= $progress ?>%"></span></div><?php endif; ?></div><?php endif; ?>
     </div>
     <div class="card__footer"><span class="muted"><?= e($event['instructor']['name'] ?? 'Mentoris Academy') ?></span><a class="btn btn--secondary btn--sm" href="/events/<?= e($event['slug']) ?>"><?= e($status === 'registration-open' && $circleReady ? ($event['slug'] === 'therapists-circle-second' ? $cardCopy['request'] : $cardCopy['register']) : $cardCopy['details']) ?></a></div>

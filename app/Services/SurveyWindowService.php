@@ -8,7 +8,7 @@ use DateTimeZone;
 
 final class SurveyWindowService
 {
-    public const EVENTS=['therapists-circle-tabriz','therapists-circle-second'];
+    public const EVENTS=['therapists-circle-tabriz','therapists-circle-second','therapists-circle-third'];
     public function status(string $slug, ?int $now=null): array
     {
         $row=null; $ready=true;

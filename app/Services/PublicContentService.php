@@ -198,11 +198,13 @@ final class PublicContentService
         foreach (self::courses() as $course) {
             if ($course['slug'] !== $slug) continue;
             $course['line'] = self::academyLine($course['line_slug']) ?? self::academyLines()[0];
-            $course['instructor'] = self::findBySlug(self::mentors(), $course['instructor_slug']) ?? self::mentors()[0];
-            $course['instructor_bio'] = $course['instructor']['bio'] ?? $course['instructor']['specialty'];
+            $course['instructor'] = self::findBySlug(self::mentors(), $course['instructor_slug']) ?? (self::mentors()[0] ?? null);
+            $course['instructors'] = self::relatedBySlugs(self::mentors(), array_unique([$course['instructor_slug'], ...$course['related_mentor_slugs']]));
+            $course['instructor_bio'] = $course['instructor']['bio'] ?? ($course['instructor']['specialty'] ?? '');
             $course['related_programs'] = array_values(array_filter(self::programs(), static fn (array $program): bool => in_array($slug, $program['related_course_slugs'], true)));
             $course['available'] = max(0, $course['capacity'] - $course['enrolled']);
-            $course['can_enroll'] = $course['status'] === 'active' && $course['available'] > 0;
+            $course['can_request'] = $course['status'] === 'active' && $course['registration_mode'] === 'request';
+            $course['can_enroll'] = $course['registration_mode'] !== 'request' && $course['status'] === 'active' && $course['available'] > 0;
             $course['status_label'] = self::courseStatusLabels()[$course['status']] ?? $course['status'];
             return $course;
         }
@@ -238,7 +240,7 @@ final class PublicContentService
         ], [
             'slug' => 'therapists-circle-second', 'day' => '—', 'month' => '', 'date' => 'برگزار شده', 'date_iso' => '', 'time' => 'ساعت ۱۸',
             'title' => 'نشست دوم حلقه درمانگران منتوریس', 'type' => 'نشست تخصصی', 'mode' => 'offline', 'location' => 'باشگاه فرهنگیان تبریز', 'tone' => 'sage',
-            'image' => '', 'status' => 'completed', 'capacity' => 0, 'registered' => 0, 'capacity_label' => 'ثبت‌نام پایان یافته',
+            'image' => 'images/therapists-circle-second-v1.jpg', 'status' => 'completed', 'capacity' => 0, 'registered' => 0, 'capacity_label' => 'ثبت‌نام پایان یافته',
             'instructor_slug' => 'maryam-haghani', 'line_slug' => 'therapist-development',
             'short_description' => 'گفت‌وگویی درباره تمرین عامدانه، لنگراندازی و مراقبت از درمانگر در مسیر بالینی.',
             'description' => 'نشست دوم حلقه درمانگران با محور تمرین عامدانه، لنگراندازی و چالش‌های واقعی کار بالینی برگزار شد. همکاران می‌توانند بازخورد این نشست را در صفحه نظرسنجی ثبت کنند.',
@@ -255,8 +257,9 @@ final class PublicContentService
                 $event['external_registration_url']='';
                 $event['highlights']=array_values(array_filter($event['highlights'],fn($text)=>!str_contains($text,'ثبت فرم اولیه') && !str_contains($text,'Submitting the initial form')));
             }
+            if($event['status']==='registration-open' && !empty($event['ends_at']) && ($end=strtotime($event['ends_at']))!==false && $end<=time()) { $event['status']='completed'; $event['registration_note']='مهلت درخواست حضور در این نشست پایان یافته است.'; }
             return $event;
-        }, self::mergeBySlug($seed, $managed));
+        }, self::mergeBySlug(self::visibleSeeds($seed,'event'), $managed));
     }
 
     public static function event(string $slug): ?array
@@ -308,14 +311,16 @@ final class PublicContentService
             'specialty' => $founder['short_bio'], 'bio' => implode("\n\n", $founder['paragraphs']), 'initials' => $founder['initials'], 'tone' => $founder['tone'], 'image' => $founder['image'],
         ]];
         $managed = array_map(static fn (array $row): array => self::mentorFromContent($row), self::databaseContent('mentor'));
-        return self::mergeBySlug($seed, $managed);
+        return self::mergeBySlug(self::visibleSeeds($seed,'mentor'), $managed);
     }
 
     public static function articles(): array
     {
         $seed = Translator::locale() === 'fa' ? \App\Content\InboundArticles::all() : [];
         $managed = array_filter(self::databaseContent('article'), static fn (array $row): bool => ($row['resolved_locale'] ?? '') === Translator::locale() && trim((string) ($row['title'] ?? '')) !== '' && (trim((string) ($row['body'] ?? '')) !== '' || trim((string) ($row['excerpt'] ?? '')) !== ''));
-        return self::mergeBySlug($seed, array_map(static fn (array $row): array => self::articleFromContent($row), $managed));
+        $items=self::mergeBySlug(self::visibleSeeds($seed,'article'), array_map(static fn (array $row): array => self::articleFromContent($row), $managed));
+        usort($items,static fn(array $a,array $b):int=>((int)($b['featured'] ?? false)<=>(int)($a['featured'] ?? false)) ?: strcmp((string)($b['published_at'] ?? ''),(string)($a['published_at'] ?? '')));
+        return $items;
     }
 
     public static function article(string $slug): ?array
@@ -363,7 +368,8 @@ final class PublicContentService
     {
         $meta = $row['metadata'];
         $lineSlug = (string) ($meta['line_slug'] ?? 'professional-development');
-        $line = self::academyLine($lineSlug);
+        // Resolve display metadata without re-entering academyLine()->programs().
+        $line = self::findBySlug(self::academyLines(),$lineSlug);
         return [
             'slug'=>(string)$row['slug'],'title'=>(string)$row['title'],'subtitle'=>(string)($row['subtitle'] ?: 'Mentoris Professional Program'),
             'short_description'=>(string)($row['excerpt'] ?: $row['body']),'description'=>(string)($row['body'] ?: $row['excerpt']),
@@ -395,6 +401,11 @@ final class PublicContentService
             'audience'=>self::stringList($meta['audience'] ?? []),'curriculum'=>self::structuredList($meta['curriculum'] ?? []),
             'faq'=>self::faqList($meta['faq'] ?? []),'certificate'=>(string)($meta['certificate'] ?? 'گواهی دیجیتال Mentoris'),
             'instructor_slug'=>(string)($meta['instructor_slug'] ?? 'maryam-haghani'),'image'=>self::assetPath($meta['image'] ?? ''),
+            'related_mentor_slugs'=>self::stringList($meta['related_mentors'] ?? []),
+            'registration_mode'=>($meta['registration_mode'] ?? 'request') === 'request' ? 'request' : 'checkout',
+            'payment_options'=>array_values(array_intersect(['cash','installments'],self::stringList($meta['payment_options'] ?? ['cash']))),
+            'payment_note'=>(string)($meta['payment_note'] ?? ''),'certificate_confirmed'=>(bool)($meta['certificate_confirmed'] ?? true),
+            'short_description'=>(string)($row['excerpt'] ?: mb_substr($row['body'],0,200)),
         ];
     }
 
@@ -422,7 +433,10 @@ final class PublicContentService
             'status'=>$status,'capacity'=>$capacity,'registered'=>$registered,
             'capacity_label'=>$capacity > 0 ? (string)$capacity : 'ظرفیت محدود','instructor_slug'=>(string)($meta['instructor_slug'] ?? 'maryam-haghani'),
             'line_slug'=>(string)($meta['line_slug'] ?? 'professional-development'),'highlights'=>self::stringList($meta['highlights'] ?? []),
-            'registration_note'=>(string)($meta['registration_note'] ?? ''),'external_registration_url'=>self::publicUrl($meta['registration_url'] ?? '', '/contact'),
+            'registration_note'=>(string)($meta['registration_note'] ?? ''),'external_registration_url'=>self::publicUrl($meta['registration_url'] ?? '', ''),
+            'price_amount'=>max(0,(int)($meta['price_amount'] ?? 0)),
+            'price'=>!empty($meta['price_amount']) ? number_format((int)$meta['price_amount']).' تومان' : '',
+            'location_pending'=>(bool)($meta['location_pending'] ?? false),
         ];
     }
 
@@ -444,8 +458,21 @@ final class PublicContentService
             'excerpt'=>(string)($row['excerpt'] ?: mb_substr(strip_tags((string)$row['body']),0,220)),'body'=>(string)$row['body'],
             'type'=>(string)($meta['category'] ?? 'مقاله'),'read'=>(string)($meta['read_time'] ?? '۵ دقیقه'),
             'tone'=>(string)($meta['tone'] ?? 'sage'),'image'=>self::assetPath($meta['image'] ?? ''),'author'=>(string)($meta['author'] ?? $row['author_name'] ?? 'Mentoris Academy'),
+            'author_slug'=>preg_match('/^[a-z0-9-]+$/',(string)($meta['author_slug'] ?? '')) ? (string)$meta['author_slug'] : '',
+            'credit'=>(string)($meta['credit'] ?? ''),'key_points'=>self::stringList($meta['key_points'] ?? []),
+            'featured'=>(bool)($meta['featured'] ?? false),
+            'sections'=>preg_match('/^##\s/m',(string)$row['body']) ? ArticleTextService::sections((string)$row['body']) : [],
+            'references'=>array_values(array_filter(array_map(static fn($ref): ?array=>is_array($ref) && isset($ref[0],$ref[1]) && self::publicUrl($ref[1],'')!=='' ? [(string)$ref[0],self::publicUrl($ref[1],'')] : null,is_array($meta['references'] ?? null) ? $meta['references'] : []))),
+            'related_course'=>preg_match('/^[a-z0-9-]+$/',(string)($meta['related_course'] ?? '')) ? (string)$meta['related_course'] : '',
             'published_at'=>(string)($row['published_at'] ?? $row['created_at']),
             'updated_at'=>(string)($row['updated_at'] ?? $row['published_at'] ?? $row['created_at'])];
+    }
+
+    private static function visibleSeeds(array $seed,string $type): array
+    {
+        if(self::$databaseUnavailable) return $seed;
+        try { $hidden=(new ContentRepository())->unpublishedSlugs($type); return array_values(array_filter($seed,static fn(array $item):bool=>!in_array($item['slug'],$hidden,true))); }
+        catch(Throwable) { return $seed; }
     }
 
     private static function mergeBySlug(array $seed, array $managed): array

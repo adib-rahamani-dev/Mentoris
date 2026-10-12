@@ -1,0 +1,84 @@
+/* Mentoris circles, practice workshop, journal and simple content workspace. */
+.events-hero {padding-block:clamp(40px,7vw,90px);background:radial-gradient(ellipse at 20% 20%,var(--color-surface-3),transparent 65%),var(--color-surface-2)}
+.events-hero h1 {max-width:900px;font-size:clamp(32px,5vw,56px)}
+.events-grid {align-items:stretch}
+.events-grid--single {grid-template-columns:1fr;max-width:1100px;margin-inline:auto}
+.events-grid--single .event-card {display:grid;grid-template-columns:minmax(250px,.85fr) minmax(0,1fr);grid-template-rows:1fr auto;max-width:none;width:100%;gap:0;border-radius:24px;overflow:hidden}
+.events-grid--single .event-card__visual {grid-row:1 / 3;aspect-ratio:2/3;min-height:0;max-height:none;height:auto}
+.events-grid--single .event-card .card__body {align-self:center;padding:clamp(24px,4vw,48px)}
+.events-grid--single .event-card .card__title {font-size:clamp(24px,3vw,36px);line-height:1.6}
+.events-grid--single .event-card .card__footer {grid-column:2;flex-wrap:wrap}
+.event-card__visual {background:var(--color-surface-2);overflow:hidden}
+.event-card__visual img {width:100%;height:100%;object-fit:contain;object-position:center;transition:transform .45s ease}
+.event-card:hover .event-card__visual img {transform:scale(1.015)}
+.event-card__fee {display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:20px;padding-top:16px;border-top:1px solid var(--color-border)}
+.event-card__fee>span {font-size:20px;font-weight:700;color:var(--color-text)}
+.event-card__fee small {color:var(--color-text-muted)}
+.events-catalog--past .events-grid {grid-template-columns:repeat(2,minmax(0,1fr));max-width:920px;margin-inline:auto}
+.events-catalog--past .event-card__visual {aspect-ratio:2/3;height:auto;min-height:0;max-height:none}
+.event-detail-hero__grid {align-items:start}
+.event-registration {padding:0;overflow:hidden}
+.event-registration__body {padding:24px;display:grid;gap:16px}
+.event-poster-link {display:block;background:var(--color-surface-2);text-align:center}
+.event-poster-link .event-registration__poster {display:block;max-height:460px;object-fit:contain;width:100%;height:auto;aspect-ratio:2/3;margin:0}
+.event-poster-link small {display:flex;justify-content:center;gap:6px;padding:8px 12px;color:var(--color-text-soft);font-size:12px}
+.event-fee {display:grid;gap:4px;padding-block:12px;border-block:1px solid var(--color-border)}
+.event-fee strong {font-size:26px}
+.event-application-steps {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-block:12px}
+.event-application-steps span {display:grid;gap:8px;padding:14px;border:1px solid var(--color-border);border-radius:14px;font-size:13px}
+.event-application-steps b {color:var(--color-text-soft);font-size:20px}
+.event-signup-status {padding:10px 12px;margin-top:12px;border-radius:10px;background:var(--color-surface-3);font-size:13px}
+.course-poster-link {display:block;margin-bottom:20px}
+.course-poster {width:100%;height:auto;max-height:460px;object-fit:contain;border-radius:14px;background:var(--color-surface-2)}
+.course-card .card__media:has(.course-card__poster) {min-height:0;height:auto;aspect-ratio:2/3;background:var(--color-surface-2)}
+.course-card__poster {height:100%;width:100%;object-fit:contain}
+.course-card__poster~.badge,.course-card__poster~.course-status {backdrop-filter:blur(8px)}
+.course-detail-subtitle {direction:rtl;text-align:start}
+.course-enroll-card {position:static;display:grid;gap:16px}
+.course-outline {display:grid;gap:12px}
+.course-outline details {border:1px solid var(--color-border);border-radius:16px;background:var(--color-surface-1);overflow:hidden}
+.course-outline summary {display:flex;align-items:center;gap:14px;padding:20px;cursor:pointer;list-style:none;line-height:1.8}
+.course-outline summary::-webkit-details-marker {display:none}
+.course-outline summary>strong {flex:1;font-size:16px}
+.course-outline summary>span:last-child {font-size:22px;transition:transform .2s ease}
+.course-outline details[open] summary>span:last-child {transform:rotate(45deg)}
+.course-outline details>p {padding:0 20px 24px;line-height:2.1}
+.course-outline__number {font-family:var(--font-mono);font-size:14px;color:var(--color-text-muted)}
+.faculty-course-card {display:grid;grid-template-columns:110px 1fr;gap:20px;border:1px solid var(--color-border);border-radius:20px;padding:20px;align-items:center;background:var(--color-surface-1)}
+.faculty-course-card img {width:110px;height:140px;object-fit:cover;object-position:50% 20%;border-radius:12px}
+.faculty-course-card h3 {font-size:20px;margin-bottom:8px}
+.faculty-course-card p {font-size:14px;margin-bottom:12px}
+.faculty-course-card a {display:flex;align-items:center;gap:6px;font-size:14px}
+.article-cover {margin-block:28px 40px}
+.article-cover img {aspect-ratio:3/2;object-fit:cover;border-radius:24px}
+.article-cover figcaption {font-size:12px;color:var(--color-text-muted);margin-top:12px;text-align:center}
+.article-author-chip {display:flex;align-items:center;gap:10px;color:var(--color-text)}
+.article-author-chip img {width:44px;height:44px;border-radius:50%;object-fit:cover;object-position:50% 20%}
+.article-takeaways {padding-block:20px;margin-block:24px 40px}
+.article-takeaways>div {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:16px}
+.article-takeaways p {padding:24px;border:1px solid var(--color-border);border-radius:16px;background:var(--color-surface-2);line-height:2;font-size:15px}
+.article-takeaways p>span {display:block;font-size:12px;font-family:var(--font-mono);margin-bottom:12px;color:var(--color-text-muted)}
+.article-body section {scroll-margin-top:100px;margin-bottom:40px}
+.article-body p {line-height:2.3;margin-bottom:20px;font-size:18px}
+.article-body h2 {font-size:clamp(23px,3vw,30px);line-height:1.7;margin-block:32px 20px}
+.article-sources ol {display:grid;gap:14px;line-height:1.9;padding-inline-start:24px}
+.mentor-detail__portrait img {object-position:50% 20%}
+.editor-steps {display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px}
+.editor-steps button {display:flex;align-items:center;gap:10px;flex:1;padding:14px 18px;background:var(--color-surface-1);border:1px solid var(--color-border);border-radius:14px;cursor:pointer;color:var(--color-text)}
+.editor-steps button>span {border-radius:50%;width:28px;height:28px;display:grid;place-items:center;background:var(--color-surface-3)}
+.editor-steps .is-active {border-color:var(--color-accent-cyan);background:var(--color-surface-2);font-weight:700}
+.content-editor [data-editor-panel][hidden],.content-editor [hidden] {display:none!important}
+.editor-text-tools {display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.editor-image-preview {max-width:260px}
+.editor-image-preview img {max-height:260px;width:auto;object-fit:contain;border-radius:12px}
+.editor-payment-options {padding:14px;border:1px solid var(--color-border);border-radius:12px;display:grid;gap:10px;min-width:0}
+.editor-payment-options legend {font-size:14px;padding-inline:6px}
+.editor-collection-row {border:1px solid var(--color-border);border-radius:14px;margin-block:16px;background:var(--color-surface-2);overflow:hidden}
+.editor-collection-row summary {padding:18px;display:flex;gap:12px;cursor:pointer;list-style:none}.editor-collection-title{flex:1;line-height:1.8}.editor-collection-row summary::-webkit-details-marker{display:none}
+.editor-row-fields {display:grid;gap:14px;padding:0 20px 20px}.editor-row-fields>[data-delete-row]{justify-self:start}
+.content-editor__actions {position:sticky;bottom:12px;z-index:10;background:var(--color-surface-1);border:1px solid var(--color-border);border-radius:14px;padding:14px;box-shadow:var(--shadow-sm);flex-wrap:wrap}
+.editor-guide {display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.editor-guide [role="status"] {font-size:13px;color:var(--color-text-muted)}
+.user-course-requests {display:grid;gap:16px;margin-block:24px}.user-course-requests .surface{padding:20px;display:grid;gap:12px}
+@media(max-width:760px){.events-grid--single .event-card{display:flex;flex-direction:column}.events-grid--single .event-card__visual{width:100%;aspect-ratio:2/3;max-height:none}.events-grid--single .event-card .card__body{padding:24px;align-self:stretch}.events-catalog--past .events-grid{grid-template-columns:1fr;max-width:480px}.article-takeaways>div{grid-template-columns:1fr}.faculty-course-grid{grid-template-columns:1fr}.article-body p{font-size:16px}.article-cover img{border-radius:16px}.editor-steps button{font-size:13px;padding:12px 8px}.event-application-steps{grid-template-columns:1fr}.event-application-steps span{display:flex;align-items:center}.event-registration__body{padding:20px}.content-editor__actions .btn{flex:1;min-width:100px}}
+@media(prefers-reduced-motion:reduce){.event-card__visual img,.course-outline summary>span:last-child{transition:none}.event-card:hover .event-card__visual img{transform:none}}

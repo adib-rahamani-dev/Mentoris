@@ -17,7 +17,7 @@ final class CircleRepository
 
     public function signup(string $slug, array $data, ?string $userId): array
     {
-        $phone = self::phone((string) $data['phone']);
+        $phone = \App\Core\PhoneNumber::normalize((string) $data['phone']);
         $now = Database::now();
         try {
             $statement = $this->pdo()->prepare('INSERT INTO event_signups (id,user_id,event_slug,name,phone,city,status,created_at,updated_at) VALUES (:id,:user_id,:slug,:name,:phone,:city,:status,:created_at,:updated_at)');

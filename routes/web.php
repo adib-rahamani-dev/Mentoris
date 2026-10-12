@@ -32,6 +32,7 @@ $router->get('/specializations', [SpecializationsController::class, 'index'], ['
 $router->get('/specializations/{slug:[a-z0-9-]+}', [SpecializationsController::class, 'show'], ['rate:120,60']);
 $router->get('/courses', [CoursesController::class, 'index'], ['rate:120,60']);
 $router->get('/courses/{slug:[a-z0-9-]+}', [CoursesController::class, 'show'], ['rate:120,60']);
+$router->post('/courses/{slug:[a-z0-9-]+}/request', [CoursesController::class, 'requestPlace'], ['csrf','rate:3,60']);
 $router->get('/events', [EventsController::class, 'index'], ['rate:120,60']);
 $router->get('/events/{slug:[a-z0-9-]+}', [EventsController::class, 'show'], ['rate:120,60']);
 $router->post('/events/{slug:[a-z0-9-]+}/register', [EventsController::class, 'register'], ['csrf', 'rate:5,60']);

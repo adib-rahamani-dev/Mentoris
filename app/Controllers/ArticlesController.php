@@ -38,6 +38,7 @@ final class ArticlesController extends Controller
             'seoImage' => !empty($article['image']) ? '/assets/' . ltrim($article['image'], '/') : null,
             'structuredData' => [SeoService::articleSchema($article), SeoService::breadcrumbSchema([['name'=>t('nav.articles'),'path'=>'/articles'],['name'=>$article['title'],'path'=>'/articles/' . $slug]])],
             'article' => $article,
+            'authorMentor'=>array_values(array_filter(PublicContentService::mentors(),static fn(array $mentor):bool=>$mentor['slug']===($article['author_slug'] ?? '')))[0] ?? null,
             'relatedArticles' => array_slice(array_values(array_filter(PublicContentService::articles(), static fn (array $item): bool => $item['slug'] !== $slug)), 0, 3),
         ]);
     }

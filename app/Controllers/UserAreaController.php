@@ -83,13 +83,15 @@ final class UserAreaController extends Controller
     public function courses(Request $request): Response
     {
         $user = $this->user();
-        return $this->page('my-courses', 'دوره‌های من', $user, ['courses' => $this->resolve(PublicContentService::courses(), $user['courses'] ?? [], 'course')]);
+        return $this->page('my-courses', 'دوره‌های من', $user, ['courses' => $this->resolve(PublicContentService::courses(), $user['courses'] ?? [], 'course'),'courseRequests'=>(new \App\Repositories\CourseRequestRepository())->userRequests($user['id'])]);
     }
 
     public function events(Request $request): Response
     {
         $user = $this->user();
-        return $this->page('my-events', 'رویدادهای من', $user, ['events' => $this->resolve(PublicContentService::events(), $user['events'] ?? [], 'event')]);
+        $events=$this->resolve(PublicContentService::events(),$user['events'] ?? [],'event');
+        if((new CircleRepository())->available()) { $statuses=array_column((new CircleRepository())->userSignups($user['id']),'status','event_slug'); foreach($events as &$event) $event['signup_status']=$statuses[$event['slug']] ?? ''; unset($event); }
+        return $this->page('my-events', 'رویدادهای من', $user, ['events'=>$events]);
     }
 
     public function certificates(Request $request): Response { $user = $this->user(); return $this->page('my-certificates', 'گواهی‌های من', $user, ['eventCertificates' => (new CircleRepository())->issueEligibleCertificates($user['id'])]); }

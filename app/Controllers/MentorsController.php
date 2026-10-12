@@ -29,6 +29,8 @@ final class MentorsController extends Controller
             return $this->view('pages.mentor-details', [
                 'title' => $mentor['name'] . ' | ' . t('nav.mentors'),
                 'description' => $mentor['specialty'],
+                'seoImage'=>!empty($mentor['image']) ? '/assets/'.$mentor['image'] : null,
+                'structuredData'=>[\App\Services\SeoService::mentorSchema($mentor)],
                 'mentor' => $mentor,
             ]);
         }

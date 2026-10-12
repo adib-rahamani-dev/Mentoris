@@ -33,7 +33,7 @@ final class EventsController extends Controller
         if ($event === null) {
             return Response::html('<h1>404 - Event Not Found</h1>', 404);
         }
-        return $this->renderEvent($event);
+        return $this->renderEvent($event,success:$event['can_register'] && (int)(new \App\Core\Session())->get('event.receipt.'.$slug,0)>time());
     }
 
     public function register(Request $request, string $slug): Response
@@ -47,7 +47,8 @@ final class EventsController extends Controller
         }
 
         $data = $request->only(['name', 'phone', 'city']);
-        $data['phone'] = CircleRepository::phone((string) ($data['phone'] ?? ''));
+        foreach($data as $key=>$value) $data[$key]=is_string($value) ? trim($value) : '';
+        $data['phone'] = \App\Core\PhoneNumber::normalize($data['phone'] ?? '');
         $validator = new Validator();
         $valid = $validator->validate($data, [
             'name' => 'required|string|min:2|max:80',
@@ -66,7 +67,8 @@ final class EventsController extends Controller
         } catch (RuntimeException $exception) {
             return $this->renderEvent($event, [], $data, false, $exception->getMessage());
         }
-        return $this->renderEvent($event, [], [], true);
+        (new \App\Core\Session())->put('event.receipt.'.$slug,time()+1800);
+        return $this->redirect('/events/'.$slug.'#register',303);
     }
 
     private function renderEvent(array $event, array $errors = [], array $old = [], bool $success = false, ?string $notice = null): Response
@@ -83,6 +85,6 @@ final class EventsController extends Controller
             'old' => $old,
             'success' => $success,
             'notice' => $notice,
-        ]);
+        ])->withHeader('Cache-Control','private, no-store');
     }
 }
