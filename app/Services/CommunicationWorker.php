@@ -29,7 +29,13 @@ final class CommunicationWorker
                         else {
                             if(!$this->deliveryAllowed($hub,$job)) {$hub->execute("UPDATE comm_outbox SET status='canceled',payload=:empty,updated_at=:now WHERE id=:id",['empty'=>CommunicationRepository::seal([]),'now'=>Database::now(),'id'=>$job['id']]);$result['skipped']++;continue;}
                             $api=new MessengerApi($job['channel']);
-                            if($job['method']==='_attachment')$api->sendAttachment((new \App\Repositories\SupportRepository($hub))->attachment($payload['attachment_id']),$job['chat_id']);
+                            if($job['method']==='_manual_receipt') {
+                                $payments=new ManualPaymentService($hub);$payment=$payments->find($payload['payment_id']);
+                                if(!$payment)throw new \RuntimeException('Receipt not found.');
+                                if((int)$payment['version']!==(int)$payload['version']){$hub->execute("UPDATE comm_outbox SET status='canceled',payload=:empty,updated_at=:now WHERE id=:id",['empty'=>CommunicationRepository::seal([]),'now'=>Database::now(),'id'=>$job['id']]);$result['skipped']++;continue;}
+                                $api->sendAttachment($payments->receipt($payment),$job['chat_id']);
+                            }
+                            elseif($job['method']==='_attachment')$api->sendAttachment((new \App\Repositories\SupportRepository($hub))->attachment($payload['attachment_id']),$job['chat_id']);
                             else $api->call($job['method'],$payload);
                             $hub->execute("UPDATE comm_outbox SET status='sent',payload=:empty,updated_at=:now WHERE id=:id",['empty'=>CommunicationRepository::seal([]),'now'=>Database::now(),'id'=>$job['id']]);
                         }
@@ -51,6 +57,7 @@ final class CommunicationWorker
         $account=$hub->one('SELECT * FROM comm_accounts WHERE channel=:channel AND chat_id=:chat',['channel'=>$job['channel'],'chat'=>$job['chat_id']]);if(!$account || $account['user_id']!==$job['user_id'])return false;
         $user=$hub->linkedUser($account);if(!$user || (int)$user['auth_version']!==(int)$job['auth_version'])return false;
         if(($job['dedupe_key'] ?? '')!=='' && !$account['notifications_enabled'])return false;
+        if(str_starts_with((string)($job['dedupe_key']??''),'manual:') && empty($account['admin_alerts']))return false;
         return empty($job['required_permission']) || ($account['link_method']==='site' && Authorization::can($user,$job['required_permission']));
     }
 }

@@ -33,8 +33,8 @@ final class TelegramBotService
                 if(!$event) { $this->repository->message($id,'این رویداد در دسترس نیست. /menu'); return; }
                 if(str_starts_with($action,'j:')) {
                     if(empty($event['can_register'])) { $this->repository->message($id,'ثبت‌نام این نشست بسته است.',$this->links([['مشاهده نشست','/events/'.$event['slug']]])); return; }
-                    $this->repository->state($id,'event_name',['event'=>$event['slug']]);
-                    $this->repository->message($id,'برای ثبت درخواست شرکت، نام و نام خانوادگی خود را بنویسید. اطلاعات شما برای پیگیری درخواست در پنل تیم منتوریس ذخیره می‌شود. لغو: /cancel'); return;
+                    $this->repository->state($id,'');
+                    $this->repository->message($id,'برای ثبت درخواست حلقه، ابتدا وارد حساب سایت شوید و پروفایل خود را تکمیل کنید؛ سپس رزومه را در فرم نشست بفرستید.',$this->links([['تکمیل پروفایل','/profile'],['ثبت درخواست نشست','/events/'.$event['slug']]])); return;
                 }
                 $rows=$this->links([['جزئیات نشست','/events/'.$event['slug']],['ثبت بازخورد','/feedback?event='.$event['slug']]])['inline_keyboard'];
                 if(!empty($event['can_register'])) array_unshift($rows,[['text'=>'درخواست شرکت در نشست','callback_data'=>'j:'.self::eventKey($event['slug'])]]);
@@ -43,8 +43,8 @@ final class TelegramBotService
             if($action==='confirm' && $user['state']==='event_confirm') {
                 $data=$user['data']; $event=PublicContentService::event($data['event']);
                 if(!$event || empty($event['can_register'])) { $this->repository->state($id,''); $this->repository->message($id,'ثبت‌نام این رویداد اکنون بسته است. /menu'); return; }
-                $created=$this->repository->eventRequest($id,$data['event'],$data); $this->repository->state($id,'');
-                $this->repository->message($id,$created ? 'درخواست شرکت شما ثبت شد و در انتظار بررسی تیم است. این پیام تأیید پرداخت یا صدور بلیت نیست.' : 'درخواست شما برای این نشست قبلاً ثبت شده است.'); return;
+                $this->repository->state($id,'');
+                $this->repository->message($id,'ثبت درخواست با پروفایل کامل و رزومه از سایت انجام می‌شود.',$this->links([['ثبت درخواست نشست','/events/'.$event['slug']]])); return;
             }
             return;
         }

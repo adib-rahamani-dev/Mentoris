@@ -16,7 +16,7 @@ final class CoursesController extends Controller
         $courses = array_map(fn (array $course): array => PublicContentService::course($course['slug']) ?? $course, PublicContentService::courses());
         return $this->view('pages.courses', [
             'title' => t('nav.courses') . ' | Mentoris Academy',
-            'description' => t('empty.text'),
+            'description' => 'دوره‌ها و کارگاه‌های منتوریس برای توسعه مهارت درمانگر؛ سرفصل‌ها، مدرسان، شرایط پذیرش و پرداخت نقدی یا دو مرحله‌ای را ببینید.',
             'indexable' => $courses !== [],
             'courses' => $courses,
             'categories' => PublicContentService::courseCategories(),
@@ -37,8 +37,12 @@ final class CoursesController extends Controller
     {
         $course=PublicContentService::course($slug);
         if(!$course) return Response::html('<h1>404</h1>',404);
-        if(!$course['can_request']) return $this->renderCourse($course,[],[],false,'ثبت درخواست برای این دوره فعال نیست.');
+        if(!$course['can_request'] && !$course['can_enroll']) return $this->renderCourse($course,[],[],false,'ثبت درخواست برای این دوره فعال نیست.');
+        $user=(new \App\Services\AuthService())->user();
+        if(!$user)return $this->redirect('/login',303);
+        if(!\App\Services\ManualPaymentService::profileReady($user))return $this->redirect('/profile',303);
         $data=$request->only(['name','phone','payment_plan']);
+        $data['name']=$user['name'];$data['phone']=$user['phone'];
         foreach($data as $key=>$value) $data[$key]=is_string($value) ? trim($value) : '';
         $data['phone']=\App\Core\PhoneNumber::normalize($data['phone'] ?? '');
         $validator=new \App\Core\Validator();
@@ -60,8 +64,9 @@ final class CoursesController extends Controller
             'title' => $course['title'] . ' | Courses',
             'description' => $course['short_description'],
             'seoImage' => !empty($course['image']) ? '/assets/'.$course['image'] : null,
-            'structuredData' => [\App\Services\SeoService::courseSchema($course)],
+            'structuredData' => [\App\Services\SeoService::courseSchema($course),\App\Services\SeoService::faqSchema($course['faq']??[])],
             'requestReady'=>(new \App\Repositories\CourseRequestRepository())->available(),
+            'enrollmentReady'=>\App\Services\ManualPaymentService::profileReady($user),'enrollmentUser'=>$user,
             'errors'=>$errors,'old'=>$old+['name'=>$user['name'] ?? '','phone'=>$user['phone'] ?? ''],'success'=>$success,'notice'=>$notice,
             'course' => $course,
         ])->withHeader('Cache-Control','private, no-store');

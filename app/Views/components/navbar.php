@@ -11,7 +11,7 @@ if (!empty($authIdentity['id'])) {
         $notificationQuery->execute(['id'=>$authIdentity['id']]); $notificationCount=(int)$notificationQuery->fetchColumn();
     } catch (\PDOException) { $notificationCount=0; }
 }
-$accountPaths = ['/dashboard', '/profile', '/my-courses', '/my-events', '/my-certificates', '/notifications', '/orders'];
+$accountPaths = ['/dashboard', '/profile', '/my-courses', '/my-events', '/my-certificates', '/notifications', '/orders', '/payments'];
 ?>
 <header class="site-header">
     <div class="container site-header__inner">

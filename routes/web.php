@@ -31,6 +31,9 @@ $router->get('/academy/{slug:[a-z0-9-]+}', [AcademyController::class, 'show'], [
 $router->get('/specializations', [SpecializationsController::class, 'index'], ['rate:120,60']);
 $router->get('/specializations/{slug:[a-z0-9-]+}', [SpecializationsController::class, 'show'], ['rate:120,60']);
 $router->get('/courses', [CoursesController::class, 'index'], ['rate:120,60']);
+$router->get('/payments', [\App\Controllers\ManualPaymentController::class,'index'], ['auth','rate:60,60']);
+$router->post('/payments/{type:circle|courses}/{id:[a-f0-9]+}', [\App\Controllers\ManualPaymentController::class,'submit'], ['auth','csrf','rate:3,60']);
+$router->get('/payments/receipt/{id:[a-f0-9]+}', [\App\Controllers\ManualPaymentController::class,'receipt'], ['auth','rate:60,60']);
 $router->get('/courses/{slug:[a-z0-9-]+}', [CoursesController::class, 'show'], ['rate:120,60']);
 $router->post('/courses/{slug:[a-z0-9-]+}/request', [CoursesController::class, 'requestPlace'], ['csrf','rate:3,60']);
 $router->get('/events', [EventsController::class, 'index'], ['rate:120,60']);

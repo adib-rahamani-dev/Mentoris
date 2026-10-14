@@ -39,6 +39,7 @@ final class SeoService
         '/notifications',
         '/orders',
         '/payment',
+        '/payments',
         '/profile',
         '/register',
         '/reset-password',
@@ -194,6 +195,11 @@ final class SeoService
             'provider'=>['@id'=>self::baseUrl().'/#organization'],'image'=>self::absoluteUrl('/assets/'.$course['image']),
             'offers'=>['@type'=>'Offer','price'=>(int)$course['price_amount']*10,'priceCurrency'=>'IRR','url'=>self::absoluteUrl('/courses/'.$course['slug']).'#request'],
             'educationalLevel'=>$course['level'],'inLanguage'=>self::LOCALE_MAP[Translator::locale()] ?? 'fa_IR'];
+    }
+
+    public static function faqSchema(array $items): array
+    {
+        return ['@type'=>'FAQPage','mainEntity'=>array_values(array_map(static fn(array $item): array=>['@type'=>'Question','name'=>$item['question'],'acceptedAnswer'=>['@type'=>'Answer','text'=>$item['answer']]],array_filter($items,static fn(array $item): bool=>!empty($item['question']) && !empty($item['answer']))))];
     }
 
     public static function mentorSchema(array $mentor): array

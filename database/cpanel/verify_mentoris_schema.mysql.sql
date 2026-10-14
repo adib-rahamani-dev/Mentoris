@@ -41,6 +41,7 @@ FROM (
     UNION ALL SELECT 'course_requests'
     UNION ALL SELECT 'support_attachments'
     UNION ALL SELECT 'circle_applications'
+    UNION ALL SELECT 'manual_payments'
     UNION ALL SELECT 'support_messages'
     UNION ALL SELECT 'support_tickets'
     UNION ALL SELECT 'comm_actions'
@@ -55,8 +56,8 @@ LEFT JOIN information_schema.tables AS actual
 ORDER BY expected.table_name;
 
 SELECT COUNT(*) AS installed_mentoris_tables,
-       44 AS expected_mentoris_tables,
-       CASE WHEN COUNT(*) = 44 THEN 'SCHEMA_OK' ELSE 'SCHEMA_INCOMPLETE' END AS result
+       45 AS expected_mentoris_tables,
+       CASE WHEN COUNT(*) = 45 THEN 'SCHEMA_OK' ELSE 'SCHEMA_INCOMPLETE' END AS result
 FROM information_schema.tables
 WHERE table_schema = DATABASE()
   AND table_name IN (
@@ -97,6 +98,7 @@ WHERE table_schema = DATABASE()
       'course_requests',
       'support_attachments',
       'circle_applications',
+      'manual_payments',
       'support_messages',
       'support_tickets',
       'comm_actions',

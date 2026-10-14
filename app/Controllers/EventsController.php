@@ -46,7 +46,11 @@ final class EventsController extends Controller
             return $this->renderEvent($event, [], $request->only(['name', 'phone', 'city']), false, 'درخواست حضور در این رویداد فعلاً فعال نیست.');
         }
 
+        $user=(new AuthService())->user();
+        if(!$user)return $this->redirect('/login',303);
+        if(!\App\Services\ManualPaymentService::profileReady($user))return $this->redirect('/profile',303);
         $data = $request->only(['name', 'phone', 'city','education','university','specialization','experience','approach','practice_areas','professional_number','motivation']);
+        $data['name']=$user['name'];$data['phone']=$user['phone'];
         foreach($data as $key=>$value) $data[$key]=is_string($value) ? trim($value) : '';
         $data['phone'] = \App\Core\PhoneNumber::normalize($data['phone'] ?? '');
         $validator = new Validator();
@@ -91,6 +95,8 @@ final class EventsController extends Controller
 
     private function renderEvent(array $event, array $errors = [], array $old = [], bool $success = false, ?string $notice = null): Response
     {
+        $user=(new AuthService())->user();
+        $profile=$user?(new \App\Repositories\MemberProfileRepository())->find($user['id']):[];
         return $this->view('pages.event-details', [
             'title' => $event['title'] . ' | Events',
             'description' => $event['short_description'],
@@ -99,8 +105,9 @@ final class EventsController extends Controller
             'structuredData' => !empty($event['date_iso']) ? [SeoService::eventSchema($event)] : [],
             'event' => $event,
             'registrationReady' => $event['can_register'] && (new CircleRepository())->applicationsAvailable(),
+            'enrollmentReady'=>\App\Services\ManualPaymentService::profileReady($user),'enrollmentUser'=>$user,
             'errors' => $errors,
-            'old' => $old,
+            'old' => $old+['name'=>$user['name']??'','phone'=>$user['phone']??'','city'=>$profile['city']??'','university'=>$profile['university']??'','education'=>\App\Services\MemberProfileService::OPTIONS['degree'][$profile['degree']??'']??'','specialization'=>$profile['specialization']??$profile['field_of_study']??'','experience'=>$profile['experience']??'','practice_areas'=>$profile['specialty_fields']??''],
             'success' => $success,
             'notice' => $notice,
         ])->withHeader('Cache-Control','private, no-store');

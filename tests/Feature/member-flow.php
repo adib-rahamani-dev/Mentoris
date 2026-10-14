@@ -182,14 +182,14 @@ $pdo->exec("INSERT INTO content_entities VALUES ('future-event','event','future-
 $pdo->prepare('INSERT INTO content_translations (id,entity_id,locale,title,subtitle,excerpt,body,metadata) VALUES (:id,:entity,:locale,:title,:subtitle,:excerpt,:body,:meta)')->execute(['id'=>'future-fa','entity'=>'future-event','locale'=>'fa','title'=>'نشست آینده','subtitle'=>'','excerpt'=>'نشست آزمایشی','body'=>'نشست آزمایشی','meta'=>json_encode(['event_status'=>'registration-open','starts_at'=>'2026-12-01 18:00:00','location'=>'تبریز'])]);
 $callback['data']='j:'.\App\Services\TelegramBotService::eventKey('future-meeting');
 $bot->handle(['update_id'=>7,'callback_query'=>$callback]);
-$check($telegram->user('12345',$message['from'])['state']==='event_name','Published open event starts bot registration.');
+$check($telegram->user('12345',$message['from'])['state']==='','Legacy bot directs enrollment to the profile-protected website.');
 $bot->handle(['update_id'=>8,'message'=>array_replace($message,['text'=>'عضو آزمایشی تلگرام'])]);
 $bot->handle(['update_id'=>9,'message'=>array_replace($message,['text'=>'۰۹۱۲۲۲۲۲۲۲۲'])]);
 $bot->handle(['update_id'=>10,'message'=>array_replace($message,['text'=>'تبریز'])]);
-$check($telegram->user('12345',$message['from'])['state']==='event_confirm','Bot collects name, normalized phone and city.');
+$check($telegram->user('12345',$message['from'])['state']==='','Unverified messages cannot begin legacy event enrollment.');
 $callback['data']='confirm'; $bot->handle(['update_id'=>11,'callback_query'=>$callback]);
 $bot->handle(['update_id'=>12,'callback_query'=>$callback]);
-$check((int)$pdo->query('SELECT COUNT(*) FROM telegram_event_requests')->fetchColumn()===1 && $pdo->query('SELECT phone FROM telegram_event_requests')->fetchColumn()==='09122222222','Confirmed bot request persists once and never issues a paid ticket.');
+$check((int)$pdo->query('SELECT COUNT(*) FROM telegram_event_requests')->fetchColumn()===0,'Old confirm callbacks cannot bypass profile and resume requirements.');
 $check((new \App\Controllers\ResourcesController())->download((function(){ $r=new Request(); $r->setRouteParams(['slug'=>'psychological-flexibility']); return $r; })())->status()===200,'Resources download stays available before metrics migration.');
 $pdo->exec('CREATE TABLE resource_downloads (user_id TEXT,resource_slug TEXT,downloads INTEGER,last_download_at TEXT,PRIMARY KEY(user_id,resource_slug))');
 $resourceRepo=new \App\Repositories\ResourceRepository(); $resourceRepo->downloaded($fallbackUser['id'],'session-reflection'); $resourceRepo->downloaded($fallbackUser['id'],'session-reflection');

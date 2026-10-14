@@ -16,25 +16,14 @@ final class PaymentController extends Controller
 {
     public function checkout(Request $request, string $slug): Response
     {
-        $course = PublicContentService::course($slug);
-        if ($course === null) return Response::html('<h1>404 - Course Not Found</h1>', 404);
-        return $this->checkoutView($course, (new AuthService())->user() ?? []);
+        if(PublicContentService::course($slug)===null)return Response::html('<h1>404 - Course Not Found</h1>',404);
+        return $this->redirect('/courses/'.$slug.'#request',303);
     }
 
     public function pay(Request $request, string $slug): Response
     {
-        $course = PublicContentService::course($slug);
-        if ($course === null) return Response::html('<h1>404 - Course Not Found</h1>', 404);
-        $user = (new AuthService())->user() ?? [];
-        if ($request->input('accept') !== '1') return $this->checkoutView($course, $user, ['accept' => ['پذیرش قوانین خرید الزامی است.']]);
-        try {
-            $result = (new PaymentService())->checkoutCourse($course, $user);
-            return $this->redirect($result['redirect_url']);
-        } catch (RuntimeException $exception) {
-            return $this->checkoutView($course, $user, ['payment' => [$exception->getMessage()]]);
-        }
+        return $this->checkout($request,$slug);
     }
-
     public function callback(Request $request): Response
     {
         try {

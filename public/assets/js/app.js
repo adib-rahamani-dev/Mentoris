@@ -29,6 +29,14 @@ ready(() => {
     });
   }
   initMemberProfile();
+  const adminNavToggle=document.querySelector('[data-admin-nav-toggle]');
+  if(adminNavToggle){
+    const sidebar=adminNavToggle.closest('.admin-sidebar');
+    const setOpen=open=>{sidebar.classList.toggle('is-menu-open',open);adminNavToggle.setAttribute('aria-expanded',String(open));};
+    try{setOpen(sessionStorage.getItem('mentoris.admin-menu')==='open');}catch{}
+    adminNavToggle.addEventListener('click',()=>{const open=adminNavToggle.getAttribute('aria-expanded')!=='true';setOpen(open);try{sessionStorage.setItem('mentoris.admin-menu',open?'open':'closed');}catch{}});
+  }
+  if(document.querySelector('[data-copy-card]'))import('./pages/manual-payments.js?v=1.1.0').then(module=>module.initManualPayments()).catch(()=>{});
   initProfileExperience();
   initPhoneVerification();
   initProfileWizard();

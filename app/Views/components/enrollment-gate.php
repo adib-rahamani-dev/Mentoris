@@ -1,0 +1,1 @@
+<div class="enrollment-gate"><h3><?= $enrollmentUser?'پروفایل را تکمیل کنید':'ابتدا وارد حساب شوید' ?></h3><p>درخواست دوره و حلقه با اطلاعات حساب شما ثبت می‌شود. اطلاعات ضروری پروفایل باید کامل باشد.</p><a class="btn btn--primary w-full" href="<?= $enrollmentUser?'/profile':'/login' ?>"><?= $enrollmentUser?'تکمیل اطلاعات پروفایل':'ورود / ساخت حساب' ?></a></div>

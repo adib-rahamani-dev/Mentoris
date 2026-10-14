@@ -120,6 +120,14 @@ final class CommunicationBotService
     }
     private function adminCallback(string $action): void
     {
+        if(preg_match('/^(mpa|mpr):([a-f0-9]{32}):([1-9][0-9]{0,9})$/',$action,$match)) {
+            $actor=$this->admin->authorized($this->account,'payments.manage');if(!$actor){$this->denied();return;}
+            $row=(new ManualPaymentService($this->hub))->find($match[2]);if(!$row || $row['status']!=='pending')throw new \RuntimeException('رسید قبلاً بررسی شده یا در دسترس نیست.');
+            if((int)$row['version']!==(int)$match[3])throw new \RuntimeException('تصویر رسید تغییر کرده؛ پیام جدید و تصویر تازه را بررسی کنید.');
+            $status=$match[1]==='mpa'?'approved':'rejected';
+            $id=$this->hub->prepareAction($this->account,$actor,'manual_payment',['id'=>$row['id'],'version'=>$row['version'],'status'=>$status,'type'=>'payment']);
+            $this->confirm($id,($status==='approved'?'تأیید دریافت وجه':'رد رسید').'؛ '.number_format((int)$row['amount']).' تومان. رسید را با گردش حساب تطبیق داده‌اید؟',$actor);return;
+        }
         if($action==='admin'){$this->adminMenu();return;}
         if(str_starts_with($action,'do:')) {$actor=$this->admin->authorized($this->account,'admin.access');if(!$actor){$this->denied();return;}$this->say($this->admin->execute($this->account,substr($action,3)),$this->buttons([[['text'=>'مدیریت','callback_data'=>'admin']]]),$actor);return;}
         if($action==='admin:alerts') {$actor=$this->admin->authorized($this->account,'engagements.view');if(!$actor){$this->denied();return;}$this->hub->execute('UPDATE comm_accounts SET admin_alerts=:enabled WHERE channel=:channel AND chat_id=:chat',['enabled'=>empty($this->account['admin_alerts'])?1:0,'channel'=>$this->channel,'chat'=>$this->account['chat_id']]);$this->say(empty($this->account['admin_alerts'])?'اعلان مدیریتی فعال شد. درخواست‌ها و پیام‌های تازه را همین‌جا دریافت می‌کنید.':'اعلان مدیریتی خاموش شد.',null,$actor);return;}
