@@ -33,8 +33,11 @@ final class ManualPaymentService
         $parts=$type==='courses' && $request['payment_plan']==='installments'?2:1;
         $total=(int)$item['price_amount'];
         $rows=$this->available()?$this->hub->rows('SELECT * FROM manual_payments WHERE request_type=:type AND request_id=:id ORDER BY part',['type'=>$type,'id'=>$id]):[];
-        if($rows && $parts===2)$total=(int)$rows[0]['amount']*2;
-        return compact('request','item','parts','total','rows','type','id','payable');
+        if($rows)$total=(int)$rows[0]['amount']*$parts;
+        $discounts=new DiscountCodeService($this->hub);$couponReady=$discounts->available();$discount=$discounts->redemption($type,$id);
+        $originalTotal=$discount?(int)$discount['original_amount']:$total;
+        if($discount)$total=(int)$discount['final_amount'];
+        return compact('request','item','parts','total','originalTotal','rows','type','id','payable','discount','couponReady');
     }
     public function submit(array $context,array $user,int $part,array $file): array
     {
@@ -47,8 +50,11 @@ final class ManualPaymentService
         if(!in_array($mime,['image/jpeg','image/png'],true))throw new RuntimeException('رسید باید تصویر JPG یا PNG باشد.');
         return Database::transaction($this->hub->pdo(),function() use($context,$user,$part,$file){
             $table=$context['type']==='circle'?'event_signups':'course_requests';
-            $accepted=$this->hub->one("SELECT status FROM $table WHERE id=:id AND user_id=:user",['id'=>$context['id'],'user'=>$user['id']]);
+            $lock=Database::driver($this->hub->pdo())==='mysql'?' FOR UPDATE':'';
+            $accepted=$this->hub->one("SELECT status FROM $table WHERE id=:id AND user_id=:user".$lock,['id'=>$context['id'],'user'=>$user['id']]);
             if(!$accepted || $accepted['status']!=='approved')throw new RuntimeException('درخواست پذیرش تغییر کرده است؛ وضعیت را دوباره بررسی کنید.');
+            $discount=(new DiscountCodeService($this->hub))->redemption($context['type'],$context['id']);
+            if(($discount && (int)$discount['final_amount']!==$context['total']) || (!$discount && !empty($context['discount'])))throw new RuntimeException('مبلغ تخفیف تغییر کرده است؛ صفحه پرداخت را تازه کنید.');
             if($part===2 && !$this->hub->one("SELECT id FROM manual_payments WHERE request_type=:type AND request_id=:id AND part=1 AND status='approved'",['type'=>$context['type'],'id'=>$context['id']]))throw new RuntimeException('ابتدا پرداخت بخش اول باید تأیید شود.');
             $old=$this->hub->one('SELECT * FROM manual_payments WHERE request_type=:type AND request_id=:id AND part=:part',['type'=>$context['type'],'id'=>$context['id'],'part'=>$part]);
             if($old && $old['status']!=='rejected')throw new RuntimeException('رسید این بخش قبلاً ثبت شده؛ منتظر بررسی بمانید.');
@@ -65,9 +71,11 @@ final class ManualPaymentService
     public function notify(array $row): void
     {
         $notifications=new NotificationService();
+        $discount=(new DiscountCodeService($this->hub))->redemption($row['request_type'],$row['request_id']);
+        $discountText=$discount?"\nکد تخفیف: ".$discount['code'].' | تخفیف کل: '.number_format((int)$discount['discount_amount']).' تومان':'';
         $member=$this->hub->one('SELECT name,phone FROM users WHERE id=:id',['id'=>$row['user_id']]);
         foreach($this->hub->rows("SELECT id,account_role,status FROM users WHERE status='active' AND account_role IN ('admin','super_admin')") as $admin){
-            if(Authorization::can($admin,'payments.manage'))$notifications->panel($admin,'رسید پرداخت تازه',($member['name']??'عضو').'؛ '.$row['item_title'].' | بخش '.$row['part'].' | '.number_format((int)$row['amount']).' تومان؛ آماده بررسی در پنل رسیدها.');
+            if(Authorization::can($admin,'payments.manage'))$notifications->panel($admin,'رسید پرداخت تازه',($member['name']??'عضو').'؛ '.$row['item_title'].' | بخش '.$row['part'].' | '.number_format((int)$row['amount']).' تومان؛ آماده بررسی در پنل رسیدها.'.$discountText);
         }
         $notifications->panel(['id'=>$row['user_id']],'رسید پرداخت دریافت شد',$row['item_title'].'؛ رسید بخش '.$row['part'].' ثبت شد و منتظر بررسی مدیر است. دوباره واریز نکنید.');
         if(!$this->hub->available())return;
@@ -76,7 +84,7 @@ final class ManualPaymentService
             if(!$admin || $account['link_method']!=='site' || !Authorization::can($admin,'payments.manage'))continue;
             $admin['__permission']='payments.manage';$key='manual:'.$row['id'].':'.$row['version'];
             $this->hub->queue($account['channel'],$account['chat_id'],'_manual_receipt',['payment_id'=>$row['id'],'version'=>$row['version']],$key.':image',$admin);
-            $this->hub->message($account,'رسید پرداخت تازه: '.$row['item_title']."\nعضو: ".($member['name']??'')."\nشماره تماس: ".($member['phone']??'')."\nبخش ".$row['part'].' | '.number_format((int)$row['amount']).' تومان', ['inline_keyboard'=>[[['text'=>'تأیید رسید','callback_data'=>'mpa:'.$row['id'].':'.$row['version']],['text'=>'رد رسید','callback_data'=>'mpr:'.$row['id'].':'.$row['version']]],[['text'=>'بررسی در سایت','url'=>rtrim((string)env('APP_URL'),'/').'/admin/manual-payments']]]],$key.':notice',$admin);
+            $this->hub->message($account,'رسید پرداخت تازه: '.$row['item_title']."\nعضو: ".($member['name']??'')."\nشماره تماس: ".($member['phone']??'')."\nبخش ".$row['part'].' | '.number_format((int)$row['amount']).' تومان'.$discountText, ['inline_keyboard'=>[[['text'=>'تأیید رسید','callback_data'=>'mpa:'.$row['id'].':'.$row['version']],['text'=>'رد رسید','callback_data'=>'mpr:'.$row['id'].':'.$row['version']]],[['text'=>'بررسی در سایت','url'=>rtrim((string)env('APP_URL'),'/').'/admin/manual-payments']]]],$key.':notice',$admin);
         }
     }
     public function review(string $id,int $version,string $status,array $admin,string $note=''): void

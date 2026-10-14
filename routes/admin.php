@@ -28,6 +28,9 @@ $router->post('/admin/feedback/{slug:[a-z-]+}/schedule', [\App\Controllers\Admin
 $router->get('/admin/telegram', [\App\Controllers\AdminTelegramController::class, 'index'], ['auth', 'can:engagements.view', 'rate:120,60']);
 $router->get('/admin/communications', [\App\Controllers\CommunicationController::class, 'admin'], ['auth','can:engagements.view','rate:120,60']);
 $router->get('/admin/manual-payments', [\App\Controllers\ManualPaymentController::class,'admin'], ['auth','can:payments.manage','rate:60,60']);
+$router->get('/admin/discounts', [\App\Controllers\DiscountCodeController::class,'index'], ['auth','can:payments.manage','rate:60,60']);
+$router->post('/admin/discounts', [\App\Controllers\DiscountCodeController::class,'create'], ['auth','can:payments.manage','csrf','rate:10,60']);
+$router->post('/admin/discounts/{id:[a-f0-9]+}/status', [\App\Controllers\DiscountCodeController::class,'status'], ['auth','can:payments.manage','csrf','rate:20,60']);
 $router->post('/admin/manual-payments/{id:[a-f0-9]+}', [\App\Controllers\ManualPaymentController::class,'review'], ['auth','can:payments.manage','csrf','rate:10,60']);
 $router->get('/admin/circle-applications/{id}/resume', [\App\Controllers\EventsController::class, 'resume'], ['auth','can:engagements.view','rate:30,60']);
 $router->post('/admin/communications/retry', [\App\Controllers\CommunicationController::class, 'retry'], ['auth','can:engagements.manage','csrf','rate:3,60']);

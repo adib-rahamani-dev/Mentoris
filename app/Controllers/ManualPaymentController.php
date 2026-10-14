@@ -34,6 +34,7 @@ final class ManualPaymentController extends Controller
         $service=new ManualPaymentService();$status=(string)$request->query('status','pending');if(!in_array($status,['pending','approved','rejected'],true))$status='pending';
         $hub=new CommunicationRepository();$page=max(1,(int)$request->query('page',1));$offset=($page-1)*20;
         $rows=$service->available()?$hub->rows("SELECT p.*,u.name,u.phone FROM manual_payments p JOIN users u ON u.id=p.user_id WHERE p.status=:status ORDER BY p.updated_at DESC LIMIT 20 OFFSET $offset",['status'=>$status]):[];
+        $discounts=new \App\Services\DiscountCodeService($hub);foreach($rows as &$row)$row['discount']=$discounts->redemption($row['request_type'],$row['request_id']);unset($row);
         $counts=$service->available()?$hub->rows('SELECT status,COUNT(*) AS total FROM manual_payments GROUP BY status'):[];
         return $this->view('admin.manual-payments',['title'=>'بررسی رسیدهای کارت‌به‌کارت','admin'=>(new AuthService())->user(),'items'=>$rows,'counts'=>$counts,'status'=>$status,'page'=>$page,'ready'=>$service->available(),'notice'=>(new Session())->pull('manual.notice')],'layouts.admin');
     }

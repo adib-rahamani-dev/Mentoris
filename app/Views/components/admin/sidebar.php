@@ -5,7 +5,7 @@ $active = static fn (string $path): string => $adminPath === $path || ($path !==
 ?>
 <aside class="admin-sidebar" data-admin-sidebar>
     <div class="admin-identity"><span><?= e(mb_substr($admin['name'] ?? 'M', 0, 1)) ?></span><div><strong><?= e($admin['name'] ?? '') ?></strong><small><?= e(Authorization::roleLabel(Authorization::role($admin))) ?></small></div></div>
-    <button class="btn btn--secondary admin-nav-toggle" type="button" data-admin-nav-toggle aria-expanded="false" aria-controls="admin-main-nav">منوی مدیریت <?= icon('menu') ?></button><nav id="admin-main-nav" aria-label="منوی مدیریت"><?php if(Authorization::can($admin,'payments.manage')): ?><a class="<?= $active('/admin/manual-payments') ?>" href="/admin/manual-payments"><span><?= icon('credit-card') ?></span>رسیدهای کارت‌به‌کارت</a><?php endif; ?>
+    <button class="btn btn--secondary admin-nav-toggle" type="button" data-admin-nav-toggle aria-expanded="false" aria-controls="admin-main-nav">منوی مدیریت <?= icon('menu') ?></button><nav id="admin-main-nav" aria-label="منوی مدیریت"><?php if(Authorization::can($admin,'payments.manage')): ?><a class="<?= $active('/admin/manual-payments') ?>" href="/admin/manual-payments"><span><?= icon('credit-card') ?></span>رسیدهای کارت‌به‌کارت</a><a class="<?= $active('/admin/discounts') ?>" href="/admin/discounts"><span><?= icon('card') ?></span>کدهای تخفیف</a><?php endif; ?>
         <small class="admin-nav-label">نمای کلی</small>
         <a class="<?= $active('/admin') ?>" href="/admin"><span><?= icon('home') ?></span>داشبورد</a>
         <?php if (Authorization::can($admin, 'analytics.view')): ?><a class="<?= $active('/admin/analytics') ?>" href="/admin/analytics"><span><?= icon('chart') ?></span>تحلیل و گزارش‌ها</a><?php endif; ?>
