@@ -8,6 +8,7 @@ final class CommunicationNoticeService
     public function __construct(private readonly CommunicationRepository $hub=new CommunicationRepository()) {}
     public function engagement(string $type,string $id,string $status): void
     {
+        (new PaymentLifecycleService($this->hub))->sync($type,$id);
         if(!$this->hub->available()) return;
         $tables=['circle'=>'event_signups','courses'=>'course_requests','community'=>'community_memberships'];$table=$tables[$type] ?? null;if(!$table) return;
         $row=$this->hub->one("SELECT * FROM $table WHERE id=:id",['id'=>$id]);if(!$row) return;
@@ -15,11 +16,11 @@ final class CommunicationNoticeService
         $title=$type==='circle'?'درخواست حضور در حلقه':($type==='courses'?'درخواست دوره':'درخواست جامعه حرفه‌ای');
         $slug=$row['event_slug'] ?? $row['course_slug'] ?? '';
         $key='engagement:'.$type.':'.$id.':'.$status.':'.($row['updated_at'] ?? $row['created_at']);
-        if(!empty($row['user_id'])) $this->hub->notifyUser($row['user_id'],$title,$label.($slug?"\n".rtrim((string)env('APP_URL'),'/').($type==='circle'?'/events/':'/courses/').$slug:''),$key);
+        if(!empty($row['user_id'])) $this->hub->notifyUser($row['user_id'],$title,$label.($slug?"\n".rtrim((string)env('APP_URL'),'/').'/payments/'.$type.'/'.$id:''),$key);
         if($status==='requested'){
             $item=$type==='circle'?PublicContentService::event($slug):($type==='courses'?PublicContentService::course($slug):null);
             $path=in_array($type,['circle','courses'],true)?'/admin/requests/'.$type.'/'.$id:null;
-            $this->hub->notifyAdmins($title.' تازه ثبت شد.'.($item?"\n".$item['title']:'')."\n".($row['name']??'')."\n".($row['phone']??''),$key,$path);
+            $this->hub->notifyAdmins(in_array($type,['circle','courses'],true)?(new CommunicationDetailService($this->hub))->request($type,$id):$title.' تازه ثبت شد.',$key,$path);
         }
     }
     public function reminders(): int

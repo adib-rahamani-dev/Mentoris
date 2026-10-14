@@ -97,7 +97,7 @@ final class CommunicationRepository
     {
         foreach($this->rows('SELECT * FROM comm_accounts WHERE admin_alerts=1 AND notifications_enabled=1') as $account) {
             $user=$this->linkedUser($account);if(!$user || $account['link_method']!=='site' || !Authorization::can($user,'engagements.view')) continue;
-            $button=$path && preg_match('~^/admin/requests/(circle|courses)/[a-f0-9]+$~D',$path)?['text'=>'مشاهده اطلاعات و بررسی درخواست','url'=>rtrim((string)env('APP_URL'),'/').$path]:['text'=>'مرکز مدیریت','callback_data'=>'admin'];
+            $button=$path && preg_match('~^/admin/(?:requests/(?:circle|courses)|support)/[a-f0-9]+$~D',$path)?['text'=>str_starts_with($path,'/admin/support/')?'مشاهده گفتگو و فایل‌ها':'مشاهده اطلاعات و بررسی درخواست','url'=>rtrim((string)env('APP_URL'),'/').$path]:['text'=>'مرکز مدیریت','callback_data'=>'admin'];
             $user['__permission']='engagements.view';$this->message($account,$text,['inline_keyboard'=>[[$button]]],$key,$user);
         }
     }
@@ -107,6 +107,6 @@ final class CommunicationRepository
     }
     public function pendingCounts(): array
     {
-        $result=[];foreach(['tickets'=>"SELECT COUNT(*) total FROM support_tickets WHERE status IN ('open','waiting')",'circle'=>"SELECT COUNT(*) total FROM event_signups WHERE status='requested'",'courses'=>"SELECT COUNT(*) total FROM course_requests WHERE status='requested'",'users'=>'SELECT COUNT(*) total FROM users','failed'=>"SELECT COUNT(*) total FROM comm_outbox WHERE status='failed'"] as $key=>$sql) {try {$result[$key]=(int)($this->one($sql)['total'] ?? 0);}catch(\PDOException $e){if(!MemberProfileRepository::missingTable($e)) throw $e;$result[$key]=0;}}return $result;
+        $result=[];foreach(['tickets'=>"SELECT COUNT(*) total FROM support_tickets WHERE status IN ('open','waiting')",'circle'=>"SELECT COUNT(*) total FROM event_signups WHERE status='requested'",'courses'=>"SELECT COUNT(*) total FROM course_requests WHERE status='requested'",'receipts'=>"SELECT COUNT(*) total FROM manual_payments WHERE status='pending'",'refunds'=>"SELECT COUNT(*) total FROM payment_refunds WHERE status='pending'",'users'=>'SELECT COUNT(*) total FROM users','failed'=>"SELECT COUNT(*) total FROM comm_outbox WHERE status='failed'"] as $key=>$sql) {try {$result[$key]=(int)($this->one($sql)['total'] ?? 0);}catch(\PDOException $e){if(!MemberProfileRepository::missingTable($e)) throw $e;$result[$key]=0;}}return $result;
     }
 }

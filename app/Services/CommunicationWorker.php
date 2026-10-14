@@ -57,7 +57,7 @@ final class CommunicationWorker
         $account=$hub->one('SELECT * FROM comm_accounts WHERE channel=:channel AND chat_id=:chat',['channel'=>$job['channel'],'chat'=>$job['chat_id']]);if(!$account || $account['user_id']!==$job['user_id'])return false;
         $user=$hub->linkedUser($account);if(!$user || (int)$user['auth_version']!==(int)$job['auth_version'])return false;
         if(($job['dedupe_key'] ?? '')!=='' && !$account['notifications_enabled'])return false;
-        if(str_starts_with((string)($job['dedupe_key']??''),'manual:') && empty($account['admin_alerts']))return false;
+        if(!empty($job['required_permission']) && !empty($job['dedupe_key']) && empty($account['admin_alerts']))return false;
         return empty($job['required_permission']) || ($account['link_method']==='site' && Authorization::can($user,$job['required_permission']));
     }
 }

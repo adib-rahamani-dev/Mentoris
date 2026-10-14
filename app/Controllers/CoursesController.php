@@ -44,7 +44,7 @@ final class CoursesController extends Controller
             return $this->redirect('/login?next='.rawurlencode($target),303);
         }
         $existing=(new \App\Repositories\CourseRequestRepository())->forUser($slug,$user['id']);
-        if($existing)return $this->redirect($existing['status']==='approved'?'/payments':'/courses/'.$slug.'#request',303);
+        if($existing)return $this->redirect('/payments/courses/'.$existing['id'],303);
         $data=$request->only(['name','phone','payment_plan']);
         $data['name']=$user['name'];$data['phone']=$user['phone'];
         foreach($data as $key=>$value) $data[$key]=is_string($value) ? trim($value) : '';
@@ -58,12 +58,15 @@ final class CoursesController extends Controller
         try { $repository->request($slug,$data,(new \App\Services\AuthService())->user()['id'] ?? null); }
         catch(\RuntimeException $e) { return $this->renderCourse($course,[],$data,false,$e->getMessage()); }
         (new \App\Core\Session())->put('course.receipt.'.$slug,time()+1800);
-        return $this->redirect('/courses/'.$slug.'#request',303);
+        $created=$repository->forUser($slug,$user['id']);
+        return $this->redirect('/payments/courses/'.$created['id'],303);
     }
 
     private function renderCourse(array $course,array $errors=[],array $old=[],bool $success=false,?string $notice=null): Response
     {
         $user=(new \App\Services\AuthService())->user();
+        $existing=$user?(new \App\Repositories\CourseRequestRepository())->forUser($course['slug'],$user['id']):null;
+        $success=$success && (!$existing || $existing['status']==='requested');
         return $this->view('pages.course-details', [
             'title' => $course['title'] . ' | Courses',
             'description' => $course['short_description'],
@@ -71,7 +74,7 @@ final class CoursesController extends Controller
             'structuredData' => [\App\Services\SeoService::courseSchema($course),\App\Services\SeoService::faqSchema($course['faq']??[])],
             'requestReady'=>(new \App\Repositories\CourseRequestRepository())->available(),
             'enrollmentReady'=>$user!==null,'enrollmentUser'=>$user,
-            'existingCourseRequest'=>$user?(new \App\Repositories\CourseRequestRepository())->forUser($course['slug'],$user['id']):null,
+            'existingCourseRequest'=>$existing,
             'errors'=>$errors,'old'=>$old+['name'=>$user['name'] ?? '','phone'=>$user['phone'] ?? ''],'success'=>$success,'notice'=>$notice,
             'course' => $course,
         ])->withHeader('Cache-Control','private, no-store');

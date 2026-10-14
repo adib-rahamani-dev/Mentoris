@@ -114,12 +114,31 @@ final class CommunicationBotService
         $rows=[];$text='مدیریت منتوریس · '.$actor['name'];
         if(Authorization::can($actor,'analytics.view')){$counts=$this->hub->pendingCounts();$text.="\nاعضا: ".$counts['users']."\nحلقه‌های در انتظار: ".$counts['circle']."\nدرخواست دوره: ".$counts['courses']."\nتیکت‌های باز: ".$counts['tickets']."\nارسال ناموفق: ".$counts['failed'];}
         if(Authorization::can($actor,'engagements.view')){$rows[]=[['text'=>'درخواست‌های حلقه','callback_data'=>'pending:circle'],['text'=>'درخواست‌های دوره','callback_data'=>'pending:courses']];$rows[]=[['text'=>'صندوق پشتیبانی','callback_data'=>'admin:tickets'],['text'=>'اعلان مدیریتی','callback_data'=>'admin:alerts']];}
+        if(Authorization::can($actor,'payments.manage')){$rows[]=[['text'=>'رسیدها و وضعیت پرداخت','callback_data'=>'admin:receipts:pending:0'],['text'=>'بازگشت وجه','callback_data'=>'admin:refunds']];$counts=$this->hub->pendingCounts();$text.="\nرسیدهای منتظر تطبیق: ".$counts['receipts']."\nبازگشت وجه نیازمند اقدام: ".$counts['refunds'];}
         if(Authorization::can($actor,'content.manage')){$rows[]=[['text'=>'محتوای سایت','callback_data'=>'admin:content'],['text'=>'پیش‌نویس مقاله','callback_data'=>'admin:draft']];}
         if(Authorization::can($actor,'users.view'))$text.="\nجست‌وجوی عضو: /user 09123456789";
         $rows[]=[[$this->link('پنل کامل سایت','/admin')]];$rows[]=$this->returnMenu();$this->say($text,$this->buttons($rows),$actor);
     }
     private function adminCallback(string $action): void
     {
+        if(preg_match('/^admin:receipts:(pending|approved|rejected):([0-9]{1,4})$/',$action,$match)){
+            $actor=$this->admin->authorized($this->account,'payments.manage');if(!$actor){$this->denied();return;}
+            if(!(new ManualPaymentService($this->hub))->available()){$this->say('بخش رسیدها هنوز آماده نیست.',null,$actor);return;}
+            $page=(int)$match[2];$offset=$page*5;$items=$this->hub->rows("SELECT * FROM manual_payments WHERE status=:status ORDER BY updated_at DESC,id DESC LIMIT 6 OFFSET $offset",['status'=>$match[1]]);
+            $this->say('رسیدهای '.(['pending'=>'منتظر بررسی','approved'=>'تأییدشده','rejected'=>'ردشده'][$match[1]]),$this->buttons([[['text'=>'منتظر بررسی','callback_data'=>'admin:receipts:pending:0'],['text'=>'تأییدشده','callback_data'=>'admin:receipts:approved:0'],['text'=>'ردشده','callback_data'=>'admin:receipts:rejected:0']]]),$actor);
+            foreach(array_slice($items,0,5) as $item){$rows=[[['text'=>'تصویر رسید در ربات','callback_data'=>'mpv:'.$item['id']]],[$this->link('بررسی کامل و بازگشت وجه','/admin/manual-payments/'.$item['id'])]];if($item['status']==='pending')$rows[]=[['text'=>'تأیید واریز','callback_data'=>'mpa:'.$item['id'].':'.$item['version']],['text'=>'رد رسید','callback_data'=>'mpr:'.$item['id'].':'.$item['version']]];$this->say((new CommunicationDetailService($this->hub))->receipt($item),$this->buttons($rows),$actor);}
+            $rows=[];if($page>0)$rows[]=['text'=>'قبلی','callback_data'=>'admin:receipts:'.$match[1].':'.($page-1)];if(count($items)>5)$rows[]=['text'=>'بعدی','callback_data'=>'admin:receipts:'.$match[1].':'.($page+1)];$this->say($items?'رسید دیگری را انتخاب کنید.':'رسیدی با این وضعیت نداریم.',$this->buttons([$rows?:[['text'=>'مدیریت','callback_data'=>'admin']]]),$actor);return;
+        }
+        if(preg_match('/^mpv:([a-f0-9]{32})$/',$action,$match)){
+            $actor=$this->admin->authorized($this->account,'payments.manage');if(!$actor){$this->denied();return;}$row=(new ManualPaymentService($this->hub))->find($match[1]);if(!$row)return;$actor['__permission']='payments.manage';$this->hub->queue($this->channel,$this->account['chat_id'],'_manual_receipt',['payment_id'=>$row['id'],'version'=>$row['version']],null,$actor);return;
+        }
+        if(preg_match('/^admin:refunds(?::([0-9]{1,4}))?$/',$action,$match)){
+            $actor=$this->admin->authorized($this->account,'payments.manage');if(!$actor){$this->denied();return;}
+            if(!(new PaymentLifecycleService($this->hub))->available()){$this->say('پیگیری بازگشت وجه پس از به‌روزرسانی پایگاه داده فعال می‌شود.',null,$actor);return;}
+            $page=(int)($match[1]??0);$offset=$page*5;$items=$this->hub->rows("SELECT r.*,p.item_title,u.name,u.phone FROM payment_refunds r JOIN manual_payments p ON p.id=r.payment_id JOIN users u ON u.id=r.user_id WHERE r.status='pending' ORDER BY r.created_at,r.id LIMIT 6 OFFSET $offset");
+            foreach(array_slice($items,0,5) as $item)$this->say('🔴 بازگشت وجه در انتظار اقدام'."\nعضو: ".$item['name']."\nشماره: ".$item['phone']."\nبرنامه: ".$item['item_title']."\nمبلغ: ".number_format((int)$item['amount']).' تومان',$this->buttons([[$this->link('اطلاعات رسید و ثبت واریز برگشتی','/admin/manual-payments/'.$item['payment_id'])]]),$actor);
+            $rows=[];if($page>0)$rows[]=['text'=>'قبلی','callback_data'=>'admin:refunds:'.($page-1)];if(count($items)>5)$rows[]=['text'=>'بعدی','callback_data'=>'admin:refunds:'.($page+1)];$this->say($items?'پرونده‌های بازگشت وجه:':'بازگشت وجه معوق نداریم.',$this->buttons([$rows?:[ $this->link('همه پرونده‌ها در سایت','/admin/manual-payments?status=refunds')]]),$actor);return;
+        }
         if(preg_match('/^(mpa|mpr):([a-f0-9]{32}):([1-9][0-9]{0,9})$/',$action,$match)) {
             $actor=$this->admin->authorized($this->account,'payments.manage');if(!$actor){$this->denied();return;}
             $row=(new ManualPaymentService($this->hub))->find($match[2]);if(!$row || $row['status']!=='pending')throw new \RuntimeException('رسید قبلاً بررسی شده یا در دسترس نیست.');
@@ -131,11 +150,11 @@ final class CommunicationBotService
         if($action==='admin'){$this->adminMenu();return;}
         if(str_starts_with($action,'do:')) {$actor=$this->admin->authorized($this->account,'admin.access');if(!$actor){$this->denied();return;}$this->say($this->admin->execute($this->account,substr($action,3)),$this->buttons([[['text'=>'مدیریت','callback_data'=>'admin']]]),$actor);return;}
         if($action==='admin:alerts') {$actor=$this->admin->authorized($this->account,'engagements.view');if(!$actor){$this->denied();return;}$this->hub->execute('UPDATE comm_accounts SET admin_alerts=:enabled WHERE channel=:channel AND chat_id=:chat',['enabled'=>empty($this->account['admin_alerts'])?1:0,'channel'=>$this->channel,'chat'=>$this->account['chat_id']]);$this->say(empty($this->account['admin_alerts'])?'اعلان مدیریتی فعال شد. درخواست‌ها و پیام‌های تازه را همین‌جا دریافت می‌کنید.':'اعلان مدیریتی خاموش شد.',null,$actor);return;}
-        if(str_starts_with($action,'pending:')) {
-            $actor=$this->admin->authorized($this->account,'engagements.view');if(!$actor){$this->denied();return;}$type=substr($action,8);$table=['circle'=>'event_signups','courses'=>'course_requests'][$type] ?? null;if(!$table)return;
-            $items=$this->hub->rows("SELECT * FROM $table WHERE status='requested' ORDER BY created_at LIMIT 8");
-            if(!$items)$this->say('درخواستی در انتظار نیست.',null,$actor);
-            foreach($items as $item){$rows=[];if(Authorization::can($actor,'engagements.manage'))$rows[]=[['text'=>'تأیید','callback_data'=>'p:'.($type==='circle'?'c':'k').':'.$item['id'].':a'],['text'=>'رد درخواست','callback_data'=>'p:'.($type==='circle'?'c':'k').':'.$item['id'].':r']];$rows[]=[[$this->link('مشاهده اطلاعات و بررسی','/admin/requests/'.$type.'/'.$item['id'])]];$this->say($item['name']."\n".($item['event_slug'] ?? $item['course_slug'])."\nدر انتظار بررسی",$this->buttons($rows),$actor);}return;
+        if(preg_match('/^pending:(circle|courses)(?::([0-9]{1,4}))?$/',$action,$match)) {
+            $actor=$this->admin->authorized($this->account,'engagements.view');if(!$actor){$this->denied();return;}$type=$match[1];$table=$type==='circle'?'event_signups':'course_requests';$page=(int)($match[2]??0);$offset=$page*5;
+            $items=$this->hub->rows("SELECT * FROM $table WHERE status='requested' ORDER BY created_at,id LIMIT 6 OFFSET $offset");
+            foreach(array_slice($items,0,5) as $item){$rows=[[$this->link('اطلاعات کامل، رزومه و تصمیم پذیرش','/admin/requests/'.$type.'/'.$item['id'])]];if(Authorization::can($actor,'engagements.manage'))$rows[]=[['text'=>'تأیید پذیرش','callback_data'=>'p:'.($type==='circle'?'c':'k').':'.$item['id'].':a'],['text'=>'رد پذیرش','callback_data'=>'p:'.($type==='circle'?'c':'k').':'.$item['id'].':r']];$this->say((new CommunicationDetailService($this->hub))->request($type,$item['id']),$this->buttons($rows),$actor);}
+            $rows=[];if($page>0)$rows[]=['text'=>'قبلی','callback_data'=>'pending:'.$type.':'.($page-1)];if(count($items)>5)$rows[]=['text'=>'بعدی','callback_data'=>'pending:'.$type.':'.($page+1)];$this->say($items?'مشاهده درخواست‌های دیگر:':'درخواستی در انتظار بررسی نیست.',$this->buttons([$rows?:[['text'=>'مدیریت','callback_data'=>'admin']]]),$actor);return;
         }
         if(preg_match('/^p:([ck]):([a-f0-9]{32}):([ar])$/',$action,$m)) {
             $actor=$this->admin->authorized($this->account,'engagements.manage');if(!$actor){$this->denied();return;}$type=$m[1]==='c'?'circle':'courses';$table=$m[1]==='c'?'event_signups':'course_requests';$row=$this->hub->one("SELECT * FROM $table WHERE id=:id",['id'=>$m[2]]);if(!$row)throw new \RuntimeException('درخواست در دسترس نیست.');

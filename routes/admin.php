@@ -35,6 +35,7 @@ $router->get('/admin/discounts', [\App\Controllers\DiscountCodeController::class
 $router->post('/admin/discounts', [\App\Controllers\DiscountCodeController::class,'create'], ['auth','can:payments.manage','csrf','rate:10,60']);
 $router->post('/admin/discounts/{id:[a-f0-9]+}/status', [\App\Controllers\DiscountCodeController::class,'status'], ['auth','can:payments.manage','csrf','rate:20,60']);
 $router->post('/admin/manual-payments/{id:[a-f0-9]+}', [\App\Controllers\ManualPaymentController::class,'review'], ['auth','can:payments.manage','csrf','rate:10,60']);
+$router->post('/admin/manual-payments/{id:[a-f0-9]+}/refund', [\App\Controllers\ManualPaymentController::class,'refund'], ['auth','can:payments.manage','csrf','rate:5,60']);
 $router->get('/admin/circle-applications/{id}/resume', [\App\Controllers\EventsController::class, 'resume'], ['auth','can:engagements.view','rate:30,60']);
 $router->post('/admin/communications/retry', [\App\Controllers\CommunicationController::class, 'retry'], ['auth','can:engagements.manage','csrf','rate:3,60']);
 $router->get('/admin/support', [\App\Controllers\SupportController::class, 'adminIndex'], ['auth','can:engagements.view','rate:120,60']);

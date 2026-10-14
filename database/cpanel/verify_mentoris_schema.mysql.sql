@@ -44,6 +44,7 @@ FROM (
     UNION ALL SELECT 'manual_payments'
     UNION ALL SELECT 'discount_codes'
     UNION ALL SELECT 'discount_redemptions'
+    UNION ALL SELECT 'payment_refunds'
     UNION ALL SELECT 'support_messages'
     UNION ALL SELECT 'support_tickets'
     UNION ALL SELECT 'comm_actions'
@@ -103,6 +104,7 @@ WHERE table_schema = DATABASE()
       'manual_payments',
       'discount_codes',
       'discount_redemptions',
+      'payment_refunds',
       'support_messages',
       'support_tickets',
       'comm_actions',

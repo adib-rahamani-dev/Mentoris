@@ -3,7 +3,7 @@ export function initCircleApplication() {
     const dialog = document.createElement('dialog');
     dialog.className = 'circle-review';
     dialog.setAttribute('aria-labelledby', 'circle-review-title');
-    dialog.innerHTML = `<div class="circle-review__body"><span class="eyebrow">یک نگاه پیش از ارسال</span><h2 id="circle-review-title">اطلاعات شما درست است؟</h2><p data-review-event></p><dl data-review-fields></dl><p class="circle-review__note">درخواست برای بررسی پذیرش ارسال می‌شود. پس از تأیید مدیر می‌توانید پرداخت را انجام دهید.</p><div class="circle-review__actions"><button type="button" class="btn btn--primary" data-review-confirm>تأیید و ارسال درخواست</button><button type="button" class="btn btn--secondary" data-review-edit>ویرایش اطلاعات</button></div></div>`;
+    dialog.innerHTML = `<div class="circle-review__body"><span class="eyebrow">یک نگاه پیش از ارسال</span><h2 id="circle-review-title">اطلاعات شما درست است؟</h2><p data-review-event></p><dl data-review-fields></dl><p class="circle-review__note">پس از ثبت درخواست وارد صفحه پرداخت می‌شوید. پذیرش بررسی می‌شود و در صورت عدم تأیید، مبلغ واریزی بازگردانده خواهد شد.</p><div class="circle-review__actions"><button type="button" class="btn btn--primary" data-review-confirm>تأیید و ارسال درخواست</button><button type="button" class="btn btn--secondary" data-review-edit>ویرایش اطلاعات</button></div></div>`;
     document.body.append(dialog);
     const fileInput = form.elements.namedItem('resume');
     const fields = {name:'نام و نام خانوادگی',phone:'شماره موبایل',city:'شهر',education:'مقطع تحصیلی',university:'دانشگاه',specialization:'رشته و گرایش',experience:'سابقه بالینی',approach:'رویکرد درمانی',practice_areas:'حوزه فعالیت',professional_number:'شماره نظام / دانشجویی',motivation:'توضیحات'};

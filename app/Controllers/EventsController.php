@@ -90,19 +90,22 @@ final class EventsController extends Controller
             }
             $data['application']=array_intersect_key($data,array_flip(['education','university','specialization','experience','approach','practice_areas','professional_number','motivation']));
             $data['resume']=$resume;
-            $circle->signup($slug, $data, $user['id'] ?? null);
+            $signup=$circle->signup($slug, $data, $user['id'] ?? null);
         } catch (RuntimeException $exception) {
             if($uploadedResume && preg_match('/^[a-f0-9]{32}\.bin$/',$uploadedResume['local_name']))@unlink(BASE_PATH.'/storage/uploads/support/'.$uploadedResume['local_name']);
             return $this->renderEvent($event, [], $data, false, $exception->getMessage());
         }
         (new \App\Core\Session())->put('event.receipt.'.$slug,time()+1800);
-        return $this->redirect('/events/'.$slug.'#register',303);
+        return $this->redirect('/payments/circle/'.$signup['id'],303);
     }
 
     private function renderEvent(array $event, array $errors = [], array $old = [], bool $success = false, ?string $notice = null): Response
     {
         $user=(new AuthService())->user();
         $profile=$user?(new \App\Repositories\MemberProfileRepository())->find($user['id']):[];
+        $circles=new CircleRepository();$existing=$user && $circles->available()?$circles->findSignup($event['slug'],$user['phone']):null;
+        if($existing && ($existing['user_id']??null)!==$user['id'])$existing=null;
+        $success=$success && (!$existing || $existing['status']==='requested');
         $saved=$user?(new CircleRepository())->savedApplication($user['id']):null;
         $savedDetails=array_filter($saved['details']??[],static fn($value)=>is_string($value));
         $savedResume=$saved['resume']??null;
@@ -118,6 +121,7 @@ final class EventsController extends Controller
             'enrollmentReady'=>\App\Services\ManualPaymentService::profileReady($user),'enrollmentUser'=>$user,
             'errors' => $errors,
             'savedApplication'=>$saved,'savedResume'=>$savedResume,
+            'existingCircleRequest'=>$existing,
             'old' => $old+['name'=>$user['name']??'','phone'=>$user['phone']??'']+$savedDetails+['city'=>$profile['city']??'','university'=>$profile['university']??'','education'=>\App\Services\MemberProfileService::OPTIONS['degree'][$profile['degree']??'']??'','specialization'=>$profile['specialization']??$profile['field_of_study']??'','experience'=>$profile['experience']??'','practice_areas'=>$profile['specialty_fields']??''],
             'success' => $success,
             'notice' => $notice,

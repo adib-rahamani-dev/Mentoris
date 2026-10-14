@@ -20,7 +20,7 @@ $saved=$repo->savedApplication($user['id']);
 $assertReuse($saved['details']['approach']==='ACT' && $saved['details']['city']==='تبریز','Professional information and city persist as reusable database data.');
 $assertReuse($repo->savedApplication('another-user')===null,'Another account cannot reuse or see this private saved information.');
 (new \App\Core\Session())->forget('event.receipt.therapists-circle-third');
-$html=$events->show(new Request(),'therapists-circle-third')->content();
+$html=$events->show(new Request(),'future-meeting')->content();
 $assertReuse(str_contains($html,'value="ACT"') && str_contains($html,'data-circle-application'),'The next form is prefilled and exposes the review step.');
 $assertReuse(!preg_match('/name="resume"[^>]*required/',$html),'Resume upload is optional in the real rendered form.');
 $assertReuse($repo->application($signup['id'])['details']['motivation']===$input['motivation'],'Optional explanatory text persists with the request.');
@@ -28,7 +28,7 @@ $file=(new \App\Services\SupportFileService())->store("%PDF-1.4\n% Resume reuse 
 try {
  $pdo->prepare('UPDATE circle_applications SET resume=:resume WHERE signup_id=:id')->execute(['resume'=>json_encode($file),'id'=>$signup['id']]);
  $assertReuse($repo->savedApplication($user['id'])['resume']['local_name']===$file['local_name'],'Saved private resume metadata belongs to the same account.');
- $html=$events->show(new Request(),'therapists-circle-third')->content();
+ $html=$events->show(new Request(),'future-meeting')->content();
  $assertReuse(str_contains($html,'name="reuse_resume"') && str_contains($html,'saved-resume.pdf'),'Reuse of a saved resume is a visible user choice.');
  $input['reuse_resume']='1';$response=$events->register(new Request(body:$input),'future-meeting');
  $next=$repo->findSignup('future-meeting',$user['phone']);

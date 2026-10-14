@@ -6,12 +6,23 @@ use App\Services\{AuthService,ManualPaymentService,SupportFileService};
 use App\Repositories\CommunicationRepository;
 final class ManualPaymentController extends Controller
 {
-    public function index(Request $request): Response
+    private function listing(Request $request,bool $history): Response
     {
         $user=(new AuthService())->user();$hub=new CommunicationRepository();$payments=new ManualPaymentService($hub);
-        $requests=$hub->rows("SELECT id,event_slug AS slug,status,'circle' AS type FROM event_signups WHERE user_id=:user UNION ALL SELECT id,course_slug,status,'courses' FROM course_requests WHERE user_id=:other",['user'=>$user['id'],'other'=>$user['id']]);
+        $page=max(1,(int)$request->query('page',1));$offset=($page-1)*20;
+        $requests=$hub->rows("SELECT id,event_slug AS slug,status,'circle' AS type,created_at FROM event_signups WHERE user_id=:user UNION ALL SELECT id,course_slug,status,'courses',created_at FROM course_requests WHERE user_id=:other ORDER BY created_at DESC LIMIT 20 OFFSET $offset",['user'=>$user['id'],'other'=>$user['id']]);
         $contexts=[];foreach($requests as $row){try{$contexts[]=$payments->context($row['type'],$row['id'],$user);}catch(\RuntimeException){}}
-        return $this->view('payment.manual',['title'=>'پرداخت کارت‌به‌کارت | منتوریس','indexable'=>false,'user'=>$user,'contexts'=>$contexts,'ready'=>$payments->available(),'profileReady'=>ManualPaymentService::profileReady($user),'notice'=>(new Session())->pull('manual.notice'),'card'=>ManualPaymentService::CARD])->withHeader('Cache-Control','private, no-store');
+        if(!$history)$contexts=array_values(array_filter($contexts,static function($context){return in_array($context['request']['status'],['requested','approved'],true) && (count(array_filter($context['rows'],static fn($row)=>$row['status']==='approved'))<$context['parts'] || $context['request']['status']==='requested');}));
+        if(!$history && count($contexts)===1)return $this->redirect('/payments/'.$contexts[0]['type'].'/'.$contexts[0]['id']);
+        return $this->view('payment.index',['title'=>$history?'سوابق پرداخت':'پرداخت ثبت‌نام','indexable'=>false,'contexts'=>$contexts,'history'=>$history,'page'=>$page,'hasMore'=>count($requests)===20,'notice'=>(new Session())->pull('manual.notice')])->withHeader('Cache-Control','private, no-store');
+    }
+    public function index(Request $request): Response{return $this->listing($request,false);}
+    public function history(Request $request): Response{return $this->listing($request,true);}
+    public function checkout(Request $request): Response
+    {
+        $user=(new AuthService())->user();$service=new ManualPaymentService();
+        try{$context=$service->context((string)$request->route('type'),(string)$request->route('id'),$user);}catch(\RuntimeException){return Response::html('سفارش پرداخت در دسترس نیست.',404);}
+        return $this->view('payment.manual',['title'=>'پرداخت '.$context['item']['title'],'indexable'=>false,'context'=>$context,'user'=>$user,'ready'=>$service->available(),'profileReady'=>ManualPaymentService::profileReady($user),'notice'=>(new Session())->pull('manual.notice'),'card'=>ManualPaymentService::CARD])->withHeader('Cache-Control','private, no-store');
     }
     public function submit(Request $request): Response
     {
@@ -27,15 +38,18 @@ final class ManualPaymentController extends Controller
             (new Session())->put('manual.notice','رسید ثبت شد و منتظر بررسی مدیر است. تا اعلام نتیجه، دوباره پرداخت نکنید.');
         }catch(\RuntimeException $e){(new Session())->put('manual.notice',$e instanceof \PDOException?'ثبت رسید انجام نشد؛ دوباره تلاش کنید.':$e->getMessage());}
         finally{if($file && !$saved && preg_match('/^[a-f0-9]{32}\.bin$/',$file['local_name']))@unlink(BASE_PATH.'/storage/uploads/support/'.$file['local_name']);}
-        return $this->redirect('/payments',303);
+        return $this->redirect('/payments/'.rawurlencode((string)$request->route('type')).'/'.rawurlencode((string)$request->route('id')),303);
     }
     public function admin(Request $request): Response
     {
-        $service=new ManualPaymentService();$status=(string)$request->query('status','pending');if(!in_array($status,['pending','approved','rejected'],true))$status='pending';
+        $service=new ManualPaymentService();$status=(string)$request->query('status','pending');if(!in_array($status,['pending','approved','rejected','refunds'],true))$status='pending';
         $hub=new CommunicationRepository();$page=max(1,(int)$request->query('page',1));$offset=($page-1)*20;
-        $rows=$service->available()?$hub->rows("SELECT p.*,u.name,u.phone FROM manual_payments p JOIN users u ON u.id=p.user_id WHERE p.status=:status ORDER BY p.updated_at DESC LIMIT 20 OFFSET $offset",['status'=>$status]):[];
+        $refundReady=(new \App\Services\PaymentLifecycleService($hub))->available();
+        $where=$status==='refunds'?"EXISTS (SELECT 1 FROM payment_refunds r WHERE r.payment_id=p.id AND r.status='pending')":'p.status=:status';
+        $rows=$service->available() && ($status!=='refunds'||$refundReady)?$hub->rows("SELECT p.*,u.name,u.phone FROM manual_payments p JOIN users u ON u.id=p.user_id WHERE $where ORDER BY p.updated_at DESC LIMIT 20 OFFSET $offset",$status==='refunds'?[]:['status'=>$status]):[];
         $discounts=new \App\Services\DiscountCodeService($hub);foreach($rows as &$row)$row['discount']=$discounts->redemption($row['request_type'],$row['request_id']);unset($row);
         $counts=$service->available()?$hub->rows('SELECT status,COUNT(*) AS total FROM manual_payments GROUP BY status'):[];
+        if($refundReady)$counts[]=['status'=>'refunds','total'=>(int)($hub->one("SELECT COUNT(*) total FROM payment_refunds WHERE status='pending'")['total']??0)];
         return $this->view('admin.manual-payments',['title'=>'بررسی رسیدهای کارت‌به‌کارت','admin'=>(new AuthService())->user(),'items'=>$rows,'counts'=>$counts,'status'=>$status,'page'=>$page,'ready'=>$service->available(),'notice'=>(new Session())->pull('manual.notice')],'layouts.admin');
     }
     public function review(Request $request): Response
@@ -53,7 +67,14 @@ final class ManualPaymentController extends Controller
         $hub=new CommunicationRepository();$member=$hub->one('SELECT id,name,email,phone FROM users WHERE id=:id',['id'=>$row['user_id']]);
         if(!$member)return Response::html('حساب عضو پیدا نشد.',404);
         try{$context=$service->context($row['request_type'],$row['request_id'],$member);}catch(\RuntimeException){$context=['discount'=>(new \App\Services\DiscountCodeService($hub))->redemption($row['request_type'],$row['request_id'])];}
-        return $this->view('admin.payment-review',['title'=>'بررسی رسید پرداخت','admin'=>(new AuthService())->user(),'payment'=>$row,'member'=>$member,'context'=>$context,'notice'=>(new Session())->pull('manual.notice')],'layouts.admin')->withHeader('Cache-Control','private, no-store');
+        $refund=null;foreach((new \App\Services\PaymentLifecycleService($hub))->refunds($row['request_type'],$row['request_id']) as $candidate)if($candidate['payment_id']===$row['id'])$refund=$candidate;
+        return $this->view('admin.payment-review',['title'=>'بررسی رسید پرداخت','admin'=>(new AuthService())->user(),'payment'=>$row,'member'=>$member,'context'=>$context,'refund'=>$refund,'notice'=>(new Session())->pull('manual.notice')],'layouts.admin')->withHeader('Cache-Control','private, no-store');
+    }
+    public function refund(Request $request): Response
+    {
+        try{(new \App\Services\PaymentLifecycleService())->complete((string)$request->route('id'),(new AuthService())->user(),is_string($request->input('reference'))?$request->input('reference'):'',is_string($request->input('note'))?$request->input('note'):'',$request->input('transferred')==='1');(new Session())->put('manual.notice','انجام بازگشت وجه با شماره پیگیری ثبت شد.');}
+        catch(\RuntimeException $e){(new Session())->put('manual.notice',$e instanceof \PDOException?'ثبت بازگشت وجه انجام نشد.':$e->getMessage());}
+        CommunicationController::afterWebhook();return $this->redirect('/admin/manual-payments/'.rawurlencode((string)$request->route('id')),303);
     }
     public function receipt(Request $request): Response
     {

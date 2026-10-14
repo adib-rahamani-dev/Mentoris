@@ -66,7 +66,7 @@ final class DiscountCodeService
         if(!$table)throw new RuntimeException('درخواست معتبر نیست.');
         $lock=Database::driver($this->hub->pdo())==='mysql'?' FOR UPDATE':'';
         $request=$this->hub->one("SELECT status FROM $table WHERE id=:id AND user_id=:user".$lock,['id'=>$context['id'],'user'=>$user['id']]);
-        if(!$request || $request['status']!=='approved' || ($context['payable']??true)===false)throw new RuntimeException('تخفیف فقط برای درخواست پذیرفته‌شده و فعال قابل اعمال است.');
+        if(!$request || !in_array($request['status'],['requested','approved'],true) || ($context['payable']??true)===false || (new PaymentLifecycleService($this->hub))->refunds($context['type'],$context['id']))throw new RuntimeException('تخفیف فقط برای درخواست فعال و قابل پرداخت قابل اعمال است.');
         if(!ManualPaymentService::enrollmentReady($user,$context['type']))throw new RuntimeException('ابتدا پروفایل را تکمیل کنید.');
         if($this->hub->one('SELECT id FROM manual_payments WHERE request_type=:type AND request_id=:id LIMIT 1',['type'=>$context['type'],'id'=>$context['id']]))throw new RuntimeException('پس از ثبت اولین رسید، کد و مبلغ تخفیف قابل تغییر نیست.');
     }

@@ -36,7 +36,7 @@ final class AdminRequestReviewController extends Controller
                 if(!(new AdminRepository($hub->pdo()))->updateEngagementStatus($type,$id,$status))throw new RuntimeException('ثبت نتیجه انجام نشد.');
                 Audit::record('engagement.status.updated',$type,$id,$admin['id'],['status'=>'requested'],['status'=>$status],$request->ip());
             });
-            (new Session())->put('review.notice',$status==='approved'?'پذیرش تأیید شد؛ پرداخت برای عضو فعال است.':'درخواست رد شد و نتیجه ثبت شد.');
+            (new Session())->put('review.notice',$status==='approved'?'پذیرش تأیید شد؛ ثبت‌نام پس از تأیید واریز قطعی می‌شود.':'درخواست رد شد؛ وجه تأییدشده برای بازگشت پیگیری می‌شود.');
         }catch(RuntimeException $e){(new Session())->put('review.notice',$e instanceof \PDOException?'ثبت نتیجه انجام نشد؛ دوباره تلاش کنید.':$e->getMessage());}
         CommunicationController::afterWebhook();
         return $this->redirect('/admin/requests/'.$type.'/'.$id,303);

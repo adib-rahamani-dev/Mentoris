@@ -1,6 +1,7 @@
 export function initManualPayments(){
   document.querySelectorAll('[data-receipt-form]').forEach(form=>{
     const input=form.querySelector('[name=receipt]'),preview=form.querySelector('[data-receipt-preview]'),status=form.querySelector('[data-receipt-status]'),submit=form.querySelector('[data-receipt-submit]');
+    const submitText=submit.textContent;
     let url;
     input.addEventListener('change',()=>{
       if(url)URL.revokeObjectURL(url);
@@ -14,7 +15,7 @@ export function initManualPayments(){
       status.textContent='تصویر را بررسی کنید و سپس رسید را ارسال کنید.';
     });
     form.addEventListener('submit',()=>{submit.disabled=true;submit.textContent='در حال ارسال رسید…';form.setAttribute('aria-busy','true');});
-    window.addEventListener('pageshow',()=>{submit.disabled=false;submit.textContent='ارسال رسید برای تأیید';form.removeAttribute('aria-busy');});
+    window.addEventListener('pageshow',()=>{submit.disabled=false;submit.textContent=submitText;form.removeAttribute('aria-busy');});
   });
   document.querySelectorAll('[data-copy-card]').forEach(button=>button.addEventListener('click',async()=>{
     const status=button.parentElement.querySelector('[data-copy-status]');

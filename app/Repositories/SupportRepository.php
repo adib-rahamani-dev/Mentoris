@@ -47,7 +47,12 @@ final class SupportRepository
             $this->hub->execute('INSERT INTO support_messages (id,ticket_id,author_id,sender_role,body,source_key,created_at) VALUES (:id,:ticket,:author,:role,:body,:source,:now)',['id'=>$id,'ticket'=>$ticket['id'],'author'=>$author,'role'=>$role,'body'=>CommunicationRepository::seal(['text'=>$body]),'source'=>$sourceKey,'now'=>$now]);
             if($attachment) $this->hub->execute('INSERT INTO support_attachments (id,message_id,channel,file_id,local_name,filename,mime_type,byte_size,media_kind,created_at) VALUES (:id,:message,:channel,:file,:local,:name,:mime,:size,:kind,:now)',['id'=>Security::randomToken(16),'message'=>$id,'channel'=>$attachment['channel'],'file'=>$attachment['file_id'],'local'=>$attachment['local_name'],'name'=>$attachment['filename'],'mime'=>$attachment['mime_type'],'size'=>$attachment['byte_size'],'kind'=>$attachment['media_kind'],'now'=>$now]);
             $this->hub->execute('UPDATE support_tickets SET status=:status,updated_at=:now WHERE id=:id',['status'=>$role==='staff'?'answered':'open','now'=>$now,'id'=>$ticket['id']]);
-            if($role==='member') $this->hub->notifyAdmins('پیام تازه در پشتیبانی: '.$ticket['subject'],'ticket-message:'.$id);
+            if($role==='member'){
+                $member=!empty($ticket['user_id'])?$this->hub->one('SELECT name,phone FROM users WHERE id=:id',['id'=>$ticket['user_id']]):null;
+                $text='💬 پیام تازه در پشتیبانی'."\nموضوع: ".$ticket['subject']."\nعضو: ".($member['name']??$ticket['user_name']??'عضو پیام‌رسان')."\nموبایل: ".($member['phone']??'ثبت نشده')."\nدسته: ".($this->categories()[$ticket['category']]??$ticket['category'])."\nزمان: ".self::dateLabel($now)."\n\n".mb_strimwidth($body,0,2200,'…');
+                if($attachment)$text.="\nپیوست: ".$attachment['filename'].' | '.number_format((int)$attachment['byte_size']).' بایت';
+                $this->hub->notifyAdmins($text,'ticket-message:'.$id,'/admin/support/'.$ticket['id']);
+            }
             else $this->deliverReply($ticket,$id,$body);
             return $id;
         });

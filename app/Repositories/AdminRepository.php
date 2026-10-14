@@ -211,8 +211,11 @@ final class AdminRepository
 
     public function updateEngagementStatus(string $type, string $id, string $status): bool
     {
+        return Database::transaction($this->pdo(),function()use($type,$id,$status):bool {
         $config = $this->engagementConfig($type);
         if (!in_array($status, $config['statuses'], true)) throw new RuntimeException('وضعیت انتخاب‌شده معتبر نیست.');
+        $lock=Database::driver($this->pdo())==='mysql'?' FOR UPDATE':' ';
+        $this->pdo()->prepare("SELECT id FROM {$config['table']} WHERE id=:id".$lock)->execute(['id'=>$id]);
         $attended = $type === 'circle' ? ',attended_at=' . ($status === 'attended' ? 'COALESCE(attended_at,:attended)' : 'NULL') : '';
         $statement = $this->pdo()->prepare("UPDATE {$config['table']} SET status=:status,updated_at=:updated_at{$attended} WHERE id=:id");
         $parameters=['status'=>$status,'updated_at'=>Database::now(),'id'=>$id];if($type==='circle' && $status==='attended')$parameters['attended']=Database::now();
@@ -220,6 +223,7 @@ final class AdminRepository
         $changed=$statement->rowCount()===1;
         if($changed)(new \App\Services\CommunicationNoticeService(new CommunicationRepository($this->pdo())))->engagement($type,$id,$status);
         return $changed;
+        });
     }
 
     public function auditLogs(array $filters, int $page = 1, int $perPage = 30): array

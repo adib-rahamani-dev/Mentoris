@@ -21,7 +21,7 @@ import { initProfileWizard } from './pages/profile-wizard.js?v=2.0.0';
 import { initSurveyClocks } from './pages/survey-clock.js?v=1.0.0';
 
 ready(() => {
-  if(document.querySelector('[data-circle-application]'))import('./pages/circle-application.js?v=1.0.0').then(module=>module.initCircleApplication()).catch(()=>{});
+  if(document.querySelector('[data-circle-application]'))import('./pages/circle-application.js?v=1.1.0').then(module=>module.initCircleApplication()).catch(()=>{});
   if(document.querySelector('[data-support-form],[data-support-thread],[data-support-utc]')) {
     import('./pages/support.js?v=1.0.0').then(module=>module.initSupport()).catch(()=>{});
   }
@@ -39,7 +39,7 @@ ready(() => {
     try{setOpen(sessionStorage.getItem('mentoris.admin-menu')==='open');}catch{}
     adminNavToggle.addEventListener('click',()=>{const open=adminNavToggle.getAttribute('aria-expanded')!=='true';setOpen(open);try{sessionStorage.setItem('mentoris.admin-menu',open?'open':'closed');}catch{}});
   }
-  if(document.querySelector('[data-copy-card]'))import('./pages/manual-payments.js?v=1.1.0').then(module=>module.initManualPayments()).catch(()=>{});
+  if(document.querySelector('[data-copy-card]'))import('./pages/manual-payments.js?v=1.2.0').then(module=>module.initManualPayments()).catch(()=>{});
   initProfileExperience();
   initPhoneVerification();
   initProfileWizard();

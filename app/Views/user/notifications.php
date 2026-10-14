@@ -10,6 +10,7 @@
 $paymentTarget=match($notification['title']){
 'رسید پرداخت تازه'=>\App\Core\Authorization::can($user,'payments.manage')?'/admin/manual-payments':null,
 'رسید پرداخت دریافت شد','بررسی رسید پرداخت'=>'/payments',
+'بازگشت وجه'=>'/payments/history',
 default=>null,
 }; ?>
 <article class="notification-item <?= empty($notification['read_at'])?'is-unread':'' ?>">

@@ -33,6 +33,6 @@ final class DiscountCodeController extends Controller
             else{if(!is_string($request->input('code')))throw new \RuntimeException('کد تخفیف معتبر وارد کنید.');$discount=$discounts->apply($context,$user,$request->input('code'));$message='کد اعمال شد؛ مبلغ نهایی '.number_format((int)$discount['final_amount']).' تومان است.';}
             (new Session())->put('manual.notice',$message);
         }catch(\RuntimeException $e){(new Session())->put('manual.notice',$e instanceof \PDOException?'اعمال کد انجام نشد؛ دوباره تلاش کنید.':$e->getMessage());}
-        return $this->redirect('/payments',303);
+        return $this->redirect('/payments/'.rawurlencode((string)$request->route('type')).'/'.rawurlencode((string)$request->route('id')),303);
     }
 }
