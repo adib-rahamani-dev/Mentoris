@@ -18,7 +18,7 @@ final class ManualPaymentController extends Controller
         $user=(new AuthService())->user();$file=null;$saved=false;
         try {
             $service=new ManualPaymentService();$context=$service->context((string)$request->route('type'),(string)$request->route('id'),$user);
-            if(!ManualPaymentService::profileReady($user))throw new \RuntimeException('ابتدا پروفایل را تکمیل کنید.');
+            if(!ManualPaymentService::enrollmentReady($user,$context['type']))throw new \RuntimeException('ابتدا پروفایل را تکمیل کنید.');
             $upload=$request->file('receipt');
             if(!$upload || !in_array(strtolower(pathinfo((string)($upload['name']??''),PATHINFO_EXTENSION)),['jpg','jpeg','png'],true))throw new \RuntimeException('تصویر رسید را به صورت JPG یا PNG انتخاب کنید.');
             $file=(new SupportFileService())->upload($upload);if(!$file)throw new \RuntimeException('تصویر رسید الزامی است.');
@@ -43,7 +43,17 @@ final class ManualPaymentController extends Controller
         try{(new ManualPaymentService())->review((string)$request->route('id'),(int)$request->input('version'),(string)$request->input('status'),(new AuthService())->user(),is_string($request->input('note'))?$request->input('note'):'');(new Session())->put('manual.notice','نتیجه بررسی ثبت شد.');}
         catch(\RuntimeException $e){(new Session())->put('manual.notice',$e instanceof \PDOException?'ثبت نتیجه انجام نشد.':$e->getMessage());}
         CommunicationController::afterWebhook();
-        return $this->redirect('/admin/manual-payments',303);
+        return $this->redirect('/admin/manual-payments'.($request->input('detail')==='1'?'/'.rawurlencode((string)$request->route('id')):''),303);
+    }
+    public function detail(Request $request): Response
+    {
+        $admin=(new AuthService())->user();if(!$admin || !Authorization::can($admin,'payments.manage'))return Response::html('دسترسی مجاز نیست.',403);
+        $service=new ManualPaymentService();$row=$service->find((string)$request->route('id'));
+        if(!$row)return Response::html('رسید پیدا نشد.',404);
+        $hub=new CommunicationRepository();$member=$hub->one('SELECT id,name,email,phone FROM users WHERE id=:id',['id'=>$row['user_id']]);
+        if(!$member)return Response::html('حساب عضو پیدا نشد.',404);
+        try{$context=$service->context($row['request_type'],$row['request_id'],$member);}catch(\RuntimeException){$context=['discount'=>(new \App\Services\DiscountCodeService($hub))->redemption($row['request_type'],$row['request_id'])];}
+        return $this->view('admin.payment-review',['title'=>'بررسی رسید پرداخت','admin'=>(new AuthService())->user(),'payment'=>$row,'member'=>$member,'context'=>$context,'notice'=>(new Session())->pull('manual.notice')],'layouts.admin')->withHeader('Cache-Control','private, no-store');
     }
     public function receipt(Request $request): Response
     {

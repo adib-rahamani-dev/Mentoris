@@ -93,11 +93,12 @@ final class CommunicationRepository
             $this->message($account,$title."\n\n".$message,null,$key,$user);
         }
     }
-    public function notifyAdmins(string $text,string $key): void
+    public function notifyAdmins(string $text,string $key,?string $path=null): void
     {
         foreach($this->rows('SELECT * FROM comm_accounts WHERE admin_alerts=1 AND notifications_enabled=1') as $account) {
             $user=$this->linkedUser($account);if(!$user || $account['link_method']!=='site' || !Authorization::can($user,'engagements.view')) continue;
-            $user['__permission']='engagements.view';$this->message($account,$text,['inline_keyboard'=>[[['text'=>'مرکز مدیریت','callback_data'=>'admin']]]],$key,$user);
+            $button=$path && preg_match('~^/admin/requests/(circle|courses)/[a-f0-9]+$~D',$path)?['text'=>'مشاهده اطلاعات و بررسی درخواست','url'=>rtrim((string)env('APP_URL'),'/').$path]:['text'=>'مرکز مدیریت','callback_data'=>'admin'];
+            $user['__permission']='engagements.view';$this->message($account,$text,['inline_keyboard'=>[[$button]]],$key,$user);
         }
     }
     public function prepareAction(array $account,array $user,string $action,array $payload): string

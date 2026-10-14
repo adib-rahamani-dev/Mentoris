@@ -20,6 +20,8 @@ $router->post('/admin/users/{id:[a-f0-9]+}/password', [AdminController::class, '
 $router->get('/admin/orders', [AdminController::class, 'orders'], ['auth', 'can:orders.view', 'rate:120,60']);
 $router->get('/admin/orders/{id:[a-f0-9]+}', [AdminController::class, 'order'], ['auth', 'can:orders.view', 'rate:120,60']);
 $router->get('/admin/engagements', [AdminController::class, 'engagements'], ['auth', 'can:engagements.view', 'rate:120,60']);
+$router->get('/admin/requests/{type:circle|courses}/{id:[a-f0-9]+}', [\App\Controllers\AdminRequestReviewController::class,'show'], ['auth','can:engagements.view','rate:90,60']);
+$router->post('/admin/requests/{type:circle|courses}/{id:[a-f0-9]+}', [\App\Controllers\AdminRequestReviewController::class,'review'], ['auth','can:engagements.manage','csrf','rate:20,60']);
 $router->post('/admin/engagements/{type:[a-z]+}/{id:[a-f0-9]+}', [AdminController::class, 'updateEngagement'], ['auth', 'can:engagements.manage', 'csrf', 'rate:60,60']);
 $router->get('/admin/content', [AdminController::class, 'content'], ['auth', 'can:content.view', 'rate:120,60']);
 $router->get('/admin/qr', [AdminQrController::class, 'index'], ['auth', 'can:content.view', 'rate:120,60']);
@@ -28,6 +30,7 @@ $router->post('/admin/feedback/{slug:[a-z-]+}/schedule', [\App\Controllers\Admin
 $router->get('/admin/telegram', [\App\Controllers\AdminTelegramController::class, 'index'], ['auth', 'can:engagements.view', 'rate:120,60']);
 $router->get('/admin/communications', [\App\Controllers\CommunicationController::class, 'admin'], ['auth','can:engagements.view','rate:120,60']);
 $router->get('/admin/manual-payments', [\App\Controllers\ManualPaymentController::class,'admin'], ['auth','can:payments.manage','rate:60,60']);
+$router->get('/admin/manual-payments/{id:[a-f0-9]+}', [\App\Controllers\ManualPaymentController::class,'detail'], ['auth','can:payments.manage','rate:90,60']);
 $router->get('/admin/discounts', [\App\Controllers\DiscountCodeController::class,'index'], ['auth','can:payments.manage','rate:60,60']);
 $router->post('/admin/discounts', [\App\Controllers\DiscountCodeController::class,'create'], ['auth','can:payments.manage','csrf','rate:10,60']);
 $router->post('/admin/discounts/{id:[a-f0-9]+}/status', [\App\Controllers\DiscountCodeController::class,'status'], ['auth','can:payments.manage','csrf','rate:20,60']);

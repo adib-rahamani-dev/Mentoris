@@ -16,7 +16,11 @@ final class CommunicationNoticeService
         $slug=$row['event_slug'] ?? $row['course_slug'] ?? '';
         $key='engagement:'.$type.':'.$id.':'.$status.':'.($row['updated_at'] ?? $row['created_at']);
         if(!empty($row['user_id'])) $this->hub->notifyUser($row['user_id'],$title,$label.($slug?"\n".rtrim((string)env('APP_URL'),'/').($type==='circle'?'/events/':'/courses/').$slug:''),$key);
-        if($status==='requested') $this->hub->notifyAdmins($title.' تازه ثبت شد.',$key);
+        if($status==='requested'){
+            $item=$type==='circle'?PublicContentService::event($slug):($type==='courses'?PublicContentService::course($slug):null);
+            $path=in_array($type,['circle','courses'],true)?'/admin/requests/'.$type.'/'.$id:null;
+            $this->hub->notifyAdmins($title.' تازه ثبت شد.'.($item?"\n".$item['title']:'')."\n".($row['name']??'')."\n".($row['phone']??''),$key,$path);
+        }
     }
     public function reminders(): int
     {

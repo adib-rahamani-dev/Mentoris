@@ -62,6 +62,7 @@ final class AuthController extends Controller
             return $this->authView('register', [$exception->getCode() === 409 ? 'phone' : 'email' => [$exception->getMessage()]], $this->safeOld($data));
         }
         $next=\App\Services\EnrollmentReturnService::target();
+        if($next && str_starts_with($next,'/courses/'))return $this->redirect(\App\Services\EnrollmentReturnService::consume(),303);
         return $this->redirect('/profile?welcome=1'.($next?'&next='.rawurlencode($next):''),303);
     }
 
@@ -94,8 +95,8 @@ final class AuthController extends Controller
         }
         foreach($limitKeys as $key) $limiter->clear($key);
         $user=(new AuthService())->user();
-        if($request->expectsJson())return Response::json(['message'=>'وارد حساب شدید.','user_id'=>$user['id'],'redirect'=>$request->input('recover')==='1'?null:(\App\Services\EnrollmentReturnService::afterLogin($user)??$this->intended())]);
-        return $this->redirect(\App\Services\EnrollmentReturnService::afterLogin($user)??$this->intended(),303);
+        if($request->expectsJson())return Response::json(['message'=>'وارد حساب شدید.','user_id'=>$user['id'],'redirect'=>$request->input('recover')==='1'?null:$this->loginDestination($user)]);
+        return $this->redirect($this->loginDestination($user),303);
     }
 
     public function logout(Request $request): Response
@@ -155,5 +156,10 @@ final class AuthController extends Controller
         $path = (string) (new Session())->pull('auth.intended', '/dashboard');
         $decoded=rawurldecode($path);
         return str_starts_with($decoded, '/') && !str_starts_with($decoded, '//') && !str_contains($decoded,'\\') && !preg_match('/[\x00-\x20]/',$decoded) ? $path : '/dashboard';
+    }
+    private function loginDestination(array $user): string
+    {
+        if(str_starts_with((string)(new Session())->get('auth.intended',''),'/admin/'))return $this->intended();
+        return \App\Services\EnrollmentReturnService::afterLogin($user)??$this->intended();
     }
 }

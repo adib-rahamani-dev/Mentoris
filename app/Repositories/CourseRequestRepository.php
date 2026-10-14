@@ -33,4 +33,9 @@ final class CourseRequestRepository
         if(!$this->available()) return [];
         $q=$this->pdo()->prepare('SELECT course_slug,payment_plan,status,created_at FROM course_requests WHERE user_id=:id ORDER BY created_at DESC'); $q->execute(['id'=>$userId]); return $q->fetchAll() ?: [];
     }
+    public function forUser(string $slug,string $userId): ?array
+    {
+        if(!$this->available())return null;
+        $q=$this->pdo()->prepare('SELECT id,payment_plan,status FROM course_requests WHERE course_slug=:slug AND user_id=:user LIMIT 1');$q->execute(['slug'=>$slug,'user'=>$userId]);$row=$q->fetch();return is_array($row)?$row:null;
+    }
 }

@@ -20,6 +20,10 @@ final class ManualPaymentService
         try{$this->hub->pdo()->query('SELECT id FROM manual_payments LIMIT 0');return true;}
         catch(\PDOException $e){if(MemberProfileRepository::missingTable($e))return false;throw $e;}
     }
+    public static function enrollmentReady(?array $user,string $type): bool
+    {
+        return $user!==null && ($type==='courses' || ($type==='circle' && self::profileReady($user)));
+    }
     public function context(string $type,string $id,array $user): array
     {
         $table=['circle'=>'event_signups','courses'=>'course_requests'][$type]??null;
@@ -41,7 +45,7 @@ final class ManualPaymentService
     }
     public function submit(array $context,array $user,int $part,array $file): array
     {
-        if(!self::profileReady($user))throw new RuntimeException('ابتدا پروفایل خود را تکمیل کنید.');
+        if(!self::enrollmentReady($user,$context['type']))throw new RuntimeException('ابتدا پروفایل خود را تکمیل کنید.');
         if(!$this->available())throw new RuntimeException('بخش پرداخت در حال آماده‌سازی است.');
         if(($context['payable']??true)===false)throw new RuntimeException('پرداخت برای این حلقه پایان‌یافته یا لغوشده فعال نیست.');
         if($context['request']['status']!=='approved')throw new RuntimeException('پرداخت پس از تأیید درخواست فعال می‌شود.');
@@ -84,7 +88,7 @@ final class ManualPaymentService
             if(!$admin || $account['link_method']!=='site' || !Authorization::can($admin,'payments.manage'))continue;
             $admin['__permission']='payments.manage';$key='manual:'.$row['id'].':'.$row['version'];
             $this->hub->queue($account['channel'],$account['chat_id'],'_manual_receipt',['payment_id'=>$row['id'],'version'=>$row['version']],$key.':image',$admin);
-            $this->hub->message($account,'رسید پرداخت تازه: '.$row['item_title']."\nعضو: ".($member['name']??'')."\nشماره تماس: ".($member['phone']??'')."\nبخش ".$row['part'].' | '.number_format((int)$row['amount']).' تومان'.$discountText, ['inline_keyboard'=>[[['text'=>'تأیید رسید','callback_data'=>'mpa:'.$row['id'].':'.$row['version']],['text'=>'رد رسید','callback_data'=>'mpr:'.$row['id'].':'.$row['version']]],[['text'=>'بررسی در سایت','url'=>rtrim((string)env('APP_URL'),'/').'/admin/manual-payments']]]],$key.':notice',$admin);
+            $this->hub->message($account,'رسید پرداخت تازه: '.$row['item_title']."\nعضو: ".($member['name']??'')."\nشماره تماس: ".($member['phone']??'')."\nبخش ".$row['part'].' | '.number_format((int)$row['amount']).' تومان'.$discountText, ['inline_keyboard'=>[[['text'=>'مشاهده اطلاعات و بررسی رسید','url'=>rtrim((string)env('APP_URL'),'/').'/admin/manual-payments/'.$row['id']]],[['text'=>'تأیید رسید','callback_data'=>'mpa:'.$row['id'].':'.$row['version']],['text'=>'رد رسید','callback_data'=>'mpr:'.$row['id'].':'.$row['version']]]]],$key.':notice',$admin);
         }
     }
     public function review(string $id,int $version,string $status,array $admin,string $note=''): void

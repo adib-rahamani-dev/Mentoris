@@ -39,10 +39,12 @@ final class CoursesController extends Controller
         if(!$course) return Response::html('<h1>404</h1>',404);
         if(!$course['can_request'] && !$course['can_enroll']) return $this->renderCourse($course,[],[],false,'ثبت درخواست برای این دوره فعال نیست.');
         $user=(new \App\Services\AuthService())->user();
-        if(!$user || !\App\Services\ManualPaymentService::profileReady($user)){
+        if(!$user){
             $target='/courses/'.$slug.'#request';\App\Services\EnrollmentReturnService::remember($target);
-            return $this->redirect(($user?'/profile':'/login').'?next='.rawurlencode($target),303);
+            return $this->redirect('/login?next='.rawurlencode($target),303);
         }
+        $existing=(new \App\Repositories\CourseRequestRepository())->forUser($slug,$user['id']);
+        if($existing)return $this->redirect($existing['status']==='approved'?'/payments':'/courses/'.$slug.'#request',303);
         $data=$request->only(['name','phone','payment_plan']);
         $data['name']=$user['name'];$data['phone']=$user['phone'];
         foreach($data as $key=>$value) $data[$key]=is_string($value) ? trim($value) : '';
@@ -68,7 +70,8 @@ final class CoursesController extends Controller
             'seoImage' => !empty($course['image']) ? '/assets/'.$course['image'] : null,
             'structuredData' => [\App\Services\SeoService::courseSchema($course),\App\Services\SeoService::faqSchema($course['faq']??[])],
             'requestReady'=>(new \App\Repositories\CourseRequestRepository())->available(),
-            'enrollmentReady'=>\App\Services\ManualPaymentService::profileReady($user),'enrollmentUser'=>$user,
+            'enrollmentReady'=>$user!==null,'enrollmentUser'=>$user,
+            'existingCourseRequest'=>$user?(new \App\Repositories\CourseRequestRepository())->forUser($course['slug'],$user['id']):null,
             'errors'=>$errors,'old'=>$old+['name'=>$user['name'] ?? '','phone'=>$user['phone'] ?? ''],'success'=>$success,'notice'=>$notice,
             'course' => $course,
         ])->withHeader('Cache-Control','private, no-store');

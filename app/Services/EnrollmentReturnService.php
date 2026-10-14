@@ -27,6 +27,6 @@ final class EnrollmentReturnService
     public static function afterLogin(array $user): ?string
     {
         if(!($target=self::target()))return null;
-        return ManualPaymentService::profileReady($user)?self::consume():'/profile?next='.rawurlencode($target);
+        return str_starts_with($target,'/courses/') || ManualPaymentService::profileReady($user)?self::consume():'/profile?next='.rawurlencode($target);
     }
 }

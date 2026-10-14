@@ -7,7 +7,7 @@ use App\Controllers\{AuthController,MemberProfileController};
 use App\Core\{Session,Request,CSRF};
 $continuationChecks=0;$assertContinuation=static function($condition,$message)use(&$continuationChecks){if(!$condition)throw new RuntimeException($message);$continuationChecks++;};
 $session=new Session();$session->forget('auth.user');$session->forget('auth.intended');$session->forget('enrollment.return');
-$target='/courses/psychotherapy-mastery-deliberate-practice#request';
+$target='/events/therapists-circle-third#register';
 $assertContinuation(EnrollmentReturnService::valid($target)===$target,'A course registration destination is preserved including its anchor.');
 foreach(['//evil.example','https://evil.example','/\\evil.example','/courses/x?next=https://evil.example',"/courses/x\nLocation:evil",'/admin/users'] as $bad)$assertContinuation(EnrollmentReturnService::valid($bad)===null,'Return targets are restricted to real local course/event URL shapes.');
 $guest=json_decode((new AuthController())->sessionState(new Request())->content(),true);$assertContinuation(!$guest['authenticated'] && (new CSRF())->validate($guest['csrf_token']),'Guest session state provides a fresh usable token without requiring another tab.');
@@ -35,5 +35,9 @@ $local=new Request(body:['_token'=>$fresh['csrf_token']],server:['REQUEST_METHOD
 $assertContinuation($middleware->handle($local,$next)->status()===200,'Local preview ports accept their own origin even when APP_URL uses the development domain.');
 $foreign=new Request(body:['_token'=>$fresh['csrf_token']],server:['REQUEST_METHOD'=>'POST','HTTP_ACCEPT'=>'application/json','HTTP_ORIGIN'=>'http://127.0.0.1:9999','HTTP_HOST'=>'127.0.0.1:8103']);$assertContinuation($middleware->handle($foreign,$next)->status()===419,'The local exception never permits a different port origin.');
 $_ENV['APP_ENV']='production';$assertContinuation($middleware->handle($local,$next)->status()===419,'Production keeps the canonical origin policy.');$_ENV['APP_ENV']='local';
+$session->forget('enrollment.return');
+$adminDestination='/admin/requests/courses/'.str_repeat('a',32);$session->put('auth.intended',$adminDestination);EnrollmentReturnService::remember('/courses/psychotherapy-mastery-deliberate-practice#request');
+$login=(new AuthController())->login(new Request(body:['identifier'=>$registration['phone'],'password'=>$registration['password']]));
+$assertContinuation(($login->headers()['Location']??'')===$adminDestination,'A protected admin review destination takes precedence over an older enrollment return; route authorization remains required.');
 $session->forget('enrollment.return');
 echo "PASS: {$continuationChecks} profile session, save, return and origin security checks.\n";ob_end_flush();
