@@ -11,15 +11,17 @@ import { initProgramFilters, initCourseFilters } from './pages/courses.js?v=6.0.
 import { initEventFilters } from './pages/events.js?v=5.0.0';
 import { Theme } from './components/theme.js?v=10.1.0';
 import { initContentSeoPreview } from './pages/content-seo.js?v=1.0.0';
-import { initMemberProfile } from './pages/member-profile.js?v=2.0.0';
-import { initProfileExperience } from './pages/profile-experience.js?v=3.1.0';
+import { initMemberProfile } from './pages/member-profile.js?v=2.1.0';
+import { initProfileExperience } from './pages/profile-experience.js?v=4.0.0';
+import { restoreProfileDrafts } from './pages/profile-draft.js?v=1.0.0';
 import { initPhoneVerification } from './pages/phone-verification.js?v=1.0.1';
 import { initContentEditor } from './pages/content-editor.js?v=1.0.0';
 
-import { initProfileWizard } from './pages/profile-wizard.js?v=1.0.0';
+import { initProfileWizard } from './pages/profile-wizard.js?v=2.0.0';
 import { initSurveyClocks } from './pages/survey-clock.js?v=1.0.0';
 
 ready(() => {
+  if(document.querySelector('[data-circle-application]'))import('./pages/circle-application.js?v=1.0.0').then(module=>module.initCircleApplication()).catch(()=>{});
   if(document.querySelector('[data-support-form],[data-support-thread],[data-support-utc]')) {
     import('./pages/support.js?v=1.0.0').then(module=>module.initSupport()).catch(()=>{});
   }
@@ -28,6 +30,7 @@ ready(() => {
       document.querySelector('[data-assessment-error]').textContent = 'بخش محاسبه بارگذاری نشد. صفحه را تازه کنید؛ متن سؤال‌ها و راهنمای نمره‌گذاری در دسترس است.';
     });
   }
+  restoreProfileDrafts();
   initMemberProfile();
   const adminNavToggle=document.querySelector('[data-admin-nav-toggle]');
   if(adminNavToggle){

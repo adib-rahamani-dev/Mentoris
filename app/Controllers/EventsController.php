@@ -47,8 +47,10 @@ final class EventsController extends Controller
         }
 
         $user=(new AuthService())->user();
-        if(!$user)return $this->redirect('/login',303);
-        if(!\App\Services\ManualPaymentService::profileReady($user))return $this->redirect('/profile',303);
+        if(!$user || !\App\Services\ManualPaymentService::profileReady($user)){
+            $target='/events/'.$slug.'#register';\App\Services\EnrollmentReturnService::remember($target);
+            return $this->redirect(($user?'/profile':'/login').'?next='.rawurlencode($target),303);
+        }
         $data = $request->only(['name', 'phone', 'city','education','university','specialization','experience','approach','practice_areas','professional_number','motivation']);
         $data['name']=$user['name'];$data['phone']=$user['phone'];
         foreach($data as $key=>$value) $data[$key]=is_string($value) ? trim($value) : '';
@@ -71,22 +73,26 @@ final class EventsController extends Controller
             return $this->renderEvent($event, $validator->errors(), $data);
         }
 
-        $resume=null;
+        $resume=null;$uploadedResume=null;
         try {
             $user = (new AuthService())->user();
             $circle = new CircleRepository();
             if (!$circle->applicationsAvailable()) return $this->renderEvent($event, [], $data, false, 'ثبت درخواست پس از آماده‌سازی پایگاه داده فعال می‌شود.');
             if($circle->findSignup($slug,$data['phone']))throw new RuntimeException('این شماره برای این رویداد قبلاً ثبت شده است.');
             $file=$request->file('resume');
-            if(!$file || !in_array(strtolower(pathinfo((string)($file['name']??''),PATHINFO_EXTENSION)),['pdf','docx'],true))throw new RuntimeException('رزومه را به صورت PDF یا DOCX بارگذاری کنید.');
-            $resume=(new \App\Services\SupportFileService())->upload($file);
-            if(!$resume)throw new RuntimeException('بارگذاری رزومه الزامی است.');
-            if(!in_array($resume['mime_type'],['application/pdf','application/octet-stream'],true))throw new RuntimeException('محتوای فایل رزومه معتبر نیست.');
+            if($file && ($file['error']??UPLOAD_ERR_NO_FILE)!==UPLOAD_ERR_NO_FILE){
+                if(!in_array(strtolower(pathinfo((string)($file['name']??''),PATHINFO_EXTENSION)),['pdf','docx'],true))throw new RuntimeException('رزومه را به صورت PDF یا DOCX بارگذاری کنید.');
+                $resume=$uploadedResume=(new \App\Services\SupportFileService())->upload($file);
+                if(!$resume || !in_array($resume['mime_type'],['application/pdf','application/octet-stream'],true))throw new RuntimeException('محتوای فایل رزومه معتبر نیست.');
+            } elseif($request->input('reuse_resume')==='1') {
+                $resume=$circle->savedApplication($user['id'])['resume']??null;
+                if($resume){try{(new \App\Services\SupportFileService())->bytes($resume);}catch(RuntimeException){$resume=null;}}
+            }
             $data['application']=array_intersect_key($data,array_flip(['education','university','specialization','experience','approach','practice_areas','professional_number','motivation']));
             $data['resume']=$resume;
             $circle->signup($slug, $data, $user['id'] ?? null);
         } catch (RuntimeException $exception) {
-            if($resume && preg_match('/^[a-f0-9]{32}\.bin$/',$resume['local_name']))@unlink(BASE_PATH.'/storage/uploads/support/'.$resume['local_name']);
+            if($uploadedResume && preg_match('/^[a-f0-9]{32}\.bin$/',$uploadedResume['local_name']))@unlink(BASE_PATH.'/storage/uploads/support/'.$uploadedResume['local_name']);
             return $this->renderEvent($event, [], $data, false, $exception->getMessage());
         }
         (new \App\Core\Session())->put('event.receipt.'.$slug,time()+1800);
@@ -97,6 +103,10 @@ final class EventsController extends Controller
     {
         $user=(new AuthService())->user();
         $profile=$user?(new \App\Repositories\MemberProfileRepository())->find($user['id']):[];
+        $saved=$user?(new CircleRepository())->savedApplication($user['id']):null;
+        $savedDetails=array_filter($saved['details']??[],static fn($value)=>is_string($value));
+        $savedResume=$saved['resume']??null;
+        if($savedResume && (!preg_match('/^[a-f0-9]{32}\.bin$/',(string)($savedResume['local_name']??'')) || !is_file(BASE_PATH.'/storage/uploads/support/'.$savedResume['local_name'])))$savedResume=null;
         return $this->view('pages.event-details', [
             'title' => $event['title'] . ' | Events',
             'description' => $event['short_description'],
@@ -107,7 +117,8 @@ final class EventsController extends Controller
             'registrationReady' => $event['can_register'] && (new CircleRepository())->applicationsAvailable(),
             'enrollmentReady'=>\App\Services\ManualPaymentService::profileReady($user),'enrollmentUser'=>$user,
             'errors' => $errors,
-            'old' => $old+['name'=>$user['name']??'','phone'=>$user['phone']??'','city'=>$profile['city']??'','university'=>$profile['university']??'','education'=>\App\Services\MemberProfileService::OPTIONS['degree'][$profile['degree']??'']??'','specialization'=>$profile['specialization']??$profile['field_of_study']??'','experience'=>$profile['experience']??'','practice_areas'=>$profile['specialty_fields']??''],
+            'savedApplication'=>$saved,'savedResume'=>$savedResume,
+            'old' => $old+['name'=>$user['name']??'','phone'=>$user['phone']??'']+$savedDetails+['city'=>$profile['city']??'','university'=>$profile['university']??'','education'=>\App\Services\MemberProfileService::OPTIONS['degree'][$profile['degree']??'']??'','specialization'=>$profile['specialization']??$profile['field_of_study']??'','experience'=>$profile['experience']??'','practice_areas'=>$profile['specialty_fields']??''],
             'success' => $success,
             'notice' => $notice,
         ])->withHeader('Cache-Control','private, no-store');
@@ -118,7 +129,7 @@ final class EventsController extends Controller
         $user=(new AuthService())->user();
         if(!$user || !\App\Core\Authorization::can($user,'engagements.view'))return Response::html('دسترسی مجاز نیست.',403);
         $application=(new CircleRepository())->application((string)$request->route('id'));
-        if(!$application)return Response::html('فایل یافت نشد.',404);
+        if(!$application || empty($application['resume']))return Response::html('رزومه‌ای برای این درخواست ثبت نشده است.',404);
         try {$file=$application['resume'];$bytes=(new \App\Services\SupportFileService())->bytes($file);}
         catch(RuntimeException){return Response::html('فایل در دسترس نیست.',404);}
         return new Response($bytes,200,['Content-Type'=>$file['mime_type'],'Content-Disposition'=>"attachment; filename*=UTF-8''".rawurlencode($file['filename']),'Cache-Control'=>'private, no-store','X-Content-Type-Options'=>'nosniff']);

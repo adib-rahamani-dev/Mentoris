@@ -55,10 +55,10 @@ $check(str_contains($pages['journal'],'article-takeaways') && str_contains($page
 $eventController=new EventsController();
 $posted=['name'=>'عضو رویداد','phone'=>'+۹۸ (۹۱۲) ۷۷۷-۶۶۶۶','city'=>'تبریز'];
 $response=$eventController->register(new Request(body:$posted),'therapists-circle-third');
-$check($response->status()===303 && (new CircleRepository())->findSignup('therapists-circle-third','09127776666')===null,'Incomplete applications cannot register without professional details and a resume.');
+$check($response->status()===303 && (new CircleRepository())->findSignup('therapists-circle-third','09127776666')===null,'Anonymous applications require sign-in and profile completion.');
 $posted+=['education'=>'ارشد','university'=>'دانشگاه تبریز','specialization'=>'بالینی','experience'=>'۳ سال','approach'=>'ACT','practice_areas'=>'بزرگسال','professional_number'=>'','motivation'=>''];
 $response=$eventController->register(new Request(body:$posted),'therapists-circle-third');
-$check($response->status()===303 && (int)$pdo->query('SELECT COUNT(*) FROM event_signups')->fetchColumn()===0,'A complete text form still requires a real uploaded resume.');
+$check($response->status()===303 && (int)$pdo->query('SELECT COUNT(*) FROM event_signups')->fetchColumn()===0,'Professional text alone cannot bypass authentication.');
 $file=(new \App\Services\SupportFileService())->store("%PDF-1.4\n% Test resume\n",'resume.pdf');
 $posted['application']=array_intersect_key($posted,array_flip(['education','university','specialization','experience','approach','practice_areas','professional_number','motivation']));$posted['resume']=$file;
 (new CircleRepository())->signup('therapists-circle-third',$posted,null);

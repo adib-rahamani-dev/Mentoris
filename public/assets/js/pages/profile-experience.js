@@ -1,14 +1,9 @@
+import { sendProfile as send, simpleProfileSave } from './profile-transport.js?v=1.0.0';
+import { storeProfileDraft, clearProfileDraft } from './profile-draft.js?v=1.0.0';
 const storage = {
   read(key) { try { return JSON.parse(sessionStorage.getItem(key) || 'null'); } catch { return null; } },
   write(key, value) { try { sessionStorage.setItem(key, JSON.stringify(value)); } catch {} }
 };
-async function send(form, data) {
-  const response = await fetch(form.action, { method: 'POST', body: data, credentials: 'same-origin', headers: { Accept: 'application/json' } });
-  if (!response.headers.get('content-type')?.includes('application/json')) throw new Error('نشست شما منقضی شده یا سرور پاسخ نداد؛ اطلاعات فرم حفظ شده است. در یک زبانهٔ دیگر وارد حساب شوید و دوباره ذخیره کنید.');
-  const result = await response.json().catch(() => ({ message: 'ذخیره انجام نشد؛ اطلاعات فرم حفظ شده است. دوباره تلاش کنید.' }));
-  if (!response.ok) throw Object.assign(new Error(result.message || 'عملیات انجام نشد.'), { errors: result.errors });
-  return result;
-}
 export function initProfileExperience() {
   document.querySelector('[data-print-resource]')?.addEventListener('click', () => {
     document.querySelectorAll('[data-resource-answer]').forEach(input => {
@@ -66,6 +61,8 @@ export function initProfileExperience() {
   });
   document.querySelectorAll('[data-member-form],[data-async-save],[data-survey-form]').forEach(form => {
     let busy = false;
+    form.addEventListener('input',()=>storeProfileDraft(form));form.addEventListener('change',()=>storeProfileDraft(form));
+    if(form.dataset.draftRestored==='true'){const status=form.querySelector('[data-save-status]');if(status)status.textContent='پاسخ‌های ذخیره‌نشده برگشت. برای ثبت نهایی، ذخیره کنید.';}
     form.addEventListener('submit', async event => {
       event.preventDefault();
       if (event.defaultPrevented && !form.reportValidity()) return;
@@ -73,32 +70,43 @@ export function initProfileExperience() {
       const status = form.querySelector('[data-save-status]');
       const buttons = [...form.querySelectorAll('button[type="submit"]')];
       const data = new FormData(form); if (event.submitter?.name) data.set(event.submitter.name, event.submitter.value);
+      storeProfileDraft(form);
+      const labels=buttons.map(button=>button.textContent);
+      const controls=[...form.querySelectorAll('input:not([type=hidden]),select,textarea')].map(input=>({input,disabled:input.disabled}));
       form.querySelectorAll('[aria-invalid="true"]').forEach(input => input.removeAttribute('aria-invalid'));
-      buttons.forEach(button => { button.disabled = true; }); if (status) status.textContent = 'در حال ذخیره…';
+      form.querySelectorAll('[data-profile-error]').forEach(node=>node.remove());
+      buttons.forEach(button => { button.disabled = true; });if(event.submitter)event.submitter.textContent='در حال ذخیره…'; if (status){status.textContent='در حال ذخیره…';status.dataset.state='saving';}
+      controls.forEach(({input})=>input.disabled=true);
       try {
-        const result = await send(form, data); if (status) status.textContent = result.message;
+        const result = await send(form, data);clearProfileDraft(form); if (status){status.textContent=result.message;status.dataset.state='success';}
         if(form.matches('[data-async-save]') && result.phone_verification) document.dispatchEvent(new CustomEvent('profile:account-saved',{detail:result}));
         if(form.matches('[data-member-form]')) {
           const badge=form.closest('.member-profile')?.querySelector('header .badge');
           if(badge) { badge.textContent=result.complete ? 'تکمیل‌شده' : 'در حال تکمیل'; badge.classList.toggle('badge--success',!!result.complete); }
+          form.dispatchEvent(new CustomEvent('profile:saved',{detail:result}));
         }
         form.querySelector('input[type="file"]')?.value && (form.querySelector('input[type="file"]').value = '');
         if (form.matches('[data-survey-form]') && result.recorded) {
           form.replaceChildren(); const title = document.createElement('h2'); title.textContent = 'نظر شما ثبت شد. سپاس از همراهی‌تان.';
           const link = document.createElement('a'); link.href = '/resources'; link.className = 'btn btn--primary'; link.textContent = 'دریافت ابزارهای رایگان'; form.append(title, link);
         }
+        if(typeof result.redirect==='string' && result.redirect.startsWith('/') && !result.redirect.startsWith('//') && new URL(result.redirect,location.origin).origin===location.origin)location.assign(result.redirect);
       } catch (error) {
-        if (status) status.textContent = error.message;
+        controls.forEach(({input,disabled})=>input.disabled=disabled);
+        if (status){status.textContent=error.message;status.dataset.state='error';}
+        if(error.simpleSave && status && form.matches('[data-member-form],[data-async-save]')){
+          const fallback=document.createElement('button');fallback.type='button';fallback.className='btn btn--secondary btn--sm';fallback.textContent='ذخیره به روش ساده';fallback.addEventListener('click',()=>simpleProfileSave(form,data.get('mode')));status.append(fallback);
+        }
         if (error.errors) {
           let first;
           Object.entries(error.errors).forEach(([name, messages]) => {
-            const input = form.elements.namedItem(name); if (input?.setAttribute) { input.setAttribute('aria-invalid', 'true'); input.closest('details') && (input.closest('details').open = true); first ||= input; }
+            const input = form.elements.namedItem(name) || (name==='training_courses'?form.querySelector('[data-course-name]'):null); if (input?.setAttribute) { input.setAttribute('aria-invalid', 'true'); input.closest('details') && (input.closest('details').open = true); first ||= input;const hint=document.createElement('small');hint.className='form-error';hint.dataset.profileError='';hint.textContent=Array.isArray(messages)?messages[0]:messages;input.closest('.form-group')?.append(hint); }
           });
           form.dispatchEvent(new CustomEvent('profile:invalid', { detail: { input: first } }));
           first?.focus({ preventScroll: true });
-          if (status) status.textContent = Object.values(error.errors).flat().join(' ');
+          if (status) status.textContent = 'فیلدهای مشخص‌شده را بررسی کنید. '+Object.values(error.errors).flat()[0];
         }
-      } finally { busy = false; buttons.forEach(button => { button.disabled = form.dataset.surveyClosed==='true'; }); }
+      } finally { busy = false; controls.forEach(({input,disabled})=>input.disabled=disabled);buttons.forEach((button,index) => { button.disabled = form.dataset.surveyClosed==='true';button.textContent=labels[index]; }); }
     });
   });
   const community = document.querySelector('[data-community-toggle]');
@@ -113,8 +121,8 @@ export function initProfileExperience() {
     });
   }
   const profile = document.querySelector('[data-member-form]');
-  const key = `mentoris-view:${location.pathname}:${profile?.dataset.stateKey || ''}`;
-  const saved = storage.read(key); const details = [...document.querySelectorAll('.member-section,.account-details')];
+  const key = `mentoris-view.v2:${location.pathname}:${profile?.dataset.stateKey || ''}`;
+  const saved = storage.read(key); const details = [...document.querySelectorAll('.member-extras,.member-section,.account-details')];
   if (saved?.open) details.forEach((item, index) => { if (typeof saved.open[index] === 'boolean') item.open = saved.open[index]; });
   const persist = () => storage.write(key, { scroll: scrollY, open: details.map(item => item.open) });
   window.addEventListener('pagehide', persist);

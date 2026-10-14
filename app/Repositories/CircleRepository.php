@@ -24,8 +24,8 @@ final class CircleRepository
             $id=Security::randomToken(16);
             $statement = $this->pdo()->prepare('INSERT INTO event_signups (id,user_id,event_slug,name,phone,city,status,created_at,updated_at) VALUES (:id,:user_id,:slug,:name,:phone,:city,:status,:created_at,:updated_at)');
             $statement->execute(['id' => $id, 'user_id' => $userId, 'slug' => $slug, 'name' => trim((string) $data['name']), 'phone' => $phone, 'city' => trim((string) $data['city']), 'status' => 'requested', 'created_at' => $now, 'updated_at' => $now]);
-            if(isset($data['application'],$data['resume'])) {
-                $this->pdo()->prepare('INSERT INTO circle_applications (signup_id,details,resume,created_at) VALUES (:id,:details,:resume,:at)')->execute(['id'=>$id,'details'=>json_encode($data['application'],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),'resume'=>json_encode($data['resume'],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),'at'=>$now]);
+            if(isset($data['application'])) {
+                $this->pdo()->prepare('INSERT INTO circle_applications (signup_id,details,resume,created_at) VALUES (:id,:details,:resume,:at)')->execute(['id'=>$id,'details'=>json_encode($data['application'],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),'resume'=>json_encode($data['resume'] ?? null,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),'at'=>$now]);
             }
             });
         } catch (PDOException $exception) {
@@ -162,6 +162,18 @@ final class CircleRepository
     private function pdo(): PDO { return $this->database ?? Database::connection(); }
 
     public function applicationsAvailable(): bool { return $this->available() && $this->tableExists('circle_applications'); }
+
+    public function savedApplication(string $userId): ?array
+    {
+        if (!$this->applicationsAvailable()) return null;
+        $statement=$this->pdo()->prepare('SELECT a.details,a.resume,s.city,s.created_at FROM circle_applications a JOIN event_signups s ON s.id=a.signup_id WHERE s.user_id=:user_id ORDER BY s.created_at DESC,s.id DESC LIMIT 1');
+        $statement->execute(['user_id'=>$userId]);
+        $row=$statement->fetch();
+        if (!$row) return null;
+        $details=json_decode((string)$row['details'],true);
+        $resume=json_decode((string)$row['resume'],true);
+        return ['details'=> (is_array($details)?$details:[])+['city'=>$row['city']], 'resume'=>is_array($resume)?$resume:null, 'created_at'=>$row['created_at']];
+    }
 
     public function application(string $id): ?array
     {

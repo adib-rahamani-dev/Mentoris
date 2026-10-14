@@ -39,8 +39,10 @@ final class CoursesController extends Controller
         if(!$course) return Response::html('<h1>404</h1>',404);
         if(!$course['can_request'] && !$course['can_enroll']) return $this->renderCourse($course,[],[],false,'ثبت درخواست برای این دوره فعال نیست.');
         $user=(new \App\Services\AuthService())->user();
-        if(!$user)return $this->redirect('/login',303);
-        if(!\App\Services\ManualPaymentService::profileReady($user))return $this->redirect('/profile',303);
+        if(!$user || !\App\Services\ManualPaymentService::profileReady($user)){
+            $target='/courses/'.$slug.'#request';\App\Services\EnrollmentReturnService::remember($target);
+            return $this->redirect(($user?'/profile':'/login').'?next='.rawurlencode($target),303);
+        }
         $data=$request->only(['name','phone','payment_plan']);
         $data['name']=$user['name'];$data['phone']=$user['phone'];
         foreach($data as $key=>$value) $data[$key]=is_string($value) ? trim($value) : '';

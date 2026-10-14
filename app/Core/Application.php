@@ -62,7 +62,7 @@ final class Application
         $frameSources = rtrim((string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH), '/') === '/live'
             ? 'https://www.youtube-nocookie.com https://www.aparat.com'
             : "'none'";
-        $csp = "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; script-src 'self' 'nonce-{$nonce}'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; frame-src {$frameSources}; manifest-src 'self'";
+        $csp = "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; script-src 'self' 'nonce-{$nonce}'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; frame-src {$frameSources}; manifest-src 'self'";
         if (env('APP_ENV', 'production') === 'production') $csp .= '; upgrade-insecure-requests';
         $response = $response
             ->withHeader('X-Content-Type-Options', 'nosniff')
@@ -74,7 +74,7 @@ final class Application
             ->withHeader('X-Permitted-Cross-Domain-Policies', 'none');
 
         if ($response->status() >= 400) $response = $response->withHeader('X-Robots-Tag', 'noindex, nofollow');
-        if ($request->method() !== 'GET' || preg_match('~^/(?:admin|dashboard|profile|my-courses|my-events|my-certificates|notifications|login|register|forgot-password|reset-password)(?:/|$)~',$request->uri())) {
+        if ($request->method() !== 'GET' || (new Session())->has('auth.user') || preg_match('~^/(?:auth|admin|dashboard|profile|my-courses|my-events|my-certificates|notifications|login|register|forgot-password|reset-password)(?:/|$)~',$request->uri())) {
             $response=$response->withHeader('Cache-Control','private, no-store')->withHeader('Pragma','no-cache')->withHeader('X-Robots-Tag','noindex, nofollow');
         }
 

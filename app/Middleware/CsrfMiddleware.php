@@ -21,7 +21,8 @@ final class CsrfMiddleware implements MiddlewareInterface
         }
 
         $origin = trim((string) $request->header('Origin', ''));
-        if ($origin !== '' && !$this->sameOrigin($origin, (string) env('APP_URL', ''))) {
+        $localOrigin=(string)env('APP_ENV','production')==='local' && in_array((string)parse_url($origin,PHP_URL_HOST),['localhost','127.0.0.1','[::1]'],true) && $this->sameOrigin($origin,'http://'.$request->header('Host',''));
+        if ($origin !== '' && !$localOrigin && !$this->sameOrigin($origin, (string) env('APP_URL', ''))) {
             return $this->rejected($request);
         }
 
@@ -46,7 +47,7 @@ final class CsrfMiddleware implements MiddlewareInterface
     private function rejected(Request $request): Response
     {
         return $request->expectsJson()
-            ? Response::json(['message' => 'CSRF token mismatch'], 419)
+            ? Response::json(['message' => 'اعتبار فرم تازه شود و دوباره ذخیره کنید.'], 419)
             : Response::html('<!doctype html><html lang="fa" dir="rtl"><meta charset="utf-8"><title>نشست منقضی شد</title><body><main><h1>نشست منقضی شد</h1><p>صفحه را تازه کنید و دوباره تلاش کنید.</p></main></body></html>', 419);
     }
 }

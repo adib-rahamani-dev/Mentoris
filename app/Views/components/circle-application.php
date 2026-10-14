@@ -4,6 +4,7 @@
 <?php endforeach; ?>
 </fieldset>
 <fieldset class="stack"><legend>رزومه برای بررسی پذیرش</legend>
-<label class="form-group"><span class="form-label">فایل رزومه *</span><input class="form-control" type="file" name="resume" accept=".pdf,.docx" required><small>PDF یا DOCX، حداکثر ۸ مگابایت. فقط تیم بررسی پذیرش به فایل دسترسی دارد. پس از خطای فرم، فایل را دوباره انتخاب کنید.</small></label>
+<?php if(!empty($savedResume)): ?><label class="circle-saved-resume"><input type="checkbox" name="reuse_resume" value="1" checked data-saved-resume="<?= e($savedResume['filename']) ?>"><span>استفاده از رزومه ذخیره‌شده <small><?= e($savedResume['filename']) ?></small></span></label><?php endif; ?>
+<label class="form-group"><span class="form-label">فایل رزومه (اختیاری)</span><input class="form-control" type="file" name="resume" accept=".pdf,.docx"><small>بدون رزومه هم می‌توانید درخواست ثبت کنید. PDF یا DOCX، تا ۸ مگابایت؛ فقط تیم پذیرش به فایل دسترسی دارد. انتخاب فایل جدید، رزومه قبلی را برای این درخواست جایگزین می‌کند.</small></label>
 <label class="form-group"><span class="form-label">انگیزه حضور / توضیحات تکمیلی (اختیاری)</span><textarea class="form-control" name="motivation" maxlength="1500" rows="3"><?= e($old['motivation']??'') ?></textarea></label>
 </fieldset>

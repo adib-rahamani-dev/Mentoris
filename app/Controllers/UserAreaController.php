@@ -21,7 +21,11 @@ final class UserAreaController extends Controller
         return $this->page('dashboard', 'داشبورد من', $user, ['recommendations' => array_slice(array_values(array_filter(array_map(fn ($c) => PublicContentService::course($c['slug']), PublicContentService::courses()), fn ($c) => $c && $c['status'] === 'active')), 0, 3)]);
     }
 
-    public function profile(Request $request): Response { $user = $this->user(); $circle = new CircleRepository(); return $this->page('profile', 'پروفایل من', $user, ['therapist' => $circle->profile($user['id']), 'therapistEnabled' => $circle->therapistAvailable()]); }
+    public function profile(Request $request): Response {
+        \App\Services\EnrollmentReturnService::remember($request->query('next'));$user=$this->user();
+        if(\App\Services\EnrollmentReturnService::target() && \App\Services\ManualPaymentService::profileReady($user))return $this->redirect(\App\Services\EnrollmentReturnService::consume(),303);
+        $circle=new CircleRepository();return $this->page('profile','پروفایل من',$user,['therapist'=>$circle->profile($user['id']),'therapistEnabled'=>$circle->therapistAvailable()]);
+    }
 
     public function updateProfile(Request $request): Response
     {
@@ -116,6 +120,7 @@ final class UserAreaController extends Controller
     private function page(string $view, string $title, array $user, array $extra = []): Response
     {
         if ($view === 'profile') {
+            $extra+=['enrollmentReturn'=>\App\Services\EnrollmentReturnService::target()];
             $extra += ['phoneVerification'=>(new \App\Services\PhoneVerificationService())->state($user['id']), 'phoneNotice'=>(new \App\Core\Session())->pull('phone.notice')];
             $profiles = new \App\Repositories\MemberProfileRepository();
             $extra += ['member'=>$profiles->find($user['id']), 'memberEnabled'=>true, 'communityMembership'=>(new \App\Repositories\EngagementRepository())->communityForUser($user)];

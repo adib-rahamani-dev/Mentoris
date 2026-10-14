@@ -28,6 +28,7 @@ final class MemberProfileController extends Controller
     private function persist(Request $request, array $user, bool $admin): Response
     {
         $repo=new MemberProfileRepository();
+        if(!$admin)\App\Services\EnrollmentReturnService::remember($request->input('next'));
         $complete=$request->input('mode')==='complete';
         [$data,$errors]=MemberProfileService::validate((array)$request->input(),$complete);
         if(!$errors && !$complete) $complete=$data['member_type']==='other' || ($data['field_of_study']!=='' && $data['university']!=='');
@@ -48,8 +49,9 @@ final class MemberProfileController extends Controller
                 throw $e;
             }
             if ($admin) Audit::record('user.member_profile.updated','user',$user['id'],(new AuthService())->user()['id'] ?? null,[],['member_type'=>$data['member_type'],'complete'=>$complete],$request->ip());
-            if ($request->expectsJson()) return Response::json(['message'=>'اطلاعات شما ذخیره شد.','complete'=>$complete]);
-            return $this->redirect($admin ? '/admin/users/'.$user['id'].'?member_saved=1' : '/profile?saved=1');
+            $redirect=!$admin && $complete?\App\Services\EnrollmentReturnService::consume():null;
+            if ($request->expectsJson()) return Response::json(['message'=>$complete?'پروفایل تکمیل و ذخیره شد.':'اطلاعات شما ذخیره شد.','complete'=>$complete,'redirect'=>$redirect]);
+            return $this->redirect($redirect??($admin ? '/admin/users/'.$user['id'].'?member_saved=1' : '/profile?saved=1'),303);
         }
         $extra=['member'=>$data,'memberErrors'=>$errors,'memberEnabled'=>true];
         if ($request->expectsJson()) return Response::json(['message'=>'فیلدهای مشخص‌شده را بررسی کنید.','errors'=>$errors],422);

@@ -16,7 +16,13 @@ use RuntimeException;
 
 final class AuthController extends Controller
 {
-    public function registerForm(Request $request): Response { return $this->authView('register'); }
+    public function registerForm(Request $request): Response { \App\Services\EnrollmentReturnService::remember($request->query('next'));return $this->authView('register'); }
+
+    public function sessionState(Request $request): Response
+    {
+        $user=(new AuthService())->user();
+        return Response::json(['authenticated'=>$user!==null,'user_id'=>$user['id']??null,'csrf_token'=>(new \App\Core\CSRF())->token()])->withHeader('Cache-Control','private, no-store');
+    }
 
     public function sendRegistrationCode(Request $request): Response
     {
@@ -28,6 +34,7 @@ final class AuthController extends Controller
 
     public function register(Request $request): Response
     {
+        \App\Services\EnrollmentReturnService::remember($request->input('next'));
         $data = $request->only(['name', 'phone', 'email', 'password', 'password_confirmation', 'accept', 'member_type', 'marketing_consent']);
         $data['phone'] = is_string($data['phone'] ?? null) && strlen($data['phone']) <= 240 ? \App\Core\PhoneNumber::normalize($data['phone']) : '';
         $validator = new Validator();
@@ -54,13 +61,15 @@ final class AuthController extends Controller
         } catch (RuntimeException $exception) {
             return $this->authView('register', [$exception->getCode() === 409 ? 'phone' : 'email' => [$exception->getMessage()]], $this->safeOld($data));
         }
-        return $this->redirect('/profile?welcome=1');
+        $next=\App\Services\EnrollmentReturnService::target();
+        return $this->redirect('/profile?welcome=1'.($next?'&next='.rawurlencode($next):''),303);
     }
 
-    public function loginForm(Request $request): Response { return $this->authView('login', extra:['loginWithEmail'=>$request->query('method')==='email']); }
+    public function loginForm(Request $request): Response { \App\Services\EnrollmentReturnService::remember($request->query('next'));return $this->authView('login', extra:['loginWithEmail'=>$request->query('method')==='email']); }
 
     public function login(Request $request): Response
     {
+        \App\Services\EnrollmentReturnService::remember($request->input('next'));
         $raw=$request->input('identifier',$request->input('phone',$request->input('email','')));
         $identifier=is_string($raw) && strlen($raw)<=240 ? AuthService::normalizeLoginIdentifier($raw) : '';
         $data=['identifier'=>$identifier,'password'=>$request->input('password')];
@@ -70,7 +79,7 @@ final class AuthController extends Controller
         $validator->validate($data, ['identifier' => 'required|string|max:120', 'password' => 'required|string|max:128']);
         $errors=$validator->errors();
         if (!preg_match('/^09[0-9]{9}$/',$identifier) && !filter_var($identifier,FILTER_VALIDATE_EMAIL)) $errors['identifier']=['شمارهٔ موبایل معتبر وارد کنید؛ برای استفاده از ایمیل، گزینهٔ ورود با ایمیل را انتخاب کنید.'];
-        if ($errors) return $this->authView('login', $errors, $old, extra:$extra);
+        if ($errors) return $request->expectsJson()?Response::json(['message'=>'اطلاعات ورود را بررسی کنید.','errors'=>$errors],422):$this->authView('login', $errors, $old, extra:$extra);
         $limiter = new RateLimiter();
         $limitKeys=['login-account|'.$identifier]; $limited=false;
         $allowed=(new AuthService())->attempt($identifier,(string)$data['password'],static function(?string $userId) use ($limiter,&$limitKeys,&$limited): bool {
@@ -79,12 +88,14 @@ final class AuthController extends Controller
             $reservation=$limiter->reserveMany($limits,static function(\PDO $pdo): void {});
             $limited=!$reservation['allowed']; return !$limited;
         });
-        if ($limited) return $this->authView('login', ['credentials' => ['تلاش‌های ورود بیش از حد مجاز بود؛ ۱۵ دقیقه دیگر دوباره امتحان کنید.']], $old, extra:$extra);
+        if ($limited) return $request->expectsJson()?Response::json(['message'=>'تلاش‌های ورود بیش از حد مجاز بود؛ ۱۵ دقیقه دیگر دوباره امتحان کنید.'],429):$this->authView('login', ['credentials' => ['تلاش‌های ورود بیش از حد مجاز بود؛ ۱۵ دقیقه دیگر دوباره امتحان کنید.']], $old, extra:$extra);
         if (!$allowed) {
-            return $this->authView('login', ['credentials' => ['شماره، ایمیل یا رمز عبور صحیح نیست. در صورت نیاز، ورود با ایمیل را امتحان کنید.']], $old, extra:$extra);
+            return $request->expectsJson()?Response::json(['message'=>'شماره، ایمیل یا رمز عبور صحیح نیست.'],422):$this->authView('login', ['credentials' => ['شماره، ایمیل یا رمز عبور صحیح نیست. در صورت نیاز، ورود با ایمیل را امتحان کنید.']], $old, extra:$extra);
         }
         foreach($limitKeys as $key) $limiter->clear($key);
-        return $this->redirect($this->intended());
+        $user=(new AuthService())->user();
+        if($request->expectsJson())return Response::json(['message'=>'وارد حساب شدید.','user_id'=>$user['id'],'redirect'=>$request->input('recover')==='1'?null:(\App\Services\EnrollmentReturnService::afterLogin($user)??$this->intended())]);
+        return $this->redirect(\App\Services\EnrollmentReturnService::afterLogin($user)??$this->intended(),303);
     }
 
     public function logout(Request $request): Response
@@ -129,7 +140,7 @@ final class AuthController extends Controller
     private function authView(string $page, array $errors = [], array $old = [], bool $success = false, array $extra = []): Response
     {
         $titles = ['register' => 'ساخت حساب کاربری', 'login' => 'ورود به Mentoris', 'forgot-password' => 'بازیابی رمز عبور'];
-        return $this->view('auth.' . $page, ['title' => $titles[$page], 'errors' => $errors, 'old' => $old, 'success' => $success, ...$extra]);
+        return $this->view('auth.' . $page, ['title' => $titles[$page], 'errors' => $errors, 'old' => $old, 'success' => $success, 'enrollmentReturn'=>\App\Services\EnrollmentReturnService::target(), ...$extra]);
     }
 
     private function resetView(string $token, bool $valid, array $errors = [], bool $success = false): Response
@@ -142,6 +153,7 @@ final class AuthController extends Controller
     private function intended(): string
     {
         $path = (string) (new Session())->pull('auth.intended', '/dashboard');
-        return str_starts_with($path, '/') && !str_starts_with($path, '//') ? $path : '/dashboard';
+        $decoded=rawurldecode($path);
+        return str_starts_with($decoded, '/') && !str_starts_with($decoded, '//') && !str_contains($decoded,'\\') && !preg_match('/[\x00-\x20]/',$decoded) ? $path : '/dashboard';
     }
 }

@@ -15,7 +15,7 @@ export function initMemberProfile() {
       while (section) { section.open = true; section = section.parentElement.closest('details'); }
     }, true);
     const list = form.querySelector('[data-course-list]');
-    let nextIndex = list.children.length;
+    let nextIndex = Math.max(-1,...[...list.querySelectorAll('[name]')].map(input=>Number(input.name.match(/^training_courses\[(\d+)\]/)?.[1]??-1)))+1;
     const update = () => {
       const count = list.children.length;
       form.querySelector('[data-course-status]').textContent = `${count} دوره ثبت شده؛ حداکثر ۳۰ دوره.`;
@@ -33,7 +33,7 @@ export function initMemberProfile() {
       if (button) { button.closest('[data-course-row]').remove(); update(); }
     });
     form.addEventListener('submit', event => {
-      form.querySelectorAll('[name="field_of_study"],[name="university"]').forEach(input => { input.required = event.submitter?.value === 'complete' && ['student','therapist'].includes(value('member_type')); });
+      form.querySelectorAll('[name="field_of_study"],[name="university"]').forEach(input => { input.setCustomValidity('');input.required = event.submitter?.value === 'complete' && ['student','therapist'].includes(value('member_type')); });
       if (!form.reportValidity()) event.preventDefault();
     });
     update();

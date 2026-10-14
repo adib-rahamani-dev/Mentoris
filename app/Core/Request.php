@@ -107,7 +107,7 @@ final class Request
 
     public function expectsJson(): bool
     {
-        return $this->isJson() || str_contains(strtolower((string) $this->header('Accept', '')), 'application/json');
+        return $this->isJson() || str_contains(strtolower((string) $this->header('Accept', '')), 'application/json') || strtolower((string)$this->header('X-Requested-With',''))==='xmlhttprequest';
     }
 
     public function ip(): string
