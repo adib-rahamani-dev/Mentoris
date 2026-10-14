@@ -100,7 +100,9 @@ final class SeoService
                 'url' => $baseUrl . '/',
                 'logo' => [
                     '@type' => 'ImageObject',
-                    'url' => self::absoluteUrl('/assets/icons/favicon.svg'),
+                    'url' => self::absoluteUrl('/assets/images/brand/mentoris-academy-mark-512-v1.png'),
+                    'width' => 512,
+                    'height' => 512,
                 ],
                 'email' => 'Academichaghani@gmail.com',
                 'telephone' => '+989100077611',

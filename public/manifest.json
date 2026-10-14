@@ -7,14 +7,20 @@
   "start_url": "/?lang=fa",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#050914",
-  "theme_color": "#7c3aed",
+  "background_color": "#f8f7f1",
+  "theme_color": "#244C41",
   "icons": [
     {
-      "src": "/assets/icons/favicon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "src": "/assets/images/brand/mentoris-academy-mark-192-v1.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/images/brand/mentoris-academy-mark-512-v1.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
 }
