@@ -139,20 +139,20 @@ final class CommunicationBotService
             foreach(array_slice($items,0,5) as $item)$this->say('🔴 بازگشت وجه در انتظار اقدام'."\nعضو: ".$item['name']."\nشماره: ".$item['phone']."\nبرنامه: ".$item['item_title']."\nمبلغ: ".number_format((int)$item['amount']).' تومان',$this->buttons([[$this->link('اطلاعات رسید و ثبت واریز برگشتی','/admin/manual-payments/'.$item['payment_id'])]]),$actor);
             $rows=[];if($page>0)$rows[]=['text'=>'قبلی','callback_data'=>'admin:refunds:'.($page-1)];if(count($items)>5)$rows[]=['text'=>'بعدی','callback_data'=>'admin:refunds:'.($page+1)];$this->say($items?'پرونده‌های بازگشت وجه:':'بازگشت وجه معوق نداریم.',$this->buttons([$rows?:[ $this->link('همه پرونده‌ها در سایت','/admin/manual-payments?status=refunds')]]),$actor);return;
         }
-        if(preg_match('/^(mpa|mpr):([a-f0-9]{32}):([1-9][0-9]{0,9})$/',$action,$match)) {
+        if(preg_match('/^(mpa|mpr|mpx):([a-f0-9]{32}):([1-9][0-9]{0,9})$/',$action,$match)) {
             $actor=$this->admin->authorized($this->account,'payments.manage');if(!$actor){$this->denied();return;}
             $row=(new ManualPaymentService($this->hub))->find($match[2]);if(!$row || $row['status']!=='pending')throw new \RuntimeException('رسید قبلاً بررسی شده یا در دسترس نیست.');
             if((int)$row['version']!==(int)$match[3])throw new \RuntimeException('تصویر رسید تغییر کرده؛ پیام جدید و تصویر تازه را بررسی کنید.');
-            $status=$match[1]==='mpa'?'approved':'rejected';
-            $id=$this->hub->prepareAction($this->account,$actor,'manual_payment',['id'=>$row['id'],'version'=>$row['version'],'status'=>$status,'type'=>'payment']);
-            $this->confirm($id,($status==='approved'?'تأیید دریافت وجه':'رد رسید').'؛ '.number_format((int)$row['amount']).' تومان. رسید را با گردش حساب تطبیق داده‌اید؟',$actor);return;
+            $combined=$match[1]==='mpx';if($combined && !Authorization::can($actor,'engagements.manage')){$this->denied();return;}$status=$match[1]==='mpr'?'rejected':'approved';
+            $id=$this->hub->prepareAction($this->account,$actor,$combined?'payment_admission':'manual_payment',['id'=>$row['id'],'version'=>$row['version'],'status'=>$status,'type'=>'payment']);
+            $this->confirm($id,($combined?'تأیید واریز و پذیرش':($status==='approved'?'تأیید دریافت وجه':'رد رسید')).'؛ '.number_format((int)$row['amount']).' تومان. رسید را با گردش حساب تطبیق داده‌اید؟',$actor);return;
         }
         if($action==='admin'){$this->adminMenu();return;}
         if(str_starts_with($action,'do:')) {$actor=$this->admin->authorized($this->account,'admin.access');if(!$actor){$this->denied();return;}$this->say($this->admin->execute($this->account,substr($action,3)),$this->buttons([[['text'=>'مدیریت','callback_data'=>'admin']]]),$actor);return;}
         if($action==='admin:alerts') {$actor=$this->admin->authorized($this->account,'engagements.view');if(!$actor){$this->denied();return;}$this->hub->execute('UPDATE comm_accounts SET admin_alerts=:enabled WHERE channel=:channel AND chat_id=:chat',['enabled'=>empty($this->account['admin_alerts'])?1:0,'channel'=>$this->channel,'chat'=>$this->account['chat_id']]);$this->say(empty($this->account['admin_alerts'])?'اعلان مدیریتی فعال شد. درخواست‌ها و پیام‌های تازه را همین‌جا دریافت می‌کنید.':'اعلان مدیریتی خاموش شد.',null,$actor);return;}
         if(preg_match('/^pending:(circle|courses)(?::([0-9]{1,4}))?$/',$action,$match)) {
             $actor=$this->admin->authorized($this->account,'engagements.view');if(!$actor){$this->denied();return;}$type=$match[1];$table=$type==='circle'?'event_signups':'course_requests';$page=(int)($match[2]??0);$offset=$page*5;
-            $items=$this->hub->rows("SELECT * FROM $table WHERE status='requested' ORDER BY created_at,id LIMIT 6 OFFSET $offset");
+            $items=(new ManualPaymentService($this->hub))->available()?$this->hub->rows("SELECT * FROM $table WHERE status='requested' AND EXISTS (SELECT 1 FROM manual_payments p WHERE p.request_type=:type AND p.request_id=$table.id AND p.part=1 AND p.status='approved') ORDER BY created_at,id LIMIT 6 OFFSET $offset",['type'=>$type]):[];
             foreach(array_slice($items,0,5) as $item){$rows=[[$this->link('اطلاعات کامل، رزومه و تصمیم پذیرش','/admin/requests/'.$type.'/'.$item['id'])]];if(Authorization::can($actor,'engagements.manage'))$rows[]=[['text'=>'تأیید پذیرش','callback_data'=>'p:'.($type==='circle'?'c':'k').':'.$item['id'].':a'],['text'=>'رد پذیرش','callback_data'=>'p:'.($type==='circle'?'c':'k').':'.$item['id'].':r']];$this->say((new CommunicationDetailService($this->hub))->request($type,$item['id']),$this->buttons($rows),$actor);}
             $rows=[];if($page>0)$rows[]=['text'=>'قبلی','callback_data'=>'pending:'.$type.':'.($page-1)];if(count($items)>5)$rows[]=['text'=>'بعدی','callback_data'=>'pending:'.$type.':'.($page+1)];$this->say($items?'مشاهده درخواست‌های دیگر:':'درخواستی در انتظار بررسی نیست.',$this->buttons([$rows?:[['text'=>'مدیریت','callback_data'=>'admin']]]),$actor);return;
         }

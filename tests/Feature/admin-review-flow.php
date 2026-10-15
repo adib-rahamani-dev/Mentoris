@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 ob_start();require __DIR__.'/manual-payments.php';
+$sql=file_get_contents(BASE_PATH.'/database/migrations/014_payment_refunds.mysql.sql');preg_match('/CREATE TABLE IF NOT EXISTS (\w+) \((.*?)\) ENGINE=/s',$sql,$block);$body=preg_replace('/ CHARACTER SET \w+ COLLATE \w+/','',$block[2]);$body=preg_replace('/,\s*KEY \w+\s*\([^)]*\)/','',$body);$pdo->exec('CREATE TABLE IF NOT EXISTS '.$block[1].' ('.$body.')');
 use App\Core\Request;
 use App\Services\{AuthService,EnrollmentReturnService,ContentReleaseService};
 use App\Controllers\{CoursesController,AdminRequestReviewController,ManualPaymentController};
@@ -17,7 +18,11 @@ $requestRow=$hub->one('SELECT * FROM course_requests WHERE user_id=:user AND cou
 $checkReview($response->status()===303 && $requestRow && $requestRow['status']==='requested' && $requestRow['name']===$outsider['name'],'An incomplete profile can actually submit a course request using its account identity.');
 $expectedUrl=rtrim((string)env('APP_URL'),'/').'/admin/requests/courses/'.$requestRow['id'];$matchingNotice=false;
 foreach($hub->rows("SELECT payload FROM comm_outbox WHERE chat_id='501' AND method='sendMessage'") as $queued){$payload=\App\Repositories\CommunicationRepository::open($queued['payload']);if(($payload['reply_markup']['inline_keyboard'][0][0]['url']??null)===$expectedUrl)$matchingNotice=true;}
-$checkReview($matchingNotice,'The queued Telegram notification opens the exact request review page.');
+$checkReview(!$matchingNotice,'An unpaid request does not enter the admission notification queue.');
+$firstImage=(new \App\Services\SupportFileService())->store(base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jA1sAAAAASUVORK5CYII='),'first-review.png');
+try{$firstReceipt=$payment->submit($payment->context('courses',$requestRow['id'],$outsider),$outsider,1,$firstImage);$payment->review($firstReceipt['id'],1,'approved',$manager);}finally{unlink(BASE_PATH.'/storage/uploads/support/'.$firstImage['local_name']);}
+$matchingNotice=false;foreach($hub->rows("SELECT payload FROM comm_outbox WHERE chat_id='501' AND method='sendMessage'") as $queued){$payload=\App\Repositories\CommunicationRepository::open($queued['payload']);if(($payload['reply_markup']['inline_keyboard'][0][0]['url']??null)===$expectedUrl)$matchingNotice=true;}
+$checkReview($matchingNotice,'A verified payment queues the exact admission review link.');
 $request=new Request();$request->setRouteParams(['type'=>'courses','id'=>$requestRow['id']]);$controller=new AdminRequestReviewController();
 $checkReview($controller->show($request)->status()===403,'A normal member cannot view the admin review page.');
 (new AuthService())->refresh($manager);$detail=$controller->show($request);
@@ -29,7 +34,7 @@ $checkReview($hub->one('SELECT status FROM course_requests WHERE id=:id',['id'=>
 $context=$payment->context('courses',$requestRow['id'],$outsider);
 $newImage=(new \App\Services\SupportFileService())->store(base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jA1sAAAAASUVORK5CYII='),'review.png');
 try {
- $newReceipt=$payment->submit($context,$outsider,1,$newImage);
+ $newReceipt=$payment->submit($context,$outsider,2,$newImage);
  $checkReview($newReceipt['status']==='pending' && (int)$newReceipt['amount']===7500000,'Approved course members can upload a receipt without completing their profile.');
  $noticeRow=$hub->one('SELECT payload FROM comm_outbox WHERE dedupe_key=:key',['key'=>'manual:'.$newReceipt['id'].':1:notice']);$payload=\App\Repositories\CommunicationRepository::open($noticeRow['payload']);
  $checkReview($payload['reply_markup']['inline_keyboard'][0][0]['url']===rtrim((string)env('APP_URL'),'/').'/admin/manual-payments/'.$newReceipt['id'],'Receipt notification links to the exact receipt instead of the general inbox.');

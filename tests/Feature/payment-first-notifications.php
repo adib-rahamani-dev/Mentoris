@@ -1,0 +1,41 @@
+<?php
+declare(strict_types=1);
+ob_start();require __DIR__.'/prepayment-refunds.php';
+use App\Core\Request;
+use App\Services\{AuthService,NotificationService,BotAdminService,CommunicationBotService};
+use App\Controllers\{ManualPaymentController,UserAreaController};
+$checksNow=0;$assertNow=static function(bool $ok,string $message)use(&$checksNow):void{if(!$ok)throw new RuntimeException($message);$checksNow++;};
+$deniedNow=static function(callable $fn,string $message)use($assertNow):void{try{$fn();throw new LogicException($message);}catch(RuntimeException){$assertNow(true,$message);}};
+[$applicant,$application]=$create('8','09129990008');
+$deniedNow(fn()=>$repo->updateEngagementStatus('courses',$application['id'],'approved'),'Unpaid requests cannot be accepted through site administration.');
+$listed=$repo->engagements('courses',['status'=>'requested']);
+$assertNow(!in_array($application['id'],array_column($listed['items'],'id'),true),'Unpaid applications are absent from the admission queue.');
+$img=(new \App\Services\SupportFileService())->store(base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jA1sAAAAASUVORK5CYII='),'payment-first.png');
+try{
+ $receipt=$service->submit($service->context('courses',$application['id'],$applicant),$applicant,1,$img);
+ $assertNow(!$lifecycle->reviewReady('courses',$application['id']),'Uploading an image alone does not verify funds.');
+ (new AuthService())->refresh($manager);$post=new Request(body:['version'=>'1','decision'=>'accept','detail'=>'1']);$post->setRouteParams(['id'=>$receipt['id']]);
+ $response=(new ManualPaymentController())->review($post);
+ $assertNow($response->status()===303 && $service->find($receipt['id'])['status']==='approved' && $hub->one('SELECT status FROM course_requests WHERE id=:id',['id'=>$application['id']])['status']==='approved','The real combined controller action verifies funds and accepts admission together.');
+ $assertNow((int)$hub->one('SELECT COUNT(*) n FROM enrollments WHERE user_id=:id',['id'=>$applicant['id']])['n']===1,'Combined review creates one active enrollment.');
+ (new ManualPaymentController())->review($post);
+ $assertNow((int)$hub->one('SELECT COUNT(*) n FROM enrollments WHERE user_id=:id',['id'=>$applicant['id']])['n']===1,'Repeated combined review cannot duplicate access.');
+ [$telegramMember,$telegramRequest]=$create('5','09129990005');$botReceipt=$service->submit($service->context('courses',$telegramRequest['id'],$telegramMember),$telegramMember,1,$img);
+ $bot=new CommunicationBotService($hub,'telegram');$bot->handle($callback(501,'mpx:'.$botReceipt['id'].':1',2991));
+ $action=$hub->one("SELECT * FROM comm_actions WHERE chat_id='501' AND action='payment_admission' AND used_at IS NULL ORDER BY created_at DESC LIMIT 1");
+ $assertNow($action!==null,'The new Telegram button creates an explicit combined confirmation.');
+ $account=$hub->one("SELECT * FROM comm_accounts WHERE channel='telegram' AND chat_id='501'");(new BotAdminService($hub))->execute($account,$action['id']);
+ $assertNow($service->find($botReceipt['id'])['status']==='approved' && $hub->one('SELECT status FROM course_requests WHERE id=:id',['id'=>$telegramRequest['id']])['status']==='approved','Telegram confirmation persists both financial and admission decisions.');
+ $deniedNow(fn()=>(new BotAdminService($hub))->execute($account,$action['id']),'A combined Telegram confirmation is single use.');
+ [$rejectedMember,$rejectedRequest]=$create('4','09129990004');$late=$service->submit($service->context('courses',$rejectedRequest['id'],$rejectedMember),$rejectedMember,1,$img);$repo->updateEngagementStatus('courses',$rejectedRequest['id'],'rejected');
+ $latePost=new Request(body:['version'=>'1','decision'=>'accept']);$latePost->setRouteParams(['id'=>$late['id']]);(new ManualPaymentController())->review($latePost);
+ $assertNow($service->find($late['id'])['status']==='pending' && $lifecycle->refunds('courses',$rejectedRequest['id'])===[],'Combined acceptance of an already rejected request rolls back the financial change and its side effects.');
+ (new AuthService())->refresh($applicant);$notifications=new NotificationService();$before=$notifications->unreadCount($applicant['id']);
+ $notifications->once($applicant,'آزمون اعلان','پیام اختصاصی پرداخت','payment-first-test');$notifications->once($applicant,'آزمون اعلان','پیام اختصاصی پرداخت','payment-first-test');
+ $assertNow($notifications->unreadCount($applicant['id'])===$before+1,'A repeated state event creates only one website notification.');
+ $feed=(new UserAreaController())->notificationFeed(new Request());$json=json_decode($feed->content(),true);
+ $assertNow($feed->status()===200 && $feed->headers()['Cache-Control']==='private, no-store' && $json['user_id']===$applicant['id'] && $json['unread']===$before+1,'The live feed returns current private unread counts for the authenticated account.');
+ foreach($json['items'] as $item)$assertNow($hub->one('SELECT user_id FROM notifications WHERE id=:id',['id'=>$item['id']])['user_id']===$applicant['id'],'Live notification items cannot leak another account.');
+ (new AuthService())->refresh($outsider);$other=json_decode((new UserAreaController())->notificationFeed(new Request())->content(),true);$assertNow(!in_array(substr(hash('sha256',$applicant['id'].'|payment-first-test'),0,16),array_column($other['items'],'id'),true),'A different account cannot read the payment notification.');
+}finally{unlink(BASE_PATH.'/storage/uploads/support/'.$img['local_name']);}
+echo "PASS: {$checksNow} payment-first, combined site/Telegram review, rollback and live notification checks.\n";ob_end_flush();

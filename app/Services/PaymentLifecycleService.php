@@ -17,6 +17,14 @@ final class PaymentLifecycleService
     {
         return $this->available()?$this->hub->rows('SELECT r.*,p.part FROM payment_refunds r JOIN manual_payments p ON p.id=r.payment_id WHERE p.request_type=:type AND p.request_id=:id ORDER BY p.part',['type'=>$type,'id'=>$id]):[];
     }
+    public function reviewReady(string $type,string $id): bool
+    {
+        return in_array($type,['circle','courses'],true) && (new ManualPaymentService($this->hub))->available() && $this->hub->one("SELECT id FROM manual_payments WHERE request_type=:type AND request_id=:id AND part=1 AND status='approved' LIMIT 1",['type'=>$type,'id'=>$id])!==null;
+    }
+    public function requirePayment(string $type,string $id,string $status): void
+    {
+        if($status==='approved' && in_array($type,['circle','courses'],true) && !$this->reviewReady($type,$id))throw new RuntimeException('ابتدا واریز بخش اول را از صفحه رسید تأیید کنید؛ درخواست بدون پرداخت قابل پذیرش نیست.');
+    }
     public function sync(string $type,string $id): void
     {
         if(!in_array($type,['circle','courses'],true) || !(new ManualPaymentService($this->hub))->available())return;

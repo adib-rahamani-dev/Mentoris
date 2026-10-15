@@ -101,6 +101,12 @@ final class UserAreaController extends Controller
     public function certificates(Request $request): Response { $user = $this->user(); return $this->page('my-certificates', 'گواهی‌های من', $user, ['eventCertificates' => (new CircleRepository())->issueEligibleCertificates($user['id'])]); }
 
     public function notifications(Request $request): Response { return $this->page('notifications', 'اعلان‌ها', $this->user()); }
+    public function notificationFeed(Request $request): Response
+    {
+        $user=(new AuthService())->user();if(!$user)return Response::json(['message'=>'ورود لازم است.'],401);
+        $hub=new \App\Repositories\CommunicationRepository();$items=$hub->rows('SELECT id,title,message,created_at FROM notifications WHERE user_id=:user AND read_at IS NULL ORDER BY created_at DESC,id DESC LIMIT 5',['user'=>$user['id']]);
+        return Response::json(['user_id'=>$user['id'],'unread'=>(new \App\Services\NotificationService())->unreadCount($user['id']),'items'=>$items])->withHeader('Cache-Control','private, no-store');
+    }
 
     public function readNotifications(Request $request): Response
     {

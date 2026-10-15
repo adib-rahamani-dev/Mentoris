@@ -30,4 +30,11 @@ final class NotificationService
         $s->execute(['id'=>$userId]);
         return (int)$s->fetchColumn();
     }
+    public function once(array $user,string $title,string $message,string $key): void
+    {
+        $pdo=Database::connection();$insert=Database::driver($pdo)==='sqlite'?'INSERT OR IGNORE':'INSERT IGNORE';
+        $s=$pdo->prepare("$insert INTO notifications (id,user_id,title,message,created_at) VALUES (:id,:user,:title,:message,:at)");
+        $s->execute(['id'=>substr(hash('sha256',$user['id'].'|'.$key),0,16),'user'=>$user['id'],'title'=>$title,'message'=>$message,'at'=>Database::now()]);
+        if($s->rowCount()===1){$hub=new \App\Repositories\CommunicationRepository();if($hub->available())$hub->notifyUser($user['id'],$title,$message,$key);}
+    }
 }

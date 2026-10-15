@@ -24,6 +24,7 @@ $schemas=[
  'notifications'=>'id TEXT,user_id TEXT,title TEXT,message TEXT,created_at TEXT,read_at TEXT',
  'password_reset_tokens'=>'id TEXT,user_id TEXT,token_hash TEXT,expires_at TEXT,used_at TEXT,created_at TEXT',
  'audit_logs'=>'id TEXT PRIMARY KEY,actor_id TEXT,action TEXT,subject_type TEXT,subject_id TEXT,old_values TEXT,new_values TEXT,ip_hash TEXT,created_at TEXT',
+ 'manual_payments'=>'id TEXT PRIMARY KEY,user_id TEXT,request_type TEXT,request_id TEXT,item_slug TEXT,item_title TEXT,part INTEGER,amount INTEGER,receipt TEXT,version INTEGER,status TEXT,review_note TEXT,reviewed_by TEXT,reviewed_at TEXT,created_at TEXT,updated_at TEXT',
 ];
 foreach($schemas as $table=>$fields) $pdo->exec('CREATE TABLE '.$table.' ('.$fields.')');
 $checks=0; $check=static function(bool $condition,string $message) use(&$checks): void { if(!$condition) throw new RuntimeException($message); $checks++; };
@@ -86,6 +87,9 @@ $adminId='aaaaaaaaaaaaaaaaaaaaaaaa'; $now=Database::now();
 $pdo->prepare("INSERT INTO users (id,name,email,password_hash,phone,professional_role,bio,account_role,status,auth_version,created_at,updated_at) VALUES (:id,'مدیر آزمایش','admin@example.test',:hash,'09120000000','','','super_admin','active',1,:created,:updated)")->execute(['id'=>$adminId,'hash'=>Security::hashPassword('TestAdmin123'),'created'=>$now,'updated'=>$now]);
 (new AuthService())->refresh(['id'=>$adminId,'name'=>'مدیر آزمایش','email'=>'admin@example.test','account_role'=>'super_admin','auth_version'=>1]);
 $admin=new AdminController(); $repository=new AdminRepository();
+$paid=$pdo->prepare("INSERT INTO manual_payments (id,user_id,request_type,request_id,item_slug,part,status) VALUES (:id,NULL,:type,:request,:slug,1,'approved')");
+$paid->execute(['id'=>'fixture-circle-paid','type'=>'circle','request'=>$signup['id'],'slug'=>'therapists-circle-third']);
+$paid->execute(['id'=>'fixture-course-paid','type'=>'courses','request'=>$stored['id'],'slug'=>$course['slug']]);
 $circleId=$signup['id']; $repository->updateEngagementStatus('circle',$circleId,'approved');
 $check((new CircleRepository())->findSignup('therapists-circle-third','09127776666')['status']==='approved','Admin approval is persisted.');
 $repository->updateEngagementStatus('courses',$stored['id'],'approved');

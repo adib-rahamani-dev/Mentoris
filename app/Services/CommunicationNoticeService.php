@@ -12,11 +12,12 @@ final class CommunicationNoticeService
         if(!$this->hub->available()) return;
         $tables=['circle'=>'event_signups','courses'=>'course_requests','community'=>'community_memberships'];$table=$tables[$type] ?? null;if(!$table) return;
         $row=$this->hub->one("SELECT * FROM $table WHERE id=:id",['id'=>$id]);if(!$row) return;
+        if($status==='requested' && in_array($type,['circle','courses'],true) && !(new PaymentLifecycleService($this->hub))->reviewReady($type,$id))return;
         $label=['requested'=>'در انتظار بررسی','approved'=>'تأیید شد','rejected'=>'تأیید نشد','attended'=>'حضور ثبت شد','canceled'=>'لغو شد'][$status] ?? $status;
         $title=$type==='circle'?'درخواست حضور در حلقه':($type==='courses'?'درخواست دوره':'درخواست جامعه حرفه‌ای');
         $slug=$row['event_slug'] ?? $row['course_slug'] ?? '';
         $key='engagement:'.$type.':'.$id.':'.$status.':'.($row['updated_at'] ?? $row['created_at']);
-        if(!empty($row['user_id'])) $this->hub->notifyUser($row['user_id'],$title,$label.($slug?"\n".rtrim((string)env('APP_URL'),'/').'/payments/'.$type.'/'.$id:''),$key);
+        if(!empty($row['user_id'])) (new NotificationService())->once(['id'=>$row['user_id']],$title,$label.($slug?"\n".rtrim((string)env('APP_URL'),'/').'/payments/'.$type.'/'.$id:''),$key);
         if($status==='requested'){
             $item=$type==='circle'?PublicContentService::event($slug):($type==='courses'?PublicContentService::course($slug):null);
             $path=in_array($type,['circle','courses'],true)?'/admin/requests/'.$type.'/'.$id:null;

@@ -93,13 +93,15 @@ final class ManualPaymentService
             if(!$admin || $account['link_method']!=='site' || !Authorization::can($admin,'payments.manage'))continue;
             $admin['__permission']='payments.manage';$key='manual:'.$row['id'].':'.$row['version'];
             $this->hub->queue($account['channel'],$account['chat_id'],'_manual_receipt',['payment_id'=>$row['id'],'version'=>$row['version']],$key.':image',$admin);
-            $this->hub->message($account,(new CommunicationDetailService($this->hub))->receipt($row), ['inline_keyboard'=>[[['text'=>'مشاهده اطلاعات و بررسی رسید','url'=>rtrim((string)env('APP_URL'),'/').'/admin/manual-payments/'.$row['id']]],[['text'=>'تأیید رسید','callback_data'=>'mpa:'.$row['id'].':'.$row['version']],['text'=>'رد رسید','callback_data'=>'mpr:'.$row['id'].':'.$row['version']]]]],$key.':notice',$admin);
+            $markup=['inline_keyboard'=>[[['text'=>'مشاهده اطلاعات و بررسی رسید','url'=>rtrim((string)env('APP_URL'),'/').'/admin/manual-payments/'.$row['id']]],[['text'=>'تأیید رسید','callback_data'=>'mpa:'.$row['id'].':'.$row['version']],['text'=>'رد رسید','callback_data'=>'mpr:'.$row['id'].':'.$row['version']]]]];
+            if(Authorization::can($admin,'engagements.manage'))$markup['inline_keyboard'][]=[['text'=>'تأیید واریز و پذیرش','callback_data'=>'mpx:'.$row['id'].':'.$row['version']]];
+            $this->hub->message($account,(new CommunicationDetailService($this->hub))->receipt($row),$markup,$key.':notice',$admin);
         }
     }
-    public function review(string $id,int $version,string $status,array $admin,string $note=''): void
+    public function review(string $id,int $version,string $status,array $admin,string $note='',bool $notifyAdmission=true): void
     {
         if(!Authorization::can($admin,'payments.manage') || !in_array($status,['approved','rejected'],true))throw new RuntimeException('دسترسی تأیید پرداخت مجاز نیست.');
-        Database::transaction($this->hub->pdo(),function() use($id,$version,$status,$admin,$note){
+        Database::transaction($this->hub->pdo(),function() use($id,$version,$status,$admin,$note,$notifyAdmission){
             $row=$this->find($id);if(!$row)throw new RuntimeException('رسید یافت نشد.');
             $table=$row['request_type']==='circle'?'event_signups':'course_requests';
             $lock=Database::driver($this->hub->pdo())==='mysql'?' FOR UPDATE':'';
@@ -107,6 +109,7 @@ final class ManualPaymentService
             if(!$accepted)throw new RuntimeException('درخواست پذیرش در دسترس نیست.');
             if($this->hub->execute("UPDATE manual_payments SET status=:status,reviewed_by=:admin,reviewed_at=:now,updated_at=:updated,review_note=:note WHERE id=:id AND version=:version AND status='pending'",['status'=>$status,'admin'=>$admin['id'],'now'=>Database::now(),'updated'=>Database::now(),'note'=>mb_substr($note,0,1000),'id'=>$id,'version'=>$version])!==1)throw new RuntimeException('رسید قبلاً بررسی شده یا نسخه جدیدی دارد.');
             (new PaymentLifecycleService($this->hub))->sync($row['request_type'],$row['request_id']);
+            if($notifyAdmission && $status==='approved' && (int)$row['part']===1 && $accepted['status']==='requested')(new CommunicationNoticeService($this->hub))->engagement($row['request_type'],$row['request_id'],'requested');
             Audit::record('manual_payment.'.$status,'manual_payment',$id,$admin['id'],['status'=>'pending'],['status'=>$status,'amount'=>$row['amount']], 'manual-review');
             (new NotificationService())->panel(['id'=>$row['user_id']],'بررسی رسید پرداخت',$row['item_title'].'؛ '.($status==='approved'?'رسید بخش '.$row['part'].' تأیید شد.':'رسید تأیید نشد؛ تصویر صحیح را از بخش پرداخت دوباره ارسال کنید.').($note?"\n".$note:''));
             if($this->hub->available())$this->hub->notifyUser($row['user_id'],'بررسی رسید پرداخت',$row['item_title'].'؛ '.($status==='approved'?'رسید تأیید شد.':'رسید تأیید نشد؛ از پنل پرداخت دوباره ارسال کنید.').($note?"\n".$note:''),'manual-review:'.$id.':'.$version.':'.$status);

@@ -19,8 +19,9 @@ final class AdminRequestReviewController extends Controller
         $hub=new CommunicationRepository();$member=!empty($row['user_id'])?$hub->one('SELECT id,name,email,phone FROM users WHERE id=:id',['id'=>$row['user_id']]):null;
         $item=$type==='circle'?PublicContentService::event($row['event_slug']):PublicContentService::course($row['course_slug']);
         $application=$type==='circle'?(new CircleRepository())->application($row['id']):null;
+        $reviewReady=(new \App\Services\PaymentLifecycleService($hub))->reviewReady($type,$row['id']);
         $payments=[];try{$payments=$hub->rows('SELECT id,part,amount,status FROM manual_payments WHERE request_type=:type AND request_id=:id ORDER BY part',['type'=>$type,'id'=>$row['id']]);}catch(\PDOException $e){if(!MemberProfileRepository::missingTable($e))throw $e;}
-        return $this->view('admin.request-review',['title'=>'بررسی درخواست ثبت‌نام','admin'=>$admin,'requestRow'=>$row,'type'=>$type,'member'=>$member,'item'=>$item,'application'=>$application,'payments'=>$payments,'notice'=>(new Session())->pull('review.notice')],'layouts.admin')->withHeader('Cache-Control','private, no-store');
+        return $this->view('admin.request-review',['title'=>'بررسی درخواست ثبت‌نام','admin'=>$admin,'requestRow'=>$row,'type'=>$type,'member'=>$member,'item'=>$item,'application'=>$application,'payments'=>$payments,'reviewReady'=>$reviewReady,'notice'=>(new Session())->pull('review.notice')],'layouts.admin')->withHeader('Cache-Control','private, no-store');
     }
     public function review(Request $request): Response
     {
@@ -36,7 +37,7 @@ final class AdminRequestReviewController extends Controller
                 if(!(new AdminRepository($hub->pdo()))->updateEngagementStatus($type,$id,$status))throw new RuntimeException('ثبت نتیجه انجام نشد.');
                 Audit::record('engagement.status.updated',$type,$id,$admin['id'],['status'=>'requested'],['status'=>$status],$request->ip());
             });
-            (new Session())->put('review.notice',$status==='approved'?'پذیرش تأیید شد؛ ثبت‌نام پس از تأیید واریز قطعی می‌شود.':'درخواست رد شد؛ وجه تأییدشده برای بازگشت پیگیری می‌شود.');
+            (new Session())->put('review.notice',$status==='approved'?'پذیرش تأیید شد و ثبت‌نام نهایی است.':'درخواست رد شد؛ وجه تأییدشده برای بازگشت پیگیری می‌شود.');
         }catch(RuntimeException $e){(new Session())->put('review.notice',$e instanceof \PDOException?'ثبت نتیجه انجام نشد؛ دوباره تلاش کنید.':$e->getMessage());}
         CommunicationController::afterWebhook();
         return $this->redirect('/admin/requests/'.$type.'/'.$id,303);

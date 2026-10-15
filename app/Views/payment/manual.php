@@ -3,6 +3,7 @@ $context=$context??($contexts[0]??null);
 $labels=['requested'=>'در انتظار بررسی پذیرش','approved'=>'پذیرش تأیید شده','rejected'=>'پذیرش تأیید نشد','canceled'=>'درخواست لغو شده','attended'=>'حضور ثبت شده'];
 if($context){
  $byPart=array_column($context['rows'],null,'part');$part=1;
+ if($context['request']['status']==='requested')$labels['requested']=match($byPart[1]['status']??''){'approved'=>'در انتظار بررسی پذیرش','pending'=>'رسید در انتظار تأیید واریز',default=>'در انتظار پرداخت و ارسال رسید'};
  if($context['parts']===2 && ($byPart[1]['status']??'')==='approved' && $context['request']['status']==='approved')$part=2;
  $row=$byPart[$part]??null;$amount=$context['parts']===1?$context['total']:($part===1?(int)ceil($context['total']/2):(int)floor($context['total']/2));
  $eligible=$context['type']!=='circle'||$profileReady;

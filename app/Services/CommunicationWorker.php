@@ -14,7 +14,8 @@ final class CommunicationWorker
         try {
             foreach(['comm_updates','comm_outbox'] as $table) {
                 $hub->execute("UPDATE $table SET status='queued' WHERE status='processing' AND updated_at<:expiry",['expiry'=>gmdate('Y-m-d H:i:s',time()-600)]);
-                $jobs=$hub->rows("SELECT * FROM $table WHERE status='queued' AND next_attempt_at<=:now ORDER BY created_at LIMIT $limit",['now'=>Database::now()]);
+                $order=$table==='comm_outbox'?"CASE WHEN method='answerCallbackQuery' THEN 0 WHEN dedupe_key LIKE 'manual:%' OR dedupe_key LIKE 'refund%' THEN 1 ELSE 2 END, created_at,id":'created_at';
+                $jobs=$hub->rows("SELECT * FROM $table WHERE status='queued' AND next_attempt_at<=:now ORDER BY $order LIMIT $limit",['now'=>Database::now()]);
                 foreach($jobs as $job) {
                     if(microtime(true)-$start>max(5,$budgetSeconds)) break;
                     $where=$table==='comm_updates'?'channel=:channel AND update_id=:id':'id=:id';$params=['id'=>$table==='comm_updates'?$job['update_id']:$job['id']];if($table==='comm_updates')$params['channel']=$job['channel'];

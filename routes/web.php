@@ -32,6 +32,7 @@ $router->get('/specializations', [SpecializationsController::class, 'index'], ['
 $router->get('/specializations/{slug:[a-z0-9-]+}', [SpecializationsController::class, 'show'], ['rate:120,60']);
 $router->get('/courses', [CoursesController::class, 'index'], ['rate:120,60']);
 $router->get('/payments', [\App\Controllers\ManualPaymentController::class,'index'], ['auth','rate:60,60']);
+$router->get('/notifications/feed', [\App\Controllers\UserAreaController::class,'notificationFeed'], ['auth','rate:20,60']);
 $router->get('/payments/history', [\App\Controllers\ManualPaymentController::class,'history'], ['auth','rate:60,60']);
 $router->get('/payments/{type:circle|courses}/{id:[a-f0-9]+}', [\App\Controllers\ManualPaymentController::class,'checkout'], ['auth','rate:60,60']);
 $router->post('/payments/{type:circle|courses}/{id:[a-f0-9]+}/discount', [\App\Controllers\DiscountCodeController::class,'apply'], ['auth','csrf','rate:6,60']);

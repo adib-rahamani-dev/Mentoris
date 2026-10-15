@@ -14,15 +14,23 @@ final class BotAdminService
         return Database::transaction($this->hub->pdo(),function() use($account,$id){
             $action=$this->hub->one('SELECT * FROM comm_actions WHERE id=:id AND channel=:channel AND chat_id=:chat',['id'=>$id,'channel'=>$account['channel'],'chat'=>$account['chat_id']]);
             if(!$action || $action['used_at']!==null || $action['expires_at']<=Database::now()) throw new RuntimeException('این تأیید منقضی شده یا قبلاً استفاده شده است.');
-            $permissions=['manual_payment'=>'payments.manage','engagement'=>'engagements.manage','reply'=>'engagements.manage','ticket_close'=>'engagements.manage','content_status'=>'content.manage','article_draft'=>'content.manage'];
+            $permissions=['payment_admission'=>'payments.manage','manual_payment'=>'payments.manage','engagement'=>'engagements.manage','reply'=>'engagements.manage','ticket_close'=>'engagements.manage','content_status'=>'content.manage','article_draft'=>'content.manage'];
             $permission=$permissions[$action['action']] ?? ''; $user=$this->authorized($account,$permission);
             if(!$user || $user['id']!==$action['user_id'] || (int)$user['auth_version']!==(int)$action['auth_version']) throw new RuntimeException('دسترسی این عملیات در حال حاضر مجاز نیست.');
             if($this->hub->execute('UPDATE comm_actions SET used_at=:now WHERE id=:id AND used_at IS NULL',['now'=>Database::now(),'id'=>$id])!==1) throw new RuntimeException('این عملیات قبلاً انجام شده است.');
             $data=CommunicationRepository::open($action['payload']);$subject=(string)($data['id'] ?? '');$before=[];$after=[];
             switch($action['action']) {
+                case 'payment_admission':
+                    if(!Authorization::can($user,'engagements.manage'))throw new RuntimeException('دسترسی پذیرش مجاز نیست.');
+                    $payment=new ManualPaymentService($this->hub);$row=$payment->find($subject);if(!$row)throw new RuntimeException('رسید پیدا نشد.');
+                    $payment->review($subject,(int)$data['version'],'approved',$user,'',false);
+                    $table=$row['request_type']==='circle'?'event_signups':'course_requests';$admission=$this->hub->one("SELECT status FROM $table WHERE id=:id",['id'=>$row['request_id']]);
+                    if(!$admission || !in_array($admission['status'],['requested','approved'],true))throw new RuntimeException('پذیرش این درخواست لغو یا رد شده است.');
+                    if($admission['status']==='requested')(new AdminRepository($this->hub->pdo()))->updateEngagementStatus($row['request_type'],$row['request_id'],'approved');$after=['payment'=>'approved','admission'=>'approved'];break;
                 case 'manual_payment':
                     (new ManualPaymentService($this->hub))->review($subject,(int)$data['version'],$data['status'],$user);$after=['status'=>$data['status']];break;
                 case 'engagement':
+                    (new PaymentLifecycleService($this->hub))->requirePayment((string)($data['type']??''),$subject,(string)($data['status']??''));
                     $tables=['circle'=>'event_signups','courses'=>'course_requests'];$table=$tables[$data['type'] ?? ''] ?? null;
                     if(!$table || !in_array($data['status'] ?? '',['approved','rejected'],true)) throw new RuntimeException('عملیات معتبر نیست.');
                     $before=$this->hub->one("SELECT * FROM $table WHERE id=:id",['id'=>$subject]);

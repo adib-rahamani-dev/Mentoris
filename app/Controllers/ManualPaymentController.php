@@ -54,7 +54,16 @@ final class ManualPaymentController extends Controller
     }
     public function review(Request $request): Response
     {
-        try{(new ManualPaymentService())->review((string)$request->route('id'),(int)$request->input('version'),(string)$request->input('status'),(new AuthService())->user(),is_string($request->input('note'))?$request->input('note'):'');(new Session())->put('manual.notice','نتیجه بررسی ثبت شد.');}
+        try{
+            $admin=(new AuthService())->user();$service=new ManualPaymentService();$id=(string)$request->route('id');$combined=$request->input('decision')==='accept';
+            \App\Core\Database::transaction((new CommunicationRepository())->pdo(),function()use($service,$id,$request,$admin,$combined):void{
+                $row=$service->find($id);if(!$row)throw new \RuntimeException('رسید پیدا نشد.');
+                if($combined && !Authorization::can($admin,'engagements.manage'))throw new \RuntimeException('دسترسی پذیرش مجاز نیست.');
+                $service->review($id,(int)$request->input('version'),$combined?'approved':(string)$request->input('status'),$admin,is_string($request->input('note'))?$request->input('note'):'',!$combined);
+                if($combined){$table=$row['request_type']==='circle'?'event_signups':'course_requests';$admission=(new CommunicationRepository())->one("SELECT status FROM $table WHERE id=:id",['id'=>$row['request_id']]);if(!$admission || !in_array($admission['status'],['requested','approved'],true))throw new \RuntimeException('پذیرش این درخواست لغو یا رد شده است.');if($admission['status']==='requested'){(new \App\Repositories\AdminRepository())->updateEngagementStatus($row['request_type'],$row['request_id'],'approved');\App\Core\Audit::record('engagement.status.updated',$row['request_type'],$row['request_id'],$admin['id'],['status'=>'requested'],['status'=>'approved'],$request->ip());}}
+            });
+            (new Session())->put('manual.notice',$combined?'واریز و پذیرش تأیید شد؛ ثبت‌نام نهایی است.':'نتیجه بررسی ثبت شد.');
+        }
         catch(\RuntimeException $e){(new Session())->put('manual.notice',$e instanceof \PDOException?'ثبت نتیجه انجام نشد.':$e->getMessage());}
         CommunicationController::afterWebhook();
         return $this->redirect('/admin/manual-payments'.($request->input('detail')==='1'?'/'.rawurlencode((string)$request->route('id')):''),303);

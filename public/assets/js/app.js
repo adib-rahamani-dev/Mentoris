@@ -21,6 +21,7 @@ import { initProfileWizard } from './pages/profile-wizard.js?v=2.0.0';
 import { initSurveyClocks } from './pages/survey-clock.js?v=1.0.0';
 
 ready(() => {
+  if(document.querySelector('meta[name=account-id]'))import('./pages/live-notifications.js?v=1.0.0').then(module=>module.initLiveNotifications()).catch(()=>{});
   if(document.querySelector('[data-circle-application]'))import('./pages/circle-application.js?v=1.1.0').then(module=>module.initCircleApplication()).catch(()=>{});
   if(document.querySelector('[data-support-form],[data-support-thread],[data-support-utc]')) {
     import('./pages/support.js?v=1.0.0').then(module=>module.initSupport()).catch(()=>{});

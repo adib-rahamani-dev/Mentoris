@@ -6,6 +6,7 @@ use App\Repositories\CommunicationRepository;
 use App\Services\{AuthService,MessengerApi,CommunicationWorker,CommunicationFaq};
 final class CommunicationController extends Controller
 {
+    private static bool $deliveryScheduled=false;
     public function connections(Request $request): Response
     {
         $user=(new AuthService())->user();if(!$user)return $this->redirect('/login');$hub=new CommunicationRepository();$ready=$hub->available();
@@ -37,7 +38,8 @@ final class CommunicationController extends Controller
     {
         // Shared hosts often use LiteSpeed rather than PHP-FPM. Process interactive
         // replies after acknowledging the webhook; Cron still recovers queued work.
-        if(PHP_SAPI==='cli')return;
+        if(PHP_SAPI==='cli' || self::$deliveryScheduled)return;
+        self::$deliveryScheduled=true;
         register_shutdown_function(static function(): void {
             ignore_user_abort(true);
             if(session_status()===PHP_SESSION_ACTIVE)session_write_close();
@@ -64,5 +66,18 @@ final class CommunicationController extends Controller
         $user=(new AuthService())->user();if(!$user || !Authorization::can($user,'engagements.manage'))return Response::html('دسترسی مجاز نیست.',403);
         $hub=new CommunicationRepository();if($hub->available()) foreach(['comm_updates','comm_outbox'] as $table)$hub->execute("UPDATE $table SET status='queued',attempts=0,next_attempt_at=:now WHERE status='failed'",['now'=>\App\Core\Database::now()]);
         \App\Core\Audit::record('communications.retry','communications_queue',null,$user['id'],[],[],$request->ip());(new Session())->put('communications.notice','ارسال‌های ناموفق برای بررسی دوباره در صف قرار گرفتند.');return $this->redirect('/admin/communications',303);
+    }
+    public function diagnose(Request $request): Response
+    {
+        $admin=(new AuthService())->user();if(!$admin || !Authorization::can($admin,'engagements.manage'))return Response::html('دسترسی مجاز نیست.',403);
+        $channel=$request->input('channel');if(!in_array($channel,['telegram','bale'],true))return Response::html('پیام‌رسان معتبر نیست.',422);
+        try{
+            $api=new MessengerApi($channel);$me=$api->call('getMe');$hook=$api->call('getWebhookInfo');$hub=new CommunicationRepository();$receivers=0;
+            foreach($hub->rows('SELECT * FROM comm_accounts WHERE channel=:channel AND admin_alerts=1 AND notifications_enabled=1',['channel'=>$channel]) as $account){$user=$hub->linkedUser($account);if($user && $account['link_method']==='site' && (Authorization::can($user,'payments.manage')||Authorization::can($user,'engagements.view')))$receivers++;}
+            $notice='اتصال API برقرار است. ربات: '.preg_replace('/[^a-zA-Z0-9_]/','',(string)($me['username']??'')).' | وب‌هوک: '.(!empty($hook['url'])?'ثبت شده':'ثبت نشده').' | آپدیت منتظر: '.(int)($hook['pending_update_count']??0).' | مدیر دریافت‌کننده اعلان: '.$receivers;
+            if(!$receivers)$notice.='؛ حساب مدیر را از «اتصال امن حساب من» وصل و اعلان مدیریتی ربات را روشن کنید.';
+            if(!empty($hook['last_error_date']))$notice.='؛ آخرین خطای وب‌هوک در '.gmdate('Y-m-d H:i',(int)$hook['last_error_date']).' UTC ثبت شده است.';
+        }catch(\RuntimeException $e){$notice=$e->getCode()===401?'توکن ربات از سوی سرویس پذیرفته نشد.':'ارتباط سرور با API پیام‌رسان برقرار نشد؛ تنظیمات و اتصال شبکه هاست بررسی شود.';}
+        (new Session())->put('communications.notice',$notice);return $this->redirect('/admin/communications',303);
     }
 }

@@ -200,6 +200,7 @@ final class AdminRepository
     {
         $config = $this->engagementConfig($type);
         $where = []; $params = [];
+        if(in_array($type,['circle','courses'],true)){$hub=new CommunicationRepository($this->pdo());$where[]=(new \App\Services\ManualPaymentService($hub))->available()?"(status<>'requested' OR EXISTS (SELECT 1 FROM manual_payments p WHERE p.request_id={$config['table']}.id AND p.request_type=:paid_type AND p.part=1 AND p.status='approved'))":"status<>'requested'";if((new \App\Services\ManualPaymentService($hub))->available())$params['paid_type']=$type;}
         if(!empty($filters['context']) && in_array($type,['circle','events','courses'],true)) { $where[]=($type==='courses' ? 'course_slug' : 'event_slug').'=:context'; $params['context']=$filters['context']; }
         $status = trim((string) ($filters['status'] ?? 'all'));
         if ($status !== 'all' && in_array($status, $config['statuses'], true)) { $where[] = 'status=:status'; $params['status'] = $status; }
@@ -216,6 +217,7 @@ final class AdminRepository
         if (!in_array($status, $config['statuses'], true)) throw new RuntimeException('وضعیت انتخاب‌شده معتبر نیست.');
         $lock=Database::driver($this->pdo())==='mysql'?' FOR UPDATE':' ';
         $this->pdo()->prepare("SELECT id FROM {$config['table']} WHERE id=:id".$lock)->execute(['id'=>$id]);
+        (new \App\Services\PaymentLifecycleService(new CommunicationRepository($this->pdo())))->requirePayment($type,$id,$status);
         $attended = $type === 'circle' ? ',attended_at=' . ($status === 'attended' ? 'COALESCE(attended_at,:attended)' : 'NULL') : '';
         $statement = $this->pdo()->prepare("UPDATE {$config['table']} SET status=:status,updated_at=:updated_at{$attended} WHERE id=:id");
         $parameters=['status'=>$status,'updated_at'=>Database::now(),'id'=>$id];if($type==='circle' && $status==='attended')$parameters['attended']=Database::now();
