@@ -105,7 +105,7 @@ final class SeoService
                     'height' => 512,
                 ],
                 'email' => 'Academichaghani@gmail.com',
-                'telephone' => '+989100077611',
+                'telephone' => '+989351939314',
                 'founder' => ['@id' => $baseUrl . '/founder/#person'],
                 'sameAs' => ['https://www.instagram.com/mentoris_academy/'],
             ],

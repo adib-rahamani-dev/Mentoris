@@ -2,7 +2,7 @@
 <section class="page-hero page-hero--compact"><div class="container page-hero__content"><span class="eyebrow">Contact Mentoris</span><h1><?= e($copy['title']) ?></h1><p><?= e($copy['lead']) ?></p></div></section>
 <section class="section"><div class="container"><div class="contact-methods-grid">
     <a class="contact-method surface" href="mailto:Academichaghani@gmail.com"><span><?= icon('mail', 'ui-icon--lg') ?></span><div><strong><?= e($copy['email']) ?></strong><p class="ltr">Academichaghani@gmail.com</p></div></a>
-    <a class="contact-method surface" href="https://wa.me/989100077611" target="_blank" rel="noopener noreferrer"><span><?= icon('phone', 'ui-icon--lg') ?></span><div><strong><?= e($copy['phone']) ?></strong><p class="ltr">09100077611</p></div></a>
+    <a class="contact-method surface" href="https://wa.me/989351939314" target="_blank" rel="noopener noreferrer"><span><?= icon('phone', 'ui-icon--lg') ?></span><div><strong><?= e($copy['phone']) ?></strong><p class="ltr">09351939314</p></div></a>
     <a class="contact-method surface" href="https://instagram.com/Mentoris_Academy" target="_blank" rel="noopener noreferrer"><span><?= icon('instagram', 'ui-icon--lg') ?></span><div><strong><?= e($copy['instagram']) ?></strong><p class="ltr">@Mentoris_Academy</p></div></a>
     <a class="contact-method surface" href="https://Mentorisacademy.com"><span><?= icon('globe', 'ui-icon--lg') ?></span><div><strong><?= e($copy['website']) ?></strong><p class="ltr">Mentorisacademy.com</p></div></a>
 </div></div></section>

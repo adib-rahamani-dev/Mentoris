@@ -21,7 +21,7 @@
             <h2 class="site-footer__title"><?= e(t('footer.contact')) ?></h2>
             <ul class="site-footer__links">
                 <li><a class="ltr" href="mailto:Academichaghani@gmail.com">Academichaghani@gmail.com</a></li>
-                <li><a class="ltr" href="tel:+989100077611">09100077611</a></li>
+                <li><a class="ltr" href="tel:+989351939314">09351939314</a></li>
                 <li><a class="ltr" href="https://instagram.com/Mentoris_Academy" rel="noopener noreferrer" target="_blank">@Mentoris_Academy</a></li>
                 <li><?= e(t('footer.location')) ?></li>
             </ul>
