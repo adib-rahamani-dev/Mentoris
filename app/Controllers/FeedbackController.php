@@ -15,8 +15,8 @@ use RuntimeException;
 
 final class FeedbackController extends Controller
 {
-    private const EVENT = 'therapists-circle-second';
-    private const EVENTS = ['therapists-circle-tabriz', 'therapists-circle-second'];
+    private const EVENT = 'therapists-circle-third';
+    private const EVENTS = \App\Services\SurveyWindowService::EVENTS;
 
     private function eventSlug(): string
     {
@@ -27,6 +27,7 @@ final class FeedbackController extends Controller
     public function index(Request $request): Response
     {
         $slug=$request->query('event');
+        if($slug!==null && (!is_string($slug) || !in_array($slug,self::EVENTS,true)))return Response::html('برنامه معتبر انتخاب کنید.',422)->withHeader('Cache-Control','private, no-store');
         if (is_string($slug) && in_array($slug,self::EVENTS,true) && $slug!==$this->eventSlug()) {
             (new Session())->put('feedback.event',$slug);
             (new Session())->put('feedback.signup','');
@@ -79,18 +80,28 @@ final class FeedbackController extends Controller
     public function feedback(Request $request): Response
     {
         $event=$request->input('event');
+        if($event!==null && (!is_string($event) || !in_array($event,self::EVENTS,true)))return Response::json(['message'=>'برنامه معتبر انتخاب کنید.'],422);
         if(is_string($event) && in_array($event,self::EVENTS,true) && $event!==$this->eventSlug()) { (new Session())->put('feedback.event',$event); (new Session())->put('feedback.signup',''); }
         $window=(new \App\Services\SurveyWindowService())->status($this->eventSlug());
         if(!$window['open']) return $request->expectsJson() ? Response::json(['message'=>$window['message']],403) : $this->render(['feedback'=>$window['message']]);
-        $signup = $this->activeSignup();
         $data = $request->only(['content_rating','hosting_rating','challenge','comment']);
+        $mode=$request->input('identity_mode');
+        if($mode!==null){
+            $service=new \App\Services\SurveyResponseService();$name=$request->input('display_name','');
+            if(!is_string($mode) || !is_string($name))return Response::json(['message'=>'اطلاعات فرم معتبر نیست.'],422);
+            $data+=['identity_mode'=>$mode,'display_name'=>$name];
+            try{$service->save($this->eventSlug(),$data,(new AuthService())->user());}
+            catch(RuntimeException $e){if($e instanceof \PDOException)throw $e;return $request->expectsJson()?Response::json(['message'=>$e->getMessage()],422):$this->render(['feedback'=>$e->getMessage()],array_filter($data,'is_scalar'));}
+            return $request->expectsJson()?Response::json(['message'=>'بازخورد شما ثبت شد. ممنون که همراه ما هستید.','recorded'=>true]):$this->redirect('/feedback?event='.$this->eventSlug().'&done=1');
+        }
+        $signup = $this->activeSignup();
         $errors = [];
-        foreach (['content_rating','hosting_rating'] as $field) if (!in_array((string) ($data[$field] ?? ''), ['1','2','3','4','5'], true)) $errors[$field] = 'امتیاز ۱ تا ۵ را انتخاب کنید.';
+        foreach (['content_rating','hosting_rating'] as $field) if (!is_scalar($data[$field]??null) || !in_array((string) $data[$field], ['1','2','3','4','5'], true)) $errors[$field] = 'امتیاز ۱ تا ۵ را انتخاب کنید.';
         $data['challenge']=$data['challenge'] ?? 'none';
         if($data['challenge']==='') $data['challenge']='none';
         if (!in_array($data['challenge'], ['none','burnout','technique','countertransference','supervision'], true)) $errors['challenge'] = 'گزینه معتبر انتخاب کنید.';
         if (!is_string($data['comment'] ?? '') || mb_strlen((string) ($data['comment'] ?? '')) > 1000) $errors['comment'] = 'متن باید حداکثر ۱۰۰۰ نویسه باشد.';
-        if ($errors) return $request->expectsJson() ? Response::json(['message'=>'دو امتیاز را انتخاب کنید.','errors'=>$errors],422) : $this->render($errors, $data);
+        if ($errors) return $request->expectsJson() ? Response::json(['message'=>'دو امتیاز را انتخاب کنید.','errors'=>$errors],422) : $this->render($errors, array_filter($data,'is_scalar'));
         if(!$signup && (new AuthService())->user() && $request->input('member_access')==='1') {
             $access=$this->access($request); $signup=$this->activeSignup();
             if(!$signup) return $request->expectsJson() ? Response::json(['message'=>'شماره پروفایل یا اتصال پرونده حضور را بررسی کنید.'],422) : $access;
@@ -148,25 +159,27 @@ final class FeedbackController extends Controller
     {
         $signup = $this->activeSignup();
         $ready = (new CircleRepository())->feedbackAvailable();
-        $feedback = $signup ? (new CircleRepository())->feedback($signup['id']) : null;
+        $surveyService=new \App\Services\SurveyResponseService();
+        $feedback = $surveyService->current($this->eventSlug()) ?? ($signup ? (new CircleRepository())->feedback($signup['id']) : null);
         $identity = (new AuthService())->user();
         $profileComplete = $signup && $identity && ((new CircleRepository())->profileComplete((string) $identity['id']) || !empty((new \App\Repositories\MemberProfileRepository())->find($identity['id'])['completed_at']));
         return $this->view('pages.feedback', [
-            'title' => 'همراه نشست دوم | منتوریس',
+            'title' => 'بازخورد برنامه‌های منتوریس',
             'description' => 'بازخورد نشست، جعبه‌ابزار لنگراندازی و عضویت در جامعه منتوریس.',
             'indexable' => false,
-            'event' => PublicContentService::event($this->eventSlug()),
+            'event' => PublicContentService::event($this->eventSlug()) ?? ['slug'=>$this->eventSlug(),'title'=>'بازخورد حلقه درمانگران منتوریس'],
             'events'=>array_map(fn($slug)=>PublicContentService::event($slug),self::EVENTS),
             'identity'=>$identity,'hallCodeEnabled'=>$this->accessCode()!=='',
             'signup' => $signup,
             'feedback' => $feedback,
             'profileComplete' => $profileComplete,
             'feedbackReady' => $ready,
+            'surveyReady' => $surveyService->available(),
             'window'=>(new \App\Services\SurveyWindowService())->status($this->eventSlug()),
             'errors' => $errors,
             'old' => $old,
             'done' => isset($_GET['done']),
-        ]);
+        ])->withHeader('Cache-Control','private, no-store');
     }
 
     private function accessCode(): string

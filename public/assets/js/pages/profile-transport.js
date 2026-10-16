@@ -50,7 +50,8 @@ function recover(form,state,expected){
   });return recovery;
 }
 export async function sendProfile(form,data){
-  const expected=actor(form),requiresLogin=!!expected || form.matches('[data-member-form],[data-async-save],[data-community-toggle]');
+  const anonymous=form.matches('[data-survey-form]') && data.get('identity_mode')==='anonymous';
+  const expected=anonymous?'':actor(form),requiresLogin=!!expected || form.matches('[data-member-form],[data-async-save],[data-community-toggle]');
   let state=await session();
   if(requiresLogin && (!state.authenticated || (expected && state.user_id!==expected)))state=await recover(form,state,expected);
   setToken(state.csrf_token);data.set('_token',state.csrf_token);

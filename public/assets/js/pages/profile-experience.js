@@ -1,10 +1,16 @@
-import { sendProfile as send, simpleProfileSave } from './profile-transport.js?v=1.0.0';
+import { sendProfile as send, simpleProfileSave } from './profile-transport.js?v=1.1.0';
 import { storeProfileDraft, clearProfileDraft } from './profile-draft.js?v=1.0.0';
 const storage = {
   read(key) { try { return JSON.parse(sessionStorage.getItem(key) || 'null'); } catch { return null; } },
   write(key, value) { try { sessionStorage.setItem(key, JSON.stringify(value)); } catch {} }
 };
 export function initProfileExperience() {
+  document.querySelectorAll('[data-survey-form]').forEach(form=>{
+    const name=form.querySelector('[name=display_name]');
+    if(!name)return;
+    const update=()=>{name.required=form.querySelector('[name=identity_mode]:checked')?.value==='named';};
+    form.querySelectorAll('[name=identity_mode]').forEach(input=>input.addEventListener('change',update));update();
+  });
   document.querySelector('[data-print-resource]')?.addEventListener('click', () => {
     document.querySelectorAll('[data-resource-answer]').forEach(input => {
       let printed = input.nextElementSibling;
@@ -87,8 +93,11 @@ export function initProfileExperience() {
         }
         form.querySelector('input[type="file"]')?.value && (form.querySelector('input[type="file"]').value = '');
         if (form.matches('[data-survey-form]') && result.recorded) {
-          form.replaceChildren(); const title = document.createElement('h2'); title.textContent = 'نظر شما ثبت شد. سپاس از همراهی‌تان.';
-          const link = document.createElement('a'); link.href = '/resources'; link.className = 'btn btn--primary'; link.textContent = 'دریافت ابزارهای رایگان'; form.append(title, link);
+          form.replaceChildren();form.classList.add('survey-success');form.setAttribute('role','status');
+          const mark=document.createElement('span');mark.textContent='✓';mark.setAttribute('aria-hidden','true');
+          const title = document.createElement('h2'); title.textContent = 'صدای شما به ما رسید.';title.tabIndex=-1;
+          const note=document.createElement('p');note.textContent='بازخوردتان ثبت شد؛ ممنون که برای بهترشدن این تجربه وقت گذاشتید.';
+          const link = document.createElement('a'); link.href = '/resources'; link.className = 'btn btn--primary'; link.textContent = 'ابزارهای رایگان منتوریس';form.append(mark,title,note,link);title.focus({preventScroll:true});form.scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
         }
         if(typeof result.redirect==='string' && result.redirect.startsWith('/') && !result.redirect.startsWith('//') && new URL(result.redirect,location.origin).origin===location.origin)location.assign(result.redirect);
       } catch (error) {

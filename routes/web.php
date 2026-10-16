@@ -58,9 +58,9 @@ $router->post('/support/{id:[a-f0-9]+}/reply', [\App\Controllers\SupportControll
 $router->get('/resources', [\App\Controllers\ResourcesController::class, 'index'], ['rate:60,60']);
 $router->get('/resources/{slug:[a-z-]+}', [\App\Controllers\ResourcesController::class, 'show'], ['rate:60,60']);
 $router->get('/resources/{slug:[a-z-]+}/download', [\App\Controllers\ResourcesController::class, 'download'], ['rate:20,60']);
-$router->get('/feedback', [FeedbackController::class, 'index'], ['rate:60,60']);
+$router->get('/feedback', [FeedbackController::class, 'index'], ['rate:600,60']);
 $router->post('/feedback/access', [FeedbackController::class, 'access'], ['csrf', 'rate:5,60']);
-$router->post('/feedback/submit', [FeedbackController::class, 'feedback'], ['csrf', 'rate:5,60']);
+$router->post('/feedback/submit', [FeedbackController::class, 'feedback'], ['csrf', 'rate:600,60', \App\Middleware\SessionRateLimitMiddleware::class]);
 $router->get('/feedback/toolbox', [FeedbackController::class, 'toolbox'], ['rate:20,60']);
 $router->get('/verify/event/{number:[A-Z0-9-]+}', [EventCertificateController::class, 'show'], ['rate:30,60']);
 $router->get('/community', [CommunityController::class, 'index'], ['rate:120,60']);

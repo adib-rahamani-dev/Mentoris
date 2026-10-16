@@ -68,6 +68,11 @@ if (studio) {
   }
 
   form.addEventListener('submit', generate);
+  studio.querySelectorAll('[data-qr-path]').forEach(button => button.addEventListener('click', () => {
+    form.elements.namedItem('path').value = button.dataset.qrPath;
+    form.elements.namedItem('title').value = button.dataset.qrLabel;
+    generate();
+  }));
   studio.querySelectorAll('[data-qr-event]').forEach(button => button.addEventListener('click', () => {
     form.elements.namedItem('path').value = '/feedback?event=' + button.dataset.qrEvent;
     form.elements.namedItem('title').value = button.dataset.qrEvent === 'therapists-circle-tabriz' ? 'بازخورد همایش اول منتوریس' : 'بازخورد همایش دوم منتوریس';

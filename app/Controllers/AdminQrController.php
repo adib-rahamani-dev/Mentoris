@@ -19,7 +19,7 @@ final class AdminQrController extends Controller
             'title' => 'استودیوی QR | Mentoris Admin',
             'admin' => (new AuthService())->user(),
             'baseUrl' => $baseUrl,
-            'feedbackReady' => (new \App\Repositories\CircleRepository())->feedbackAvailable(),
+            'feedbackReady' => (new \App\Services\SurveyResponseService())->available(),
         ], 'layouts.admin');
     }
 }

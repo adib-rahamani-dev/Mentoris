@@ -7,7 +7,7 @@ use App\Controllers\UserAreaController;
 use App\Core\Router;
 
 /** @var Router $router */
-$router->get('/auth/session',[AuthController::class,'sessionState'],['rate:60,60']);
+$router->get('/auth/session',[AuthController::class,'sessionState'],['rate:600,60', \App\Middleware\SessionRateLimitMiddleware::class.':30,60']);
 $router->get('/register', [AuthController::class, 'registerForm'], ['guest', 'rate:60,60']);
 $router->post('/register', [AuthController::class, 'register'], ['guest', 'csrf', 'rate:3,60']);
 $router->post('/register/phone/send', [AuthController::class, 'sendRegistrationCode'], ['guest', 'csrf', 'rate:3,60']);
